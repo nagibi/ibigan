@@ -10,6 +10,7 @@ use App\Http\Requests\Tenant\UpdateTenantSettingsRequest;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 final class TenantSettingsController extends Controller
@@ -57,10 +58,12 @@ final class TenantSettingsController extends Controller
         ]);
 
         $tenant = $this->currentTenant();
+        $this->deleteStoredLogo($tenant);
 
-        $tenant
-            ->addMediaFromRequest('logo')
-            ->toMediaCollection('logo');
+        $path = $request->file('logo')->store('logos', 'public');
+        $tenant->update([
+            'logo_url' => Storage::disk('public')->url($path),
+        ]);
 
         return response()->json([
             'status' => 1,
@@ -76,7 +79,9 @@ final class TenantSettingsController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $this->currentTenant()->clearMediaCollection('logo');
+        $tenant = $this->currentTenant();
+        $this->deleteStoredLogo($tenant);
+        $tenant->update(['logo_url' => null]);
 
         return response()->json([
             'status' => 1,
@@ -91,6 +96,22 @@ final class TenantSettingsController extends Controller
         $tenant = tenant();
 
         return $tenant;
+    }
+
+    private function deleteStoredLogo(Tenant $tenant): void
+    {
+        $logoUrl = $tenant->logo_url;
+
+        if (! $logoUrl) {
+            return;
+        }
+
+        $baseUrl = Storage::disk('public')->url('');
+        $relativePath = ltrim(str_replace($baseUrl, '', $logoUrl), '/');
+
+        if ($relativePath !== '' && Storage::disk('public')->exists($relativePath)) {
+            Storage::disk('public')->delete($relativePath);
+        }
     }
 
     private function ensureAdmin(Request $request): void

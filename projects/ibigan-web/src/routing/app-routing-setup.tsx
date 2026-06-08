@@ -8,6 +8,7 @@ import { DashboardPage } from '@/pages/dashboard/dashboard-page';
 import { MenuFormPage } from '@/pages/menus/menu-form-page';
 import { MenusPage } from '@/pages/menus/menus-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
+import { SettingsPage } from '@/pages/settings/settings-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
@@ -76,6 +77,7 @@ export function AppRoutingSetup() {
         <Route path="/menus/novo" element={<MenuFormPage />} />
         <Route path="/menus/:id/editar" element={<MenuFormPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

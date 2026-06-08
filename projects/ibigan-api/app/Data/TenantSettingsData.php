@@ -27,7 +27,7 @@ final class TenantSettingsData extends Data
             slug: $tenant->slug,
             timezone: $tenant->timezone ?? 'UTC',
             locale: $tenant->locale ?? 'pt_BR',
-            logo_url: $tenant->getFirstMediaUrl('logo') ?: null,
+            logo_url: $tenant->logo_url ?: null,
             created_at: $tenant->created_at->toIso8601String(),
         );
     }

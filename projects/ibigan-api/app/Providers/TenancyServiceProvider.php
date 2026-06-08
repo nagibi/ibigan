@@ -7,9 +7,11 @@ namespace App\Providers;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\PermissionRegistrar;
 use Stancl\JobPipeline\JobPipeline;
+use Stancl\Tenancy\Contracts\Tenant;
 use Stancl\Tenancy\Events;
 use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
@@ -18,6 +20,8 @@ use Stancl\Tenancy\Middleware;
 class TenancyServiceProvider extends ServiceProvider
 {
     public static string $controllerNamespace = '';
+
+    private ?string $originalPublicDiskUrl = null;
 
     public function events(): array
     {
@@ -91,14 +95,39 @@ class TenancyServiceProvider extends ServiceProvider
 
     protected function registerTenancyHooks(): void
     {
+        $this->originalPublicDiskUrl = config('filesystems.disks.public.url');
+
         // Limpa cache do Spatie Permission ao inicializar/encerrar tenant
-        Event::listen(Events\TenancyInitialized::class, function () {
+        Event::listen(Events\TenancyInitialized::class, function (Events\TenancyInitialized $event) {
             app(PermissionRegistrar::class)->forgetCachedPermissions();
+            $this->configureTenantPublicDiskUrl($event->tenancy->tenant);
         });
 
         Event::listen(Events\TenancyEnded::class, function () {
             app(PermissionRegistrar::class)->forgetCachedPermissions();
+            $this->revertPublicDiskUrl();
         });
+    }
+
+    private function configureTenantPublicDiskUrl(Tenant $tenant): void
+    {
+        $suffixBase = config('tenancy.filesystem.suffix_base', 'tenant');
+        $baseUrl = rtrim((string) config('app.url'), '/');
+
+        config([
+            'filesystems.disks.public.url' => "{$baseUrl}/storage/{$suffixBase}{$tenant->getTenantKey()}/app/public",
+        ]);
+
+        Storage::forgetDisk('public');
+    }
+
+    private function revertPublicDiskUrl(): void
+    {
+        config([
+            'filesystems.disks.public.url' => $this->originalPublicDiskUrl,
+        ]);
+
+        Storage::forgetDisk('public');
     }
 
     protected function bootEvents(): void

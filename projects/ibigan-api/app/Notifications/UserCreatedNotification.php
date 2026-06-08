@@ -6,9 +6,11 @@ namespace App\Notifications;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-final class UserCreatedNotification extends Notification
+final class UserCreatedNotification extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
@@ -21,7 +23,7 @@ final class UserCreatedNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'broadcast'];
     }
 
     /**
@@ -34,5 +36,14 @@ final class UserCreatedNotification extends Notification
             'user_name' => $this->user->name,
             'user_email' => $this->user->email,
         ];
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage([
+            'user_id' => $this->user->id,
+            'user_name' => $this->user->name,
+            'user_email' => $this->user->email,
+        ]);
     }
 }

@@ -15,7 +15,12 @@ use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
+
+Broadcast::routes([
+    'middleware' => [InitializeTenancyByHeader::class, 'auth:sanctum'],
+]);
 
 // Rotas públicas
 Route::prefix('v1')->group(function () {
