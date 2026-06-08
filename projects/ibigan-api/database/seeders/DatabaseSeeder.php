@@ -2,24 +2,30 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use App\Models\Tenant;
+use App\Models\User;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Criar tenant de demonstração
+        $tenant = Tenant::firstOrCreate(
+            ['id' => 'acme'],
+            ['slug' => 'acme']
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Criar usuário admin dentro do tenant
+        $tenant->run(function () {
+            User::firstOrCreate(
+                ['email' => 'super@ibigan.com'],
+                [
+                    'name'     => 'Super Admin',
+                    'password' => Hash::make('A12345'),
+                ]
+            );
+        });
     }
 }
