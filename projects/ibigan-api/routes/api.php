@@ -19,20 +19,20 @@ use Illuminate\Support\Facades\Route;
 // Rotas públicas
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
-        Route::post('login', [AuthController::class, 'login']);
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
+        Route::post('register', [AuthController::class, 'register'])->middleware('throttle:register');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
-        Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'verify']);
+        Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'verify'])->middleware('throttle:two-factor');
     });
 
     Route::post('invites/accept', [InviteController::class, 'accept'])
-        ->middleware(InitializeTenancyByHeader::class);
+        ->middleware([InitializeTenancyByHeader::class, 'throttle:invite-accept']);
 });
 
 // Rotas centrais — banco landlord, sem contexto de tenant
 Route::prefix('central/v1')
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth:sanctum', 'throttle:api'])
     ->group(function () {
         Route::get('tenants', [TenantController::class, 'index']);
         Route::post('tenants/switch', [TenantController::class, 'switch']);
@@ -40,7 +40,7 @@ Route::prefix('central/v1')
 
 // Rotas protegidas — requer X-Tenant-ID + token Sanctum
 Route::prefix('v1')
-    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum'])
+    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'throttle:api'])
     ->group(function () {
         Route::prefix('auth')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
@@ -94,7 +94,7 @@ Route::prefix('v1')
 
 // Rotas centrais — superusuário (sem InitializeTenancyByHeader)
 Route::prefix('central/v1')
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth:sanctum', 'throttle:api'])
     ->group(function () {
         Route::get('tenants', [TenantController::class, 'index']);
         Route::post('tenants/switch', [TenantController::class, 'switch']);
