@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
+use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Middleware\InitializeTenancyByHeader;
@@ -41,6 +42,11 @@ Route::prefix('v1')
 
         Route::get('activity-logs', [ActivityLogController::class, 'index']);
         Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);
+
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
     });
 
 // Rotas centrais — superusuário (sem InitializeTenancyByHeader)

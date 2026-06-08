@@ -8,10 +8,19 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
+/**
+ * @property Tenant $tenant
+ * @property User $superAdmin
+ * @property User $admin
+ * @property User $manager
+ * @property User $viewer
+ */
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    /** @var TestCase&object{tenant: Tenant, superAdmin: User, admin: User, manager: User, viewer: User} $this */
     $tenantId = 'tenant-'.uniqid();
     $this->tenant = Tenant::create([
         'id' => $tenantId,
@@ -92,6 +101,7 @@ it('admin pode gerenciar usuários', function (): void {
         'name' => 'Novo Usuário',
         'email' => 'novo@test.com',
         'password' => 'senha123',
+        'password_confirmation' => 'senha123',
         'role' => 'viewer',
     ];
     $this->postJson('/api/v1/users', $payload, $headers)->assertCreated();
@@ -139,6 +149,7 @@ it('viewer pode listar mas não criar usuários', function (): void {
         'name' => 'Teste',
         'email' => 'teste@test.com',
         'password' => 'senha123',
+        'password_confirmation' => 'senha123',
         'role' => 'viewer',
     ], $headers)->assertForbidden();
 });

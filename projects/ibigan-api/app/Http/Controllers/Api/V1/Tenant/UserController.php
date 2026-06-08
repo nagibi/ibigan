@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use App\Notifications\UserCreatedNotification;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,6 +67,10 @@ final class UserController extends Controller
         abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $user = $this->createUserAction->execute($request);
+
+        User::role(['admin', 'super-admin'])->each(
+            fn (User $admin) => $admin->notify(new UserCreatedNotification($user))
+        );
 
         return response()->json([
             'status' => 1,

@@ -12,6 +12,8 @@ use App\Http\Requests\Organization\StoreOrganizationRequest;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
 use App\Jobs\ExportOrganizationsJob;
 use App\Models\Organization;
+use App\Models\User;
+use App\Notifications\OrganizationCreatedNotification;
 use App\Repositories\Contracts\OrganizationRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -67,6 +69,10 @@ final class OrganizationController extends Controller
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $organization = $this->createOrganizationAction->execute($request);
+
+        User::role(['admin', 'super-admin'])->each(
+            fn (User $admin) => $admin->notify(new OrganizationCreatedNotification($organization))
+        );
 
         return response()->json([
             'status' => 1,
