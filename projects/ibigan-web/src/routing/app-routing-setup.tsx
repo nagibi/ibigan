@@ -5,6 +5,8 @@ import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { TwoFactorPage } from '@/pages/auth/two-factor-page';
 import { DashboardPage } from '@/pages/dashboard/dashboard-page';
+import { UserFormPage } from '@/pages/users/user-form-page';
+import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -64,6 +66,9 @@ export function AppRoutingSetup() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/novo" element={<UserFormPage />} />
+        <Route path="/users/:id/editar" element={<UserFormPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
 use App\Http\Controllers\Api\V1\Tenant\InviteController;
+use App\Http\Controllers\Api\V1\Tenant\MenuController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
@@ -77,6 +78,9 @@ Route::prefix('v1')
 
         Route::get('activity-logs', [ActivityLogController::class, 'index']);
         Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);
+
+        Route::patch('menus/reorder', [MenuController::class, 'reorder']);
+        Route::apiResource('menus', MenuController::class);
 
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::apiResource('message-templates', MessageTemplateController::class);
