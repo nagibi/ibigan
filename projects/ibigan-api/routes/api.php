@@ -56,6 +56,7 @@ Route::prefix('v1')
         Route::get('activity-logs', [ActivityLogController::class, 'index']);
         Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);
 
+        Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::apiResource('message-templates', MessageTemplateController::class);
 
         Route::get('notifications', [NotificationController::class, 'index']);

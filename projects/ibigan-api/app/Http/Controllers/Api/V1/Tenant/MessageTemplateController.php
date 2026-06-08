@@ -8,8 +8,10 @@ use App\Actions\MessageTemplate\CreateMessageTemplateAction;
 use App\Actions\MessageTemplate\UpdateMessageTemplateAction;
 use App\Data\MessageTemplateData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MessageTemplate\SendMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\StoreMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\UpdateMessageTemplateRequest;
+use App\Jobs\SendTemplateEmailJob;
 use App\Models\MessageTemplate;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
 use Illuminate\Http\JsonResponse;
@@ -96,6 +98,26 @@ final class MessageTemplateController extends Controller
         return response()->json([
             'status' => 1,
             'message' => 'MSG000426',
+            'result' => null,
+        ]);
+    }
+
+    public function send(SendMessageTemplateRequest $request, MessageTemplate $messageTemplate): JsonResponse
+    {
+        abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
+
+        abort_unless($messageTemplate->is_active, Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        SendTemplateEmailJob::dispatch(
+            $messageTemplate->slug,
+            $request->validated('to'),
+            $request->validated('data', []),
+        );
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000067',
+            'description' => 'E-mail enfileirado com sucesso!',
             'result' => null,
         ]);
     }
