@@ -16,6 +16,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class WebhookController extends Controller
 {
+    /**
+     * Listar webhooks configurados.
+     *
+     * Requer role admin ou super-admin.
+     */
     public function index(Request $request): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -39,6 +44,9 @@ final class WebhookController extends Controller
         ]);
     }
 
+    /**
+     * Retornar um webhook específico.
+     */
     public function show(Request $request, Webhook $webhook): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -50,6 +58,9 @@ final class WebhookController extends Controller
         ]);
     }
 
+    /**
+     * Criar webhook para receber eventos HTTP.
+     */
     public function store(StoreWebhookRequest $request): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -63,6 +74,9 @@ final class WebhookController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    /**
+     * Atualizar webhook existente.
+     */
     public function update(UpdateWebhookRequest $request, Webhook $webhook): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -76,6 +90,9 @@ final class WebhookController extends Controller
         ]);
     }
 
+    /**
+     * Remover webhook.
+     */
     public function destroy(Request $request, Webhook $webhook): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -89,6 +106,9 @@ final class WebhookController extends Controller
         ]);
     }
 
+    /**
+     * Listar histórico de entregas de um webhook.
+     */
     public function deliveries(Request $request, Webhook $webhook): JsonResponse
     {
         $this->ensureAdmin($request);

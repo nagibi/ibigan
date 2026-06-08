@@ -26,6 +26,11 @@ final class MessageTemplateController extends Controller
         private readonly UpdateMessageTemplateAction $updateMessageTemplateAction,
     ) {}
 
+    /**
+     * Listar templates de mensagem paginados.
+     *
+     * Requer permissão `template-visualizar`.
+     */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('template-visualizar'), Response::HTTP_FORBIDDEN);
@@ -50,6 +55,9 @@ final class MessageTemplateController extends Controller
         ]);
     }
 
+    /**
+     * Retornar um template de mensagem específico.
+     */
     public function show(Request $request, int $messageTemplate): JsonResponse
     {
         abort_unless($request->user()->can('template-visualizar'), Response::HTTP_FORBIDDEN);
@@ -63,6 +71,11 @@ final class MessageTemplateController extends Controller
         ]);
     }
 
+    /**
+     * Criar template de mensagem.
+     *
+     * Requer permissão `template-gerenciar`.
+     */
     public function store(StoreMessageTemplateRequest $request): JsonResponse
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -76,6 +89,9 @@ final class MessageTemplateController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    /**
+     * Atualizar template de mensagem.
+     */
     public function update(UpdateMessageTemplateRequest $request, MessageTemplate $messageTemplate): JsonResponse
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -89,6 +105,9 @@ final class MessageTemplateController extends Controller
         ]);
     }
 
+    /**
+     * Remover template de mensagem.
+     */
     public function destroy(Request $request, MessageTemplate $messageTemplate): JsonResponse
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -102,6 +121,11 @@ final class MessageTemplateController extends Controller
         ]);
     }
 
+    /**
+     * Enviar e-mail usando template e merge tags.
+     *
+     * Requer permissão `template-gerenciar`. O envio é processado em fila.
+     */
     public function send(SendMessageTemplateRequest $request, MessageTemplate $messageTemplate): JsonResponse
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);

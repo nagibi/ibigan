@@ -17,6 +17,11 @@ final class ActivityLogController extends Controller
         private readonly ActivityLogRepositoryInterface $activityLogRepository,
     ) {}
 
+    /**
+     * Listar logs de atividade paginados.
+     *
+     * Suporta filtros por log_name, subject_type, causer_id e intervalo de datas.
+     */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
@@ -41,6 +46,12 @@ final class ActivityLogController extends Controller
         ]);
     }
 
+    /**
+     * Listar logs de atividade de um recurso específico.
+     *
+     * @param  string  $type  Tipo do model (ex: user, organization)
+     * @param  int  $id  ID do recurso
+     */
     public function forSubject(Request $request, string $type, int $id): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);

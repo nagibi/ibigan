@@ -20,6 +20,11 @@ final class TenantController extends Controller
         private readonly CentralUserRepositoryInterface $centralUserRepository,
     ) {}
 
+    /**
+     * Listar tenants disponíveis para o usuário autenticado.
+     *
+     * Rota central — não requer header `X-Tenant-ID`.
+     */
     public function index(Request $request): JsonResponse
     {
         $tenantUsers = $this->centralUserRepository->tenantsForUser($request->user()->id);
@@ -38,6 +43,11 @@ final class TenantController extends Controller
         ]);
     }
 
+    /**
+     * Trocar de tenant e obter novo token de acesso.
+     *
+     * Rota central — valida vínculo do usuário com o tenant informado.
+     */
     public function switch(Request $request): JsonResponse
     {
         $validated = $request->validate([

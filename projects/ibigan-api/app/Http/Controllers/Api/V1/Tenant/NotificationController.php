@@ -12,6 +12,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class NotificationController extends Controller
 {
+    /**
+     * Listar notificações do usuário autenticado.
+     *
+     * Requer permissão `usuario-visualizar`.
+     */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
@@ -36,6 +41,9 @@ final class NotificationController extends Controller
         ]);
     }
 
+    /**
+     * Marcar uma notificação como lida.
+     */
     public function markAsRead(Request $request, string $notification): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
@@ -54,6 +62,9 @@ final class NotificationController extends Controller
         ]);
     }
 
+    /**
+     * Marcar todas as notificações como lidas.
+     */
     public function markAllAsRead(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
@@ -67,6 +78,9 @@ final class NotificationController extends Controller
         ]);
     }
 
+    /**
+     * Remover uma notificação.
+     */
     public function destroy(Request $request, string $notification): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);

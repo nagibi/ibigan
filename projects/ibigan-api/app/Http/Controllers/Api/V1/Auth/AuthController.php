@@ -23,6 +23,12 @@ use Illuminate\Validation\ValidationException;
 
 final class AuthController extends Controller
 {
+    /**
+     * Autenticar usuário no tenant.
+     *
+     * Retorna token de acesso e dados do usuário.
+     * Se 2FA estiver ativo, retorna `requires_2fa: true` sem token.
+     */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -89,6 +95,9 @@ final class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Retornar dados do usuário autenticado.
+     */
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -106,6 +115,9 @@ final class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Encerrar sessão e invalidar o token atual.
+     */
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -118,6 +130,11 @@ final class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Registrar novo tenant e usuário administrador.
+     *
+     * Cria o tenant, executa o seeder de roles/permissions e cria o usuário admin.
+     */
     public function register(RegisterRequest $request, RegisterAction $action): JsonResponse
     {
         $result = $action->execute($request);
@@ -130,6 +147,11 @@ final class AuthController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    /**
+     * Solicitar link de redefinição de senha.
+     *
+     * Por segurança, sempre retorna sucesso mesmo se o email não existir.
+     */
     public function forgotPassword(ForgotPasswordRequest $request, ForgotPasswordAction $action): JsonResponse
     {
         $action->execute($request);
@@ -142,6 +164,9 @@ final class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Redefinir senha usando token recebido por email.
+     */
     public function resetPassword(ResetPasswordRequest $request, ResetPasswordAction $action): JsonResponse
     {
         $action->execute($request);

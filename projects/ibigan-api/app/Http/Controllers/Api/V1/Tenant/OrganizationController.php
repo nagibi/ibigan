@@ -30,6 +30,11 @@ final class OrganizationController extends Controller
         private readonly WebhookDispatchService $webhookDispatchService,
     ) {}
 
+    /**
+     * Listar organizações paginadas.
+     *
+     * Requer permissão `empresa-visualizar`.
+     */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('empresa-visualizar'), Response::HTTP_FORBIDDEN);
@@ -54,6 +59,11 @@ final class OrganizationController extends Controller
         ]);
     }
 
+    /**
+     * Retornar uma organização específica.
+     *
+     * Requer permissão `empresa-visualizar`.
+     */
     public function show(Request $request, int $organization): JsonResponse
     {
         abort_unless($request->user()->can('empresa-visualizar'), Response::HTTP_FORBIDDEN);
@@ -67,6 +77,11 @@ final class OrganizationController extends Controller
         ]);
     }
 
+    /**
+     * Criar nova organização.
+     *
+     * Requer permissão `empresa-gerenciar`. Dispara notificação e webhook `organization.created`.
+     */
     public function store(StoreOrganizationRequest $request): JsonResponse
     {
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -89,6 +104,11 @@ final class OrganizationController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    /**
+     * Atualizar organização existente.
+     *
+     * Requer permissão `empresa-gerenciar`. Dispara webhook `organization.updated`.
+     */
     public function update(UpdateOrganizationRequest $request, Organization $organization): JsonResponse
     {
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -107,6 +127,11 @@ final class OrganizationController extends Controller
         ]);
     }
 
+    /**
+     * Remover organização.
+     *
+     * Requer permissão `empresa-gerenciar`. Dispara webhook `organization.deleted`.
+     */
     public function destroy(Request $request, Organization $organization): JsonResponse
     {
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -127,6 +152,11 @@ final class OrganizationController extends Controller
         ]);
     }
 
+    /**
+     * Iniciar exportação de organizações para Excel.
+     *
+     * Requer permissão `empresa-gerenciar`. A exportação é processada em fila.
+     */
     public function export(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -142,6 +172,11 @@ final class OrganizationController extends Controller
         ]);
     }
 
+    /**
+     * Fazer upload do logo da organização.
+     *
+     * Requer permissão `empresa-gerenciar`. Aceita JPG, PNG ou WebP até 2MB.
+     */
     public function uploadLogo(Request $request, int $organization): JsonResponse
     {
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);

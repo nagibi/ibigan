@@ -27,6 +27,11 @@ final class InviteController extends Controller
         private readonly WebhookDispatchService $webhookDispatchService,
     ) {}
 
+    /**
+     * Listar convites paginados.
+     *
+     * Requer permissão `usuario-visualizar`.
+     */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
@@ -51,6 +56,11 @@ final class InviteController extends Controller
         ]);
     }
 
+    /**
+     * Criar convite e enfileirar e-mail de convite.
+     *
+     * Requer permissão `usuario-gerenciar`.
+     */
     public function store(StoreInviteRequest $request): JsonResponse
     {
         abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -65,6 +75,11 @@ final class InviteController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    /**
+     * Cancelar convite pendente.
+     *
+     * Requer permissão `usuario-gerenciar`.
+     */
     public function destroy(Request $request, Invite $invite): JsonResponse
     {
         abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
@@ -78,6 +93,11 @@ final class InviteController extends Controller
         ]);
     }
 
+    /**
+     * Aceitar convite e criar usuário no tenant.
+     *
+     * Rota pública. Requer header `X-Tenant-ID` e token do convite.
+     */
     public function accept(AcceptInviteRequest $request): JsonResponse
     {
         $tenantId = $request->header('X-Tenant-ID');

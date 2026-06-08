@@ -14,6 +14,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class TenantSettingsController extends Controller
 {
+    /**
+     * Retornar configurações do tenant atual.
+     */
     public function show(Request $request): JsonResponse
     {
         return response()->json([
@@ -23,6 +26,11 @@ final class TenantSettingsController extends Controller
         ]);
     }
 
+    /**
+     * Atualizar configurações do tenant (nome, timezone, locale).
+     *
+     * Requer role admin ou super-admin.
+     */
     public function update(UpdateTenantSettingsRequest $request): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -37,6 +45,9 @@ final class TenantSettingsController extends Controller
         ]);
     }
 
+    /**
+     * Fazer upload do logo do tenant.
+     */
     public function uploadLogo(Request $request): JsonResponse
     {
         $this->ensureAdmin($request);
@@ -58,6 +69,9 @@ final class TenantSettingsController extends Controller
         ]);
     }
 
+    /**
+     * Remover logo do tenant.
+     */
     public function deleteLogo(Request $request): JsonResponse
     {
         $this->ensureAdmin($request);

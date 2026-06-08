@@ -16,6 +16,11 @@ use PragmaRX\Google2FALaravel\Facade as Google2FA;
 
 final class TwoFactorChallengeController extends Controller
 {
+    /**
+     * Validar desafio 2FA após login e retornar token de acesso.
+     *
+     * Aceita código OTP ou recovery code. Rota pública.
+     */
     public function verify(Request $request): JsonResponse
     {
         $request->validate([

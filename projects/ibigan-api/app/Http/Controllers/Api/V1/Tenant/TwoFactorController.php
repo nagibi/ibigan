@@ -15,6 +15,11 @@ use PragmaRX\Google2FALaravel\Facade as Google2FA;
 
 final class TwoFactorController extends Controller
 {
+    /**
+     * Iniciar configuração de autenticação em duas etapas.
+     *
+     * Gera secret, QR code e recovery codes. Requer confirmação via OTP.
+     */
     public function enable(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -45,6 +50,9 @@ final class TwoFactorController extends Controller
         ]);
     }
 
+    /**
+     * Confirmar 2FA com código OTP do aplicativo autenticador.
+     */
     public function confirm(Request $request): JsonResponse
     {
         $request->validate([
@@ -81,6 +89,11 @@ final class TwoFactorController extends Controller
         ]);
     }
 
+    /**
+     * Desativar autenticação em duas etapas.
+     *
+     * Requer senha atual do usuário.
+     */
     public function disable(Request $request): JsonResponse
     {
         $request->validate([
@@ -101,6 +114,9 @@ final class TwoFactorController extends Controller
         ]);
     }
 
+    /**
+     * Retornar recovery codes do 2FA.
+     */
     public function recoveryCodes(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -120,6 +136,9 @@ final class TwoFactorController extends Controller
         ]);
     }
 
+    /**
+     * Gerar novos recovery codes e invalidar os anteriores.
+     */
     public function regenerateRecoveryCodes(Request $request): JsonResponse
     {
         $user = $request->user();

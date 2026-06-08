@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Hash;
 
 final class ProfileController extends Controller
 {
+    /**
+     * Retornar perfil do usuário autenticado.
+     */
     public function show(Request $request): JsonResponse
     {
         return response()->json([
@@ -23,6 +26,9 @@ final class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Atualizar nome e e-mail do perfil.
+     */
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -35,6 +41,11 @@ final class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Atualizar senha do perfil.
+     *
+     * Invalida tokens de acesso anteriores, exceto o atual.
+     */
     public function updatePassword(UpdatePasswordRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -51,6 +62,9 @@ final class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Fazer upload do avatar do perfil.
+     */
     public function uploadAvatar(Request $request): JsonResponse
     {
         $request->validate([
@@ -68,6 +82,9 @@ final class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Remover avatar do perfil.
+     */
     public function deleteAvatar(Request $request): JsonResponse
     {
         $request->user()->clearMediaCollection('avatar');

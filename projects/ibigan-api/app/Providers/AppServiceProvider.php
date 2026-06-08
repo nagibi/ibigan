@@ -46,8 +46,9 @@ class AppServiceProvider extends ServiceProvider
         Scramble::registerJsonSpecificationRoute('docs/api.json');
 
         Scramble::extendOpenApi(function (OpenApi $openApi): void {
-            $openApi->info->title = 'Ibigan API';
-            $openApi->info->version = '1.0.0';
+            $openApi->info->title = config('scramble.ui.title', 'Ibigan API');
+            $openApi->info->version = config('scramble.info.version', '1.0.0');
+            $openApi->info->description = config('scramble.info.description', '');
         });
     }
 }
