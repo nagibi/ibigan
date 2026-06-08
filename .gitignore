@@ -1,0 +1,15 @@
+.env
+.env.local
+.env.*.local
+projects/ibigan-api/.env
+projects/ibigan-web/.env.local
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+docker/mysql/data/
+node_modules/
+projects/ibigan-api/vendor/
+projects/ibigan-api/storage/logs/
+projects/ibigan-api/.phpunit.cache/
