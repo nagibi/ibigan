@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Settings, User } from 'lucide-react';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { getInitials } from '@/lib/helpers';
+import { resetEcho } from '@/lib/echo';
 import { useAuthStore } from '@/stores/auth.store';
 import { authService } from '@/services/auth.service';
 import {
@@ -29,6 +30,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     } catch {
       // ignora erro de rede
     } finally {
+      resetEcho();
       logout();
       navigate('/auth/login');
     }

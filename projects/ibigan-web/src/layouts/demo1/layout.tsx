@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Outlet, useLocation } from 'react-router-dom';
 import { MENU_SIDEBAR } from '@/config/menu.config';
 import { useMenu } from '@/hooks/use-menu';
+import { useNotifications } from '@/hooks/use-notifications';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
 import { Footer } from './components/footer';
@@ -10,6 +11,8 @@ import { Header } from './components/header';
 import { Sidebar } from './components/sidebar';
 
 export function Demo1Layout() {
+  useNotifications();
+
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
   const { getCurrentItem } = useMenu(pathname);
