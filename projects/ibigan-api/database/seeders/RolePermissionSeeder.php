@@ -18,6 +18,7 @@ class RolePermissionSeeder extends Seeder
         'relatorio',
         'permissao',
         'notificacao',
+        'template',
     ];
 
     public function run(): void
