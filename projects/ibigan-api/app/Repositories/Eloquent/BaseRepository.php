@@ -40,6 +40,7 @@ abstract class BaseRepository implements BaseRepositoryInterface
     public function update(Model $model, array $data): Model
     {
         $model->update($data);
+
         return $model->refresh();
     }
 
