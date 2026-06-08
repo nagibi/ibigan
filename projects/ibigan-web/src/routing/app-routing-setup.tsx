@@ -5,6 +5,8 @@ import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { TwoFactorPage } from '@/pages/auth/two-factor-page';
 import { DashboardPage } from '@/pages/dashboard/dashboard-page';
+import { MenuFormPage } from '@/pages/menus/menu-form-page';
+import { MenusPage } from '@/pages/menus/menus-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
@@ -69,6 +71,9 @@ export function AppRoutingSetup() {
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/novo" element={<UserFormPage />} />
         <Route path="/users/:id/editar" element={<UserFormPage />} />
+        <Route path="/menus" element={<MenusPage />} />
+        <Route path="/menus/novo" element={<MenuFormPage />} />
+        <Route path="/menus/:id/editar" element={<MenuFormPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
