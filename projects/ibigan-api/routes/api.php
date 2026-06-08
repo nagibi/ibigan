@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Central\TenantController;
+use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
+use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +15,14 @@ Route::prefix('v1')->group(function () {
     });
 });
 
+// Rotas centrais — banco landlord, sem contexto de tenant
+Route::prefix('central/v1')
+    ->middleware(['auth:sanctum'])
+    ->group(function () {
+        Route::get('tenants', [TenantController::class, 'index']);
+        Route::post('tenants/switch', [TenantController::class, 'switch']);
+    });
+
 // Rotas protegidas — requer X-Tenant-ID + token Sanctum
 Route::prefix('v1')
     ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum'])
@@ -21,5 +32,21 @@ Route::prefix('v1')
             Route::post('logout', [AuthController::class, 'logout']);
         });
 
+        Route::get('users/export', [UserController::class, 'export']);
         Route::apiResource('users', UserController::class);
+        Route::post('users/{user}/avatar', [UserController::class, 'uploadAvatar']);
+        Route::get('organizations/export', [OrganizationController::class, 'export']);
+        Route::apiResource('organizations', OrganizationController::class);
+        Route::post('organizations/{organization}/logo', [OrganizationController::class, 'uploadLogo']);
+
+        Route::get('activity-logs', [ActivityLogController::class, 'index']);
+        Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);
+    });
+
+// Rotas centrais — superusuário (sem InitializeTenancyByHeader)
+Route::prefix('central/v1')
+    ->middleware(['auth:sanctum'])
+    ->group(function () {
+        Route::get('tenants', [TenantController::class, 'index']);
+        Route::post('tenants/switch', [TenantController::class, 'switch']);
     });
