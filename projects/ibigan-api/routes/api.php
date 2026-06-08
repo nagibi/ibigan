@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
+use App\Http\Controllers\Api\V1\Tenant\ProfileController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,14 @@ Route::prefix('v1')
         Route::prefix('auth')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
+        });
+
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [ProfileController::class, 'show']);
+            Route::put('/', [ProfileController::class, 'update']);
+            Route::put('password', [ProfileController::class, 'updatePassword']);
+            Route::post('avatar', [ProfileController::class, 'uploadAvatar']);
+            Route::delete('avatar', [ProfileController::class, 'deleteAvatar']);
         });
 
         Route::get('users/export', [UserController::class, 'export']);

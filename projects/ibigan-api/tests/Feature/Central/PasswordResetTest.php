@@ -9,11 +9,13 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $tenantId = 'tenant-'.uniqid();
+    /** @var TestCase&object{tenant: Tenant, user: User} $this */
     $this->tenant = Tenant::create([
         'id' => $tenantId,
         'slug' => $tenantId,
