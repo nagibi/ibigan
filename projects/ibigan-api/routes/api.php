@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
+use App\Http\Controllers\Api\V1\Tenant\InviteController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
@@ -19,6 +20,9 @@ Route::prefix('v1')->group(function () {
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
     });
+
+    Route::post('invites/accept', [InviteController::class, 'accept'])
+        ->middleware(InitializeTenancyByHeader::class);
 });
 
 // Rotas centrais — banco landlord, sem contexto de tenant
@@ -58,6 +62,8 @@ Route::prefix('v1')
 
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::apiResource('message-templates', MessageTemplateController::class);
+
+        Route::apiResource('invites', InviteController::class)->only(['index', 'store', 'destroy']);
 
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);

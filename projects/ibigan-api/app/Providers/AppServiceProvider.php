@@ -6,11 +6,13 @@ namespace App\Providers;
 
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use App\Repositories\Contracts\CentralUserRepositoryInterface;
+use App\Repositories\Contracts\InviteRepositoryInterface;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
 use App\Repositories\Contracts\OrganizationRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentActivityLogRepository;
 use App\Repositories\Eloquent\EloquentCentralUserRepository;
+use App\Repositories\Eloquent\EloquentInviteRepository;
 use App\Repositories\Eloquent\EloquentMessageTemplateRepository;
 use App\Repositories\Eloquent\EloquentOrganizationRepository;
 use App\Repositories\Eloquent\EloquentUserRepository;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(CentralUserRepositoryInterface::class, EloquentCentralUserRepository::class);
+        $this->app->bind(InviteRepositoryInterface::class, EloquentInviteRepository::class);
         $this->app->bind(MessageTemplateRepositoryInterface::class, EloquentMessageTemplateRepository::class);
         $this->app->bind(OrganizationRepositoryInterface::class, EloquentOrganizationRepository::class);
         $this->app->bind(ActivityLogRepositoryInterface::class, EloquentActivityLogRepository::class);
