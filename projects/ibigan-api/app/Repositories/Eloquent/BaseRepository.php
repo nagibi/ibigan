@@ -12,44 +12,44 @@ use Illuminate\Database\Eloquent\Model;
 abstract class BaseRepository implements BaseRepositoryInterface
 {
     public function __construct(
-        protected readonly Model \$model,
+        protected readonly Model $model,
     ) {}
 
-    public function findById(int|string \$id): ?Model
+    public function findById(int|string $id): ?Model
     {
-        return \$this->model->newQuery()->find(\$id);
+        return $this->model->newQuery()->find($id);
     }
 
-    public function findOrFail(int|string \$id): Model
+    public function findOrFail(int|string $id): Model
     {
-        return \$this->model->newQuery()->findOrFail(\$id);
+        return $this->model->newQuery()->findOrFail($id);
     }
 
-    public function paginate(int \$perPage = 15, array \$filters = []): LengthAwarePaginator
+    public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
-        return \$this->applyFilters(\$this->model->newQuery(), \$filters)
+        return $this->applyFilters($this->model->newQuery(), $filters)
             ->latest()
-            ->paginate(\$perPage);
+            ->paginate($perPage);
     }
 
-    public function create(array \$data): Model
+    public function create(array $data): Model
     {
-        return \$this->model->newQuery()->create(\$data);
+        return $this->model->newQuery()->create($data);
     }
 
-    public function update(Model \$model, array \$data): Model
+    public function update(Model $model, array $data): Model
     {
-        \$model->update(\$data);
-        return \$model->refresh();
+        $model->update($data);
+        return $model->refresh();
     }
 
-    public function delete(Model \$model): void
+    public function delete(Model $model): void
     {
-        \$model->delete();
+        $model->delete();
     }
 
-    protected function applyFilters(Builder \$query, array \$filters): Builder
+    protected function applyFilters(Builder $query, array $filters): Builder
     {
-        return \$query;
+        return $query;
     }
 }
