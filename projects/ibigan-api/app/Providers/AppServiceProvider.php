@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentUserRepository;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,6 +18,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
+
+        Scramble::ignoreDefaultRoutes();
     }
 
     /**
@@ -23,6 +27,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Scramble::registerUiRoute('docs/api');
+        Scramble::registerJsonSpecificationRoute('docs/api.json');
+
+        Scramble::extendOpenApi(function (OpenApi $openApi): void {
+            $openApi->info->title = 'Ibigan API';
+            $openApi->info->version = '1.0.0';
+        });
     }
 }
