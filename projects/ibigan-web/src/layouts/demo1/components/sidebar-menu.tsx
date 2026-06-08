@@ -2,8 +2,8 @@
 
 import { JSX, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MENU_SIDEBAR } from '@/config/menu.config';
 import { MenuConfig, MenuItem } from '@/config/types';
+import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { cn } from '@/lib/utils';
 import {
   AccordionMenu,
@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 export function SidebarMenu() {
+  const menu = useDynamicMenu();
   const { pathname } = useLocation();
 
   // Memoize matchPath to prevent unnecessary re-renders
@@ -218,7 +219,7 @@ export function SidebarMenu() {
         collapsible
         classNames={classNames}
       >
-        {buildMenu(MENU_SIDEBAR)}
+        {buildMenu(menu)}
       </AccordionMenu>
     </div>
   );
