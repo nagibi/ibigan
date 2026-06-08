@@ -17,8 +17,8 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email'     => ['required', 'email'],
-            'password'  => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
             'tenant_id' => ['required', 'string'],
         ]);
 
@@ -43,17 +43,17 @@ class AuthController extends Controller
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
-            'status'      => 1,
-            'message'     => 'MSG000067',
+            'status' => 1,
+            'message' => 'MSG000067',
             'description' => 'Login efetuado com sucesso!',
-            'result'      => [
-                'token'     => $token,
+            'result' => [
+                'token' => $token,
                 'tenant_id' => $tenant->id,
-                'user'      => [
-                    'id'          => $user->id,
-                    'name'        => $user->name,
-                    'email'       => $user->email,
-                    'roles'       => $user->getRoleNames(),
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->getRoleNames(),
                     'permissions' => $user->getAllPermissions()->pluck('name'),
                 ],
             ],
@@ -65,13 +65,13 @@ class AuthController extends Controller
         $user = $request->user();
 
         return response()->json([
-            'status'  => 1,
+            'status' => 1,
             'message' => 'MSG000067',
-            'result'  => [
-                'id'          => $user->id,
-                'name'        => $user->name,
-                'email'       => $user->email,
-                'roles'       => $user->getRoleNames(),
+            'result' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ],
         ]);
@@ -82,10 +82,10 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'status'      => 1,
-            'message'     => 'MSG000416',
+            'status' => 1,
+            'message' => 'MSG000416',
             'description' => 'Logout efetuado com sucesso!',
-            'result'      => null,
+            'result' => null,
         ]);
     }
 }

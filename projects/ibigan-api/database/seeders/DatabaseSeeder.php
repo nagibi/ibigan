@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             User::firstOrCreate(
                 ['email' => 'super@ibigan.com'],
                 [
-                    'name'     => 'Super Admin',
+                    'name' => 'Super Admin',
                     'password' => Hash::make('A12345'),
                 ]
             );

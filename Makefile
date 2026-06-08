@@ -73,3 +73,9 @@ horizon-pause: ## Pausa o Horizon
 
 horizon-resume: ## Retoma o Horizon
 	docker compose exec app php artisan horizon:continue
+
+lint: ## Verifica estilo do código com Pint
+	docker compose exec app ./vendor/bin/pint --test
+
+lint-fix: ## Corrige estilo do código com Pint
+	docker compose exec app ./vendor/bin/pint
