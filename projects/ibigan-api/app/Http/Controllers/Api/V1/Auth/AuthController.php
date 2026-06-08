@@ -16,7 +16,9 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 final class AuthController extends Controller
@@ -44,6 +46,26 @@ final class AuthController extends Controller
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['As credenciais informadas estão incorretas.'],
+            ]);
+        }
+
+        if ($user->two_factor_confirmed_at !== null) {
+            $twoFactorToken = Str::uuid()->toString();
+
+            Cache::put('two_factor:'.$twoFactorToken, [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+            ], now()->addMinutes(5));
+
+            return response()->json([
+                'status' => 1,
+                'message' => 'MSG000067',
+                'description' => 'Autenticação em duas etapas necessária.',
+                'result' => [
+                    'requires_2fa' => true,
+                    'two_factor_token' => $twoFactorToken,
+                    'tenant_id' => $tenant->id,
+                ],
             ]);
         }
 

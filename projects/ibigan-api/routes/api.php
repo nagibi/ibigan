@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
 use App\Http\Controllers\Api\V1\Tenant\ProfileController;
+use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
@@ -21,6 +23,7 @@ Route::prefix('v1')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'verify']);
     });
 
     Route::post('invites/accept', [InviteController::class, 'accept'])
@@ -42,6 +45,14 @@ Route::prefix('v1')
         Route::prefix('auth')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
+        });
+
+        Route::prefix('two-factor')->group(function () {
+            Route::post('enable', [TwoFactorController::class, 'enable']);
+            Route::post('confirm', [TwoFactorController::class, 'confirm']);
+            Route::post('disable', [TwoFactorController::class, 'disable']);
+            Route::get('recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
+            Route::post('recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes']);
         });
 
         Route::prefix('profile')->group(function () {
