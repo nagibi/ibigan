@@ -14,6 +14,7 @@ final class UserData extends Data
         public string $name,
         public string $email,
         public ?string $status,
+        public ?string $avatar_url,
         /** @var array<int, string> */
         public array $roles,
         /** @var array<int, string> */
@@ -28,6 +29,7 @@ final class UserData extends Data
             name: $user->name,
             email: $user->email,
             status: $user->status,
+            avatar_url: $user->getFirstMediaUrl('avatar') ?: null,
             roles: $user->getRoleNames()->toArray(),
             permissions: $user->getAllPermissions()->pluck('name')->toArray(),
             created_at: $user->created_at->toIso8601String(),
