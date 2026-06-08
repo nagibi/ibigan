@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api\V1\Central;
+
+use App\Data\TenantSettingsData;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\UpdateTenantSettingsRequest;
+use App\Models\Tenant;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+final class TenantSettingsController extends Controller
+{
+    public function show(Request $request): JsonResponse
+    {
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000067',
+            'result' => TenantSettingsData::fromModel($this->currentTenant()),
+        ]);
+    }
+
+    public function update(UpdateTenantSettingsRequest $request): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $tenant = $this->currentTenant();
+        $tenant->update($request->validated());
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000425',
+            'result' => TenantSettingsData::fromModel($tenant->fresh()),
+        ]);
+    }
+
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $request->validate([
+            'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        $tenant = $this->currentTenant();
+
+        $tenant
+            ->addMediaFromRequest('logo')
+            ->toMediaCollection('logo');
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000425',
+            'result' => TenantSettingsData::fromModel($tenant->fresh()),
+        ]);
+    }
+
+    public function deleteLogo(Request $request): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $this->currentTenant()->clearMediaCollection('logo');
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000426',
+            'result' => null,
+        ]);
+    }
+
+    private function currentTenant(): Tenant
+    {
+        /** @var Tenant $tenant */
+        $tenant = tenant();
+
+        return $tenant;
+    }
+
+    private function ensureAdmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()->hasAnyRole(['admin', 'super-admin']),
+            Response::HTTP_FORBIDDEN
+        );
+    }
+}

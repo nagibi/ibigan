@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
+use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
 use App\Http\Controllers\Api\V1\Tenant\InviteController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
@@ -49,6 +50,11 @@ Route::prefix('v1')
             Route::post('avatar', [ProfileController::class, 'uploadAvatar']);
             Route::delete('avatar', [ProfileController::class, 'deleteAvatar']);
         });
+
+        Route::get('tenant/settings', [TenantSettingsController::class, 'show']);
+        Route::put('tenant/settings', [TenantSettingsController::class, 'update']);
+        Route::post('tenant/settings/logo', [TenantSettingsController::class, 'uploadLogo']);
+        Route::delete('tenant/settings/logo', [TenantSettingsController::class, 'deleteLogo']);
 
         Route::get('users/export', [UserController::class, 'export']);
         Route::apiResource('users', UserController::class);
