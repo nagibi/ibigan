@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Actions\Auth\ForgotPasswordAction;
 use App\Actions\Auth\RegisterAction;
+use App\Actions\Auth\ResetPasswordAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -102,5 +106,29 @@ final class AuthController extends Controller
             'description' => 'Conta criada com sucesso!',
             'result' => $result,
         ], Response::HTTP_CREATED);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request, ForgotPasswordAction $action): JsonResponse
+    {
+        $action->execute($request);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000067',
+            'description' => 'Se o e-mail existir, você receberá as instruções em breve.',
+            'result' => null,
+        ]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request, ResetPasswordAction $action): JsonResponse
+    {
+        $action->execute($request);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000425',
+            'description' => 'Senha redefinida com sucesso!',
+            'result' => null,
+        ]);
     }
 }
