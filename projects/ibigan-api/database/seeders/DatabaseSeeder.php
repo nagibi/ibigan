@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Models\Tenant;
@@ -11,21 +13,25 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Criar tenant de demonstração
         $tenant = Tenant::firstOrCreate(
             ['id' => 'acme'],
             ['slug' => 'acme']
         );
 
-        // Criar usuário admin dentro do tenant
         $tenant->run(function () {
-            User::firstOrCreate(
+            $this->call(RolePermissionSeeder::class);
+
+            $user = User::firstOrCreate(
                 ['email' => 'super@ibigan.com'],
                 [
                     'name' => 'Super Admin',
                     'password' => Hash::make('A12345'),
+                    'status' => 'active',
+                    'is_super_admin' => true,
                 ]
             );
+
+            $user->syncRoles(['super-admin']);
         });
     }
 }
