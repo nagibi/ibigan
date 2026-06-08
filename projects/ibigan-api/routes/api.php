@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
 use App\Http\Controllers\Api\V1\Tenant\ProfileController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
+use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Route;
 
@@ -75,6 +76,9 @@ Route::prefix('v1')
         Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
+
+        Route::get('webhooks/{webhook}/deliveries', [WebhookController::class, 'deliveries']);
+        Route::apiResource('webhooks', WebhookController::class);
     });
 
 // Rotas centrais — superusuário (sem InitializeTenancyByHeader)

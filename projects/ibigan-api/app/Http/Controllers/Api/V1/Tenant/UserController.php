@@ -7,12 +7,14 @@ namespace App\Http\Controllers\Api\V1\Tenant;
 use App\Actions\User\CreateUserAction;
 use App\Actions\User\UpdateUserAction;
 use App\Data\UserData;
+use App\Enums\WebhookEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use App\Notifications\UserCreatedNotification;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\WebhookDispatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,6 +25,7 @@ final class UserController extends Controller
         private readonly UserRepositoryInterface $userRepository,
         private readonly CreateUserAction $createUserAction,
         private readonly UpdateUserAction $updateUserAction,
+        private readonly WebhookDispatchService $webhookDispatchService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -72,6 +75,11 @@ final class UserController extends Controller
             fn (User $admin) => $admin->notify(new UserCreatedNotification($user))
         );
 
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::UserCreated->value,
+            UserData::fromModel($user)->toArray(),
+        );
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000424',
@@ -85,6 +93,11 @@ final class UserController extends Controller
 
         $updatedUser = $this->updateUserAction->execute($user, $request);
 
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::UserUpdated->value,
+            UserData::fromModel($updatedUser)->toArray(),
+        );
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000425',
@@ -96,7 +109,14 @@ final class UserController extends Controller
     {
         abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
 
+        $userData = UserData::fromModel($user)->toArray();
+
         $this->userRepository->delete($user);
+
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::UserDeleted->value,
+            $userData,
+        );
 
         return response()->json([
             'status' => 1,

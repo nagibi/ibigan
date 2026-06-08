@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Tenant;
 use App\Actions\Organization\CreateOrganizationAction;
 use App\Actions\Organization\UpdateOrganizationAction;
 use App\Data\OrganizationData;
+use App\Enums\WebhookEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organization\StoreOrganizationRequest;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
@@ -15,6 +16,7 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Notifications\OrganizationCreatedNotification;
 use App\Repositories\Contracts\OrganizationRepositoryInterface;
+use App\Services\WebhookDispatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +27,7 @@ final class OrganizationController extends Controller
         private readonly OrganizationRepositoryInterface $organizationRepository,
         private readonly CreateOrganizationAction $createOrganizationAction,
         private readonly UpdateOrganizationAction $updateOrganizationAction,
+        private readonly WebhookDispatchService $webhookDispatchService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -74,6 +77,11 @@ final class OrganizationController extends Controller
             fn (User $admin) => $admin->notify(new OrganizationCreatedNotification($organization))
         );
 
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::OrganizationCreated->value,
+            OrganizationData::fromModel($organization)->toArray(),
+        );
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000424',
@@ -87,6 +95,11 @@ final class OrganizationController extends Controller
 
         $updatedOrganization = $this->updateOrganizationAction->execute($organization, $request);
 
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::OrganizationUpdated->value,
+            OrganizationData::fromModel($updatedOrganization)->toArray(),
+        );
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000425',
@@ -98,7 +111,14 @@ final class OrganizationController extends Controller
     {
         abort_unless($request->user()->can('empresa-gerenciar'), Response::HTTP_FORBIDDEN);
 
+        $organizationData = OrganizationData::fromModel($organization)->toArray();
+
         $this->organizationRepository->delete($organization);
+
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::OrganizationDeleted->value,
+            $organizationData,
+        );
 
         return response()->json([
             'status' => 1,

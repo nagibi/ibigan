@@ -7,11 +7,13 @@ namespace App\Http\Controllers\Api\V1\Tenant;
 use App\Actions\Invite\AcceptInviteAction;
 use App\Actions\Invite\CreateInviteAction;
 use App\Data\InviteData;
+use App\Enums\WebhookEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Invite\AcceptInviteRequest;
 use App\Http\Requests\Invite\StoreInviteRequest;
 use App\Models\Invite;
 use App\Repositories\Contracts\InviteRepositoryInterface;
+use App\Services\WebhookDispatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,6 +24,7 @@ final class InviteController extends Controller
         private readonly InviteRepositoryInterface $inviteRepository,
         private readonly CreateInviteAction $createInviteAction,
         private readonly AcceptInviteAction $acceptInviteAction,
+        private readonly WebhookDispatchService $webhookDispatchService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -88,6 +91,14 @@ final class InviteController extends Controller
         }
 
         $result = $this->acceptInviteAction->execute($request, $tenantId);
+
+        $this->webhookDispatchService->dispatch(
+            WebhookEvent::InviteAccepted->value,
+            [
+                'token' => $request->validated('token'),
+                'user' => $result['user'],
+            ],
+        );
 
         return response()->json([
             'status' => 1,
