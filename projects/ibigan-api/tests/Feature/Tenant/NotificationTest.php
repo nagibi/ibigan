@@ -9,11 +9,14 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $tenantId = 'tenant-'.uniqid();
+
+    /** @var TestCase&object{tenant: Tenant, admin: User, viewer: User} $this */
     $this->tenant = Tenant::create([
         'id' => $tenantId,
         'slug' => $tenantId,

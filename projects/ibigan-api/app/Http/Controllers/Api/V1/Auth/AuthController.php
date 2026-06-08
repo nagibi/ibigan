@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Actions\Auth\RegisterAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -87,5 +90,17 @@ final class AuthController extends Controller
             'description' => 'Logout efetuado com sucesso!',
             'result' => null,
         ]);
+    }
+
+    public function register(RegisterRequest $request, RegisterAction $action): JsonResponse
+    {
+        $result = $action->execute($request);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000424',
+            'description' => 'Conta criada com sucesso!',
+            'result' => $result,
+        ], Response::HTTP_CREATED);
     }
 }
