@@ -15,10 +15,12 @@ import {
 } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
-import { toAbsoluteUrl } from '@/lib/helpers';
+import { getInitials, toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollPosition } from '@/hooks/use-scroll-position';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -38,6 +40,7 @@ export function Header() {
   const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
 
   const { pathname } = useLocation();
+  const { user } = useAuthStore();
   const mobileMode = useIsMobile();
 
   const scrollPosition = useScrollPosition();
@@ -179,11 +182,11 @@ export function Header() {
               />
               <UserDropdownMenu
                 trigger={
-                  <img
-                    className="size-9 rounded-full border-2 border-green-500 shrink-0 cursor-pointer"
-                    src={toAbsoluteUrl('/media/avatars/300-2.png')}
-                    alt="User Avatar"
-                  />
+                  <Avatar className="size-9 cursor-pointer border-2 border-green-500">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                      {getInitials(user?.name ?? 'U', 2)}
+                    </AvatarFallback>
+                  </Avatar>
                 }
               />
             </>

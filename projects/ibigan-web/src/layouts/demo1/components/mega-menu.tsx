@@ -19,6 +19,11 @@ import {
 export function MegaMenu() {
   const { pathname } = useLocation();
   const { isActive, hasActiveChild } = useMenu(pathname);
+
+  if (!MENU_MEGA.length) {
+    return null;
+  }
+
   const homeItem = MENU_MEGA[0];
   const publicProfilesItem = MENU_MEGA[1];
   const myAccountItem = MENU_MEGA[2];
