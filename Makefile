@@ -66,7 +66,7 @@ optimize: ## Limpa e reotimiza caches
 	docker compose exec app php artisan optimize
 
 test: ## Roda testes
-	docker compose exec app php artisan test --parallel
+	docker compose exec app php artisan test
 
 horizon-pause: ## Pausa o Horizon
 	docker compose exec app php artisan horizon:pause

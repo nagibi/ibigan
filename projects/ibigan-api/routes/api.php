@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Route;
 
@@ -19,4 +20,6 @@ Route::prefix('v1')
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
         });
+
+        Route::apiResource('users', UserController::class);
     });
