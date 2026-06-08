@@ -452,7 +452,7 @@ class UserPolicy
 
 - **Pest PHP 3** — framework principal. Não usar PHPUnit puro.
 - Arquivos de teste em `tests/Unit`, `tests/Feature`, `tests/Browser`.
-- Nomenclatura: `it('creates a user with valid data')` — sempre em inglês, descritivo.
+- Nomenclatura: `it('cria um usuário com dados válidos')` — sempre em **português**, descritivo e focado na funcionalidade de negócio.
 
 ### 12.2 Testes unitários (`tests/Unit`)
 

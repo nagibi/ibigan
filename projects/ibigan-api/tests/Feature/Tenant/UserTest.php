@@ -52,7 +52,7 @@ function tenantHeaders(string $tenantId): array
     return ['X-Tenant-ID' => $tenantId];
 }
 
-it('returns paginated users for users with view permission', function (): void {
+it('retorna lista paginada de usuários para quem tem permissão de visualizar', function (): void {
     $this->tenant->run(fn () => User::factory()->count(3)->create());
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
@@ -72,7 +72,7 @@ it('returns paginated users for users with view permission', function (): void {
         ->assertJsonPath('status', 1);
 });
 
-it('shows a single user for users with view permission', function (): void {
+it('retorna um usuário específico para quem tem permissão de visualizar', function (): void {
     $targetUser = $this->tenant->run(fn () => User::factory()->create());
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
@@ -84,7 +84,7 @@ it('shows a single user for users with view permission', function (): void {
         ->assertJsonPath('result.email', $targetUser->email);
 });
 
-it('creates a user for users with manage permission', function (): void {
+it('cria um usuário para quem tem permissão de gerenciar', function (): void {
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
     $payload = [
@@ -107,7 +107,7 @@ it('creates a user for users with manage permission', function (): void {
     });
 });
 
-it('updates a user for users with manage permission', function (): void {
+it('atualiza um usuário para quem tem permissão de gerenciar', function (): void {
     $targetUser = $this->tenant->run(fn () => User::factory()->create());
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
@@ -124,7 +124,7 @@ it('updates a user for users with manage permission', function (): void {
         ->assertJsonPath('result.email', 'updated@example.com');
 });
 
-it('deletes a user for users with manage permission', function (): void {
+it('remove um usuário para quem tem permissão de gerenciar', function (): void {
     $targetUser = $this->tenant->run(fn () => User::factory()->create());
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
@@ -139,14 +139,14 @@ it('deletes a user for users with manage permission', function (): void {
     });
 });
 
-it('allows listing users for viewers with view permission', function (): void {
+it('permite listar usuários para perfil viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
     $this->getJson('/api/v1/users', tenantHeaders($this->tenant->id))
         ->assertOk();
 });
 
-it('denies creating users for viewers', function (): void {
+it('nega criação de usuário para perfil viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
     $this->postJson('/api/v1/users', [
@@ -159,7 +159,7 @@ it('denies creating users for viewers', function (): void {
         ->assertForbidden();
 });
 
-it('denies updating users for viewers', function (): void {
+it('nega atualização de usuário para perfil viewer', function (): void {
     $targetUser = $this->tenant->run(fn () => User::factory()->create());
 
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
@@ -171,7 +171,7 @@ it('denies updating users for viewers', function (): void {
         ->assertForbidden();
 });
 
-it('denies deleting users for viewers', function (): void {
+it('nega remoção de usuário para perfil viewer', function (): void {
     $targetUser = $this->tenant->run(fn () => User::factory()->create());
 
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
