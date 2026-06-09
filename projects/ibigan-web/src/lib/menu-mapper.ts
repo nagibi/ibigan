@@ -1,13 +1,6 @@
-import * as Icons from 'lucide-react';
-import { type LucideIcon } from 'lucide-react';
 import { type MenuConfig, type MenuItem } from '@/config/types';
 import { type ApiMenu } from '@/services/menus.service';
-
-function resolveIcon(iconName: string | null): LucideIcon | undefined {
-  if (!iconName) return undefined;
-  const icon = (Icons as Record<string, unknown>)[iconName];
-  return typeof icon === 'function' ? (icon as LucideIcon) : undefined;
-}
+import { resolveMenuIcon } from '@/lib/menu-icons';
 
 export function mapApiMenusToConfig(apiMenus: ApiMenu[]): MenuConfig {
   return apiMenus
@@ -15,8 +8,14 @@ export function mapApiMenusToConfig(apiMenus: ApiMenu[]): MenuConfig {
     .sort((a, b) => a.order - b.order)
     .map((m): MenuItem => ({
       title: m.title,
-      icon: resolveIcon(m.icon),
+      icon: resolveMenuIcon({
+        icon: m.icon,
+        path: m.path,
+        slug: m.slug,
+        title: m.title,
+      }),
       path: m.path ?? undefined,
+      badge: m.badge ?? undefined,
       children: m.children?.length ? mapApiMenusToConfig(m.children) : undefined,
     }));
 }

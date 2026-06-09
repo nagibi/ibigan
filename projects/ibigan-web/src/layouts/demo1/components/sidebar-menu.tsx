@@ -2,6 +2,7 @@
 
 import { JSX, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { LayoutGrid, type LucideIcon } from 'lucide-react';
 import { MenuConfig, MenuItem } from '@/config/types';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,12 @@ import {
   AccordionMenuSubTrigger,
 } from '@/components/ui/accordion-menu';
 import { Badge } from '@/components/ui/badge';
+import { MenuBadge } from '@/lib/menu-badge';
+
+function MenuIcon({ icon }: { icon?: LucideIcon }) {
+  const Icon = icon ?? LayoutGrid;
+  return <Icon data-slot="accordion-menu-icon" />;
+}
 
 export function SidebarMenu() {
   const menu = useDynamicMenu();
@@ -60,8 +67,9 @@ export function SidebarMenu() {
       return (
         <AccordionMenuSub key={index} value={item.path || `root-${index}`}>
           <AccordionMenuSubTrigger className="text-sm font-medium">
-            {item.icon && <item.icon data-slot="accordion-menu-icon" />}
+            <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
+            <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
           </AccordionMenuSubTrigger>
           <AccordionMenuSubContent
             type="single"
@@ -84,10 +92,11 @@ export function SidebarMenu() {
         >
           <Link
             to={item.path || '#'}
-            className="flex items-center justify-between grow gap-2"
+            className="flex w-full items-center gap-2"
           >
-            {item.icon && <item.icon data-slot="accordion-menu-icon" />}
+            <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
+            <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
           </Link>
         </AccordionMenuItem>
       );
@@ -104,7 +113,7 @@ export function SidebarMenu() {
         value={`disabled-${index}`}
         className="text-sm font-medium"
       >
-        {item.icon && <item.icon data-slot="accordion-menu-icon" />}
+        <MenuIcon icon={item.icon} />
         <span data-slot="accordion-menu-title">{item.title}</span>
         {item.disabled && (
           <Badge variant="secondary" size="sm" className="ms-auto me-[-10px]">
@@ -179,7 +188,11 @@ export function SidebarMenu() {
           value={item.path || ''}
           className="text-[13px]"
         >
-          <Link to={item.path || '#'}>{item.title}</Link>
+          <Link to={item.path || '#'} className="flex w-full items-center gap-2">
+            <MenuIcon icon={item.icon} />
+            <span data-slot="accordion-menu-title">{item.title}</span>
+            <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
+          </Link>
         </AccordionMenuItem>
       );
     }
@@ -211,7 +224,7 @@ export function SidebarMenu() {
   };
 
   return (
-    <div className="kt-scrollable-y-hover flex grow shrink-0 py-5 px-5 lg:max-h-[calc(100vh-5.5rem)]">
+    <div className="sidebar-menu-scroll kt-scrollable-y-hover flex w-full grow shrink-0 py-5 px-5 lg:max-h-[calc(100vh-5.5rem)]">
       <AccordionMenu
         selectedValue={pathname}
         matchPath={matchPath}

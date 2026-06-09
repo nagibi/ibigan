@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { usersService, type User } from '@/services/users.service';
@@ -38,18 +39,23 @@ export function UsersPage() {
   const users = data?.data.result.data ?? [];
   const meta = data?.data.result.meta;
 
-  return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Usuários</h1>
-          <p className="text-sm text-muted-foreground">Gerencie os usuários do tenant.</p>
-        </div>
-        <Button onClick={() => navigate('/users/novo')}>
-          <Plus className="size-4 mr-2" /> Novo Usuário
-        </Button>
-      </div>
+  const toolbarActions = useMemo(
+    () => (
+      <Button onClick={() => navigate('/users/novo')}>
+        <Plus className="size-4 mr-2" /> Novo Usuário
+      </Button>
+    ),
+    [navigate],
+  );
 
+  usePageToolbar({
+    title: 'Usuários',
+    description: 'Gerencie os usuários do tenant.',
+    actions: toolbarActions,
+  });
+
+  return (
+    <div className="container pb-6">
       <div className="border rounded-lg">
         <Table>
           <TableHeader>

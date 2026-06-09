@@ -20,6 +20,7 @@ class MenuFactory extends Factory
             'title' => ucfirst($title),
             'slug' => Str::slug($title),
             'icon' => fake()->randomElement(['Home', 'Users', 'Settings', 'Bell']),
+            'badge' => fake()->optional(0.3)->randomElement(['Novo', 'Soon', 'Beta']),
             'path' => '/'.Str::slug($title),
             'target' => '_self',
             'parent_id' => null,

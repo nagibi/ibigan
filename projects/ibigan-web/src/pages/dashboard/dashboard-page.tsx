@@ -1,8 +1,10 @@
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+
 export function DashboardPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <p className="text-muted-foreground mt-2">Bem-vindo ao Ibigan.</p>
-    </div>
-  );
+  usePageToolbar({
+    title: 'Dashboard',
+    description: 'Bem-vindo ao Ibigan.',
+  });
+
+  return null;
 }

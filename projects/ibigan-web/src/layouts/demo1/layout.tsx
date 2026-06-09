@@ -1,13 +1,18 @@
 import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { MENU_SIDEBAR } from '@/config/menu.config';
+import { type MenuMode } from '@/config/types';
 import { useMenu } from '@/hooks/use-menu';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
+import { PageToolbarProvider } from '@/providers/page-toolbar-provider';
 import { Footer } from './components/footer';
 import { Header } from './components/header';
+import { PageContentHeader } from './components/page-content-header';
+import { PageToolbarBar } from './components/page-toolbar-bar';
 import { Sidebar } from './components/sidebar';
 
 export function Demo1Layout() {
@@ -18,44 +23,62 @@ export function Demo1Layout() {
   const { getCurrentItem } = useMenu(pathname);
   const item = getCurrentItem(MENU_SIDEBAR);
   const { settings, setOption } = useSettings();
+  const { resolvedTheme } = useTheme();
+
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
+  const isSidebarMode = menuMode !== 'horizontal';
 
   useEffect(() => {
     const bodyClass = document.body.classList;
 
-    if (settings.layouts.demo1.sidebarCollapse) {
+    if (isSidebarMode && settings.layouts.demo1.sidebarCollapse) {
       bodyClass.add('sidebar-collapse');
     } else {
       bodyClass.remove('sidebar-collapse');
     }
-  }, [settings]); // Runs only on settings update
+  }, [settings.layouts.demo1.sidebarCollapse, isSidebarMode]);
 
   useEffect(() => {
-    // Set current layout
+    if (!resolvedTheme) return;
+    const sidebarTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
+    if (settings.layouts.demo1.sidebarTheme !== sidebarTheme) {
+      setOption('layouts.demo1.sidebarTheme', sidebarTheme);
+    }
+  }, [resolvedTheme, setOption, settings.layouts.demo1.sidebarTheme]);
+
+  useEffect(() => {
     setOption('layout', 'demo1');
   }, [setOption]);
 
   useEffect(() => {
     const bodyClass = document.body.classList;
 
-    // Add a class to the body element
     bodyClass.add('demo1');
-    bodyClass.add('sidebar-fixed');
     bodyClass.add('header-fixed');
+
+    if (isSidebarMode) {
+      bodyClass.add('sidebar-fixed');
+      bodyClass.remove('menu-horizontal');
+    } else {
+      bodyClass.remove('sidebar-fixed');
+      bodyClass.remove('sidebar-collapse');
+      bodyClass.add('menu-horizontal');
+    }
 
     const timer = setTimeout(() => {
       bodyClass.add('layout-initialized');
-    }, 1000); // 1000 milliseconds
+    }, 300);
 
-    // Remove the class when the component is unmounted
     return () => {
       bodyClass.remove('demo1');
       bodyClass.remove('sidebar-fixed');
       bodyClass.remove('sidebar-collapse');
+      bodyClass.remove('menu-horizontal');
       bodyClass.remove('header-fixed');
       bodyClass.remove('layout-initialized');
       clearTimeout(timer);
     };
-  }, []); // Runs only once on mount
+  }, [isSidebarMode]);
 
   return (
     <>
@@ -63,17 +86,21 @@ export function Demo1Layout() {
         <title>{item?.title}</title>
       </Helmet>
 
-      {!isMobile && <Sidebar />}
+      {!isMobile && isSidebarMode && <Sidebar />}
 
-      <div className="wrapper flex grow flex-col">
-        <Header />
+      <PageToolbarProvider>
+        <div className="wrapper flex grow flex-col">
+          <Header />
+          <PageToolbarBar />
 
-        <main className="grow pt-5" role="content">
-          <Outlet />
-        </main>
+          <main className="grow" role="content">
+            <PageContentHeader />
+            <Outlet />
+          </main>
 
-        <Footer />
-      </div>
+          <Footer />
+        </div>
+      </PageToolbarProvider>
     </>
   );
 }

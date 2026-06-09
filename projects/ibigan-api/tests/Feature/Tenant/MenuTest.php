@@ -59,6 +59,7 @@ function menuPayload(array $overrides = []): array
         'title' => 'Dashboard',
         'slug' => 'dashboard',
         'icon' => 'LayoutDashboard',
+        'badge' => null,
         'path' => '/dashboard',
         'target' => '_self',
         'order' => 0,
@@ -82,7 +83,7 @@ it('retorna árvore de menus para quem tem permissão', function (): void {
         ->assertOk()
         ->assertJsonPath('status', 1)
         ->assertJsonStructure([
-            'result' => [['id', 'title', 'slug', 'children']],
+            'result' => [['id', 'title', 'slug', 'badge', 'children']],
         ]);
 });
 
@@ -94,13 +95,14 @@ it('nega listagem sem autenticação', function (): void {
 // --- Show ---
 
 it('retorna um menu específico', function (): void {
-    $menu = $this->tenant->run(fn () => Menu::factory()->create());
+    $menu = $this->tenant->run(fn () => Menu::factory()->create(['badge' => 'Novo']));
 
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
     $this->getJson("/api/v1/menus/{$menu->id}", menuHeaders($this->tenant->id))
         ->assertOk()
-        ->assertJsonPath('result.slug', $menu->slug);
+        ->assertJsonPath('result.slug', $menu->slug)
+        ->assertJsonPath('result.badge', 'Novo');
 });
 
 it('retorna 404 para menu inexistente', function (): void {
@@ -119,6 +121,40 @@ it('cria menu para quem tem permissão de gerenciar', function (): void {
         ->assertCreated()
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.slug', 'dashboard');
+});
+
+it('cria menu com badge opcional', function (): void {
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson('/api/v1/menus', menuPayload([
+        'slug' => 'store-admin',
+        'badge' => 'Novo',
+    ]), menuHeaders($this->tenant->id))
+        ->assertCreated()
+        ->assertJsonPath('result.badge', 'Novo');
+});
+
+it('retorna badge na árvore de menus', function (): void {
+    $this->tenant->run(function (): void {
+        Menu::factory()->create(['slug' => 'relatorios', 'badge' => 'Beta']);
+    });
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.0.badge', 'Beta');
+});
+
+it('nega criação com badge maior que 50 caracteres', function (): void {
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson('/api/v1/menus', menuPayload([
+        'slug' => 'item-badge-longo',
+        'badge' => str_repeat('a', 51),
+    ]), menuHeaders($this->tenant->id))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['badge']);
 });
 
 it('nega criação para viewer', function (): void {
@@ -164,6 +200,32 @@ it('atualiza menu para quem tem permissão', function (): void {
     ]), menuHeaders($this->tenant->id))
         ->assertOk()
         ->assertJsonPath('result.title', 'Dashboard Atualizado');
+});
+
+it('atualiza badge do menu', function (): void {
+    $menu = $this->tenant->run(fn () => Menu::factory()->create(['badge' => null]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->putJson("/api/v1/menus/{$menu->id}", menuPayload([
+        'slug' => $menu->slug,
+        'badge' => 'Soon',
+    ]), menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.badge', 'Soon');
+});
+
+it('remove badge do menu ao enviar null', function (): void {
+    $menu = $this->tenant->run(fn () => Menu::factory()->create(['badge' => 'Novo']));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->putJson("/api/v1/menus/{$menu->id}", menuPayload([
+        'slug' => $menu->slug,
+        'badge' => null,
+    ]), menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.badge', null);
 });
 
 it('nega atualização para viewer', function (): void {

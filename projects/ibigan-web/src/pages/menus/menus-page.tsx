@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, ChevronRight } from 'lucide-react';
-import * as Icons from 'lucide-react';
-import { type LucideIcon } from 'lucide-react';
+import { resolveMenuIcon } from '@/lib/menu-icons';
 import { menusService, type ApiMenu } from '@/services/menus.service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,19 +16,18 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
-function resolveIcon(name: string | null): LucideIcon | null {
-  if (!name) return null;
-  const icon = (Icons as Record<string, unknown>)[name];
-  return typeof icon === 'function' ? (icon as LucideIcon) : null;
-}
-
 function MenuRow({ menu, depth = 0, onEdit, onDelete }: {
   menu: ApiMenu;
   depth?: number;
   onEdit: (m: ApiMenu) => void;
   onDelete: (id: number) => void;
 }) {
-  const Icon = resolveIcon(menu.icon);
+  const Icon = resolveMenuIcon({
+    icon: menu.icon,
+    path: menu.path,
+    slug: menu.slug,
+    title: menu.title,
+  });
 
   return (
     <>
@@ -43,6 +42,13 @@ function MenuRow({ menu, depth = 0, onEdit, onDelete }: {
         <TableCell className="text-muted-foreground text-sm">{menu.path ?? '—'}</TableCell>
         <TableCell>
           <Badge variant="outline" className="text-xs">{menu.icon ?? '—'}</Badge>
+        </TableCell>
+        <TableCell>
+          {menu.badge ? (
+            <Badge variant="primary" appearance="light" size="sm">{menu.badge}</Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
         </TableCell>
         <TableCell>
           <Badge variant={menu.is_active ? 'default' : 'secondary'}>
@@ -90,18 +96,23 @@ export function MenusPage() {
 
   const menus = data?.data.result ?? [];
 
-  return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Menus</h1>
-          <p className="text-sm text-muted-foreground">Gerencie a navegação do sistema.</p>
-        </div>
-        <Button onClick={() => navigate('/menus/novo')}>
-          <Plus className="size-4 mr-2" /> Novo Item
-        </Button>
-      </div>
+  const toolbarActions = useMemo(
+    () => (
+      <Button onClick={() => navigate('/menus/novo')}>
+        <Plus className="size-4 mr-2" /> Novo Item
+      </Button>
+    ),
+    [navigate],
+  );
 
+  usePageToolbar({
+    title: 'Menus',
+    description: 'Gerencie a navegação do sistema.',
+    actions: toolbarActions,
+  });
+
+  return (
+    <div className="container pb-6">
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -109,6 +120,7 @@ export function MenusPage() {
               <TableHead>Título</TableHead>
               <TableHead>Caminho</TableHead>
               <TableHead>Ícone</TableHead>
+              <TableHead>Badge</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Ordem</TableHead>
               <TableHead className="w-[100px]">Ações</TableHead>
@@ -117,13 +129,13 @@ export function MenusPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : menus.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum menu cadastrado.
                 </TableCell>
               </TableRow>

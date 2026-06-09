@@ -22,6 +22,7 @@ class Menu extends Model
         'title',
         'slug',
         'icon',
+        'badge',
         'path',
         'target',
         'parent_id',

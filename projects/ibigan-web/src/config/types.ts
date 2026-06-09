@@ -18,6 +18,8 @@ export interface MenuItem {
 
 export type MenuConfig = MenuItem[];
 
+export type MenuMode = 'sidebar' | 'horizontal';
+
 export interface Settings {
   container: 'fixed' | 'fluid';
   layout: string;
@@ -25,6 +27,7 @@ export interface Settings {
     demo1: {
       sidebarCollapse: boolean;
       sidebarTheme: 'light' | 'dark';
+      menuMode: MenuMode;
     };
     demo2: {
       headerSticky: boolean;

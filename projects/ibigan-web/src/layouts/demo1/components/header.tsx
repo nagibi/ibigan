@@ -18,8 +18,10 @@ import { Link } from 'react-router-dom';
 import { getInitials, toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
+import { type MenuMode } from '@/config/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollPosition } from '@/hooks/use-scroll-position';
+import { useSettings } from '@/providers/settings-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +33,7 @@ import {
 } from '@/components/ui/sheet';
 import { Container } from '@/components/common/container';
 import { Breadcrumb } from './breadcrumb';
+import { HorizontalMenu } from './horizontal-menu';
 import { MegaMenu } from './mega-menu';
 import { MegaMenuMobile } from './mega-menu-mobile';
 import { SidebarMenu } from './sidebar-menu';
@@ -41,16 +44,21 @@ export function Header() {
 
   const { pathname } = useLocation();
   const { user } = useAuthStore();
+  const { settings } = useSettings();
   const mobileMode = useIsMobile();
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
+  const isHorizontalMenu = menuMode === 'horizontal';
 
   const scrollPosition = useScrollPosition();
   const headerSticky: boolean = scrollPosition > 0;
 
-  // Close sheet when route changes
   useEffect(() => {
     setIsSidebarSheetOpen(false);
     setIsMegaMenuSheetOpen(false);
   }, [pathname]);
+
+  const showBreadcrumb = pathname.startsWith('/account');
+  const showDesktopNav = !mobileMode && !showBreadcrumb;
 
   return (
     <header
@@ -59,73 +67,83 @@ export function Header() {
         headerSticky && 'border-b border-border',
       )}
     >
-      <Container className="flex justify-between items-stretch lg:gap-4">
-        {/* HeaderLogo */}
-        <div className="flex gap-1 lg:hidden items-center gap-2.5">
-          <Link to="/" className="shrink-0">
-            <img
-              src={toAbsoluteUrl('/media/app/mini-logo.svg')}
-              className="h-[25px] w-full"
-              alt="mini-logo"
-            />
-          </Link>
-          <div className="flex items-center">
-            {mobileMode && (
-              <Sheet
-                open={isSidebarSheetOpen}
-                onOpenChange={setIsSidebarSheetOpen}
-              >
-                <SheetTrigger asChild>
-                  <Button variant="ghost" mode="icon">
-                    <Menu className="text-muted-foreground/70" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  className="p-0 gap-0 w-[275px]"
-                  side="left"
-                  close={false}
+      <Container className="flex w-full grow items-stretch justify-between gap-4">
+        <div className="flex min-w-0 items-stretch gap-5">
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <Link to="/" className="shrink-0">
+              <img
+                src={toAbsoluteUrl('/media/app/mini-logo.svg')}
+                className="h-[25px] w-full"
+                alt="mini-logo"
+              />
+            </Link>
+            <div className="flex items-center">
+              {mobileMode && (
+                <Sheet
+                  open={isSidebarSheetOpen}
+                  onOpenChange={setIsSidebarSheetOpen}
                 >
-                  <SheetHeader className="p-0 space-y-0" />
-                  <SheetBody className="p-0 overflow-y-auto">
-                    <SidebarMenu />
-                  </SheetBody>
-                </SheetContent>
-              </Sheet>
-            )}
-            {mobileMode && (
-              <Sheet
-                open={isMegaMenuSheetOpen}
-                onOpenChange={setIsMegaMenuSheetOpen}
-              >
-                <SheetTrigger asChild>
-                  <Button variant="ghost" mode="icon">
-                    <SquareChevronRight className="text-muted-foreground/70" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  className="p-0 gap-0 w-[275px]"
-                  side="left"
-                  close={false}
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" mode="icon">
+                      <Menu className="text-muted-foreground/70" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    className="p-0 gap-0 w-[275px]"
+                    side="left"
+                    close={false}
+                  >
+                    <SheetHeader className="p-0 space-y-0" />
+                    <SheetBody className="p-0 overflow-y-auto">
+                      <SidebarMenu />
+                    </SheetBody>
+                  </SheetContent>
+                </Sheet>
+              )}
+              {mobileMode && !isHorizontalMenu && (
+                <Sheet
+                  open={isMegaMenuSheetOpen}
+                  onOpenChange={setIsMegaMenuSheetOpen}
                 >
-                  <SheetHeader className="p-0 space-y-0" />
-                  <SheetBody className="p-0 overflow-y-auto">
-                    <MegaMenuMobile />
-                  </SheetBody>
-                </SheetContent>
-              </Sheet>
-            )}
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" mode="icon">
+                      <SquareChevronRight className="text-muted-foreground/70" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    className="p-0 gap-0 w-[275px]"
+                    side="left"
+                    close={false}
+                  >
+                    <SheetHeader className="p-0 space-y-0" />
+                    <SheetBody className="p-0 overflow-y-auto">
+                      <MegaMenuMobile />
+                    </SheetBody>
+                  </SheetContent>
+                </Sheet>
+              )}
+            </div>
           </div>
+
+          {isHorizontalMenu && !mobileMode && (
+            <Link to="/" className="hidden shrink-0 items-center lg:flex">
+              <img
+                src={toAbsoluteUrl('/media/app/mini-logo.svg')}
+                className="h-[22px] max-w-none"
+                alt="Ibigan"
+              />
+            </Link>
+          )}
+
+          {showBreadcrumb ? (
+            <Breadcrumb />
+          ) : (
+            showDesktopNav &&
+            (isHorizontalMenu ? <HorizontalMenu /> : <MegaMenu />)
+          )}
         </div>
 
-        {/* Main Content (MegaMenu or Breadcrumbs) */}
-        {pathname.startsWith('/account') ? (
-          <Breadcrumb />
-        ) : (
-          !mobileMode && <MegaMenu />
-        )}
-
-        {/* HeaderTopbar */}
-        <div className="flex items-center gap-3">
+        <div className="relative z-20 flex shrink-0 items-center gap-3">
           {pathname.startsWith('/store-client') ? (
             <StoreClientTopbar />
           ) : (

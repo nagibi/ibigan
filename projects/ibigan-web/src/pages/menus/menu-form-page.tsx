@@ -22,6 +22,7 @@ const schema = z.object({
   title: z.string().min(1, 'Título é obrigatório.'),
   slug: z.string().min(1, 'Slug é obrigatório.'),
   icon: z.string().optional(),
+  badge: z.string().optional(),
   path: z.string().optional(),
   target: z.enum(['_self', '_blank']),
   parent_id: z.number().nullable().optional(),
@@ -52,7 +53,7 @@ export function MenuFormPage() {
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: '', slug: '', icon: '', path: '', target: '_self',
+      title: '', slug: '', icon: '', badge: '', path: '', target: '_self',
       parent_id: null, order: 0, is_active: true, requires_auth: true,
     },
   });
@@ -64,6 +65,7 @@ export function MenuFormPage() {
         title: m.title,
         slug: m.slug,
         icon: m.icon ?? '',
+        badge: m.badge ?? '',
         path: m.path ?? '',
         target: m.target as '_self' | '_blank',
         parent_id: m.parent_id,
@@ -75,10 +77,16 @@ export function MenuFormPage() {
   }, [menuData, form]);
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      isEditing
-        ? menusService.update(Number(id), data)
-        : menusService.store(data as Parameters<typeof menusService.store>[0]),
+    mutationFn: (data: FormData) => {
+      const payload = {
+        ...data,
+        badge: data.badge?.trim() || null,
+      };
+
+      return isEditing
+        ? menusService.update(Number(id), payload)
+        : menusService.store(payload as Parameters<typeof menusService.store>[0]);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['menus'] });
       toast.success(isEditing ? 'Menu atualizado!' : 'Menu criado!');
@@ -149,6 +157,16 @@ export function MenuFormPage() {
                   </FormItem>
                 )} />
               </div>
+
+              <FormField control={form.control} name="badge" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Badge (opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Novo, Beta, 3" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="target" render={({ field }) => (

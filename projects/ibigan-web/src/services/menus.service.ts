@@ -11,6 +11,7 @@ export interface ApiMenu {
   order: number;
   is_active: boolean;
   requires_auth: boolean;
+  badge: string | null;
   roles: string[] | null;
   children: ApiMenu[];
 }

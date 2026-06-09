@@ -1,1 +1,16 @@
-{}
+{
+  "USER.MENU.PUBLIC_PROFILE": "Perfil público",
+  "USER.MENU.MY_PROFILE": "Mi perfil",
+  "USER.MENU.MY_ACCOUNT": "Mi cuenta",
+  "USER.MENU.GET_STARTED": "Comenzar",
+  "USER.MENU.BILLING": "Facturación",
+  "USER.MENU.SECURITY": "Seguridad",
+  "USER.MENU.MEMBERS_&_ROLES": "Miembros y roles",
+  "USER.MENU.INTEGRATIONS": "Integraciones",
+  "USER.MENU.NOTIFICATIONS": "Notificaciones",
+  "USER.MENU.DEV_FORUM": "Foro de desarrolladores",
+  "USER.MENU.PAYMENT_&_SUBSCRIPTION_INFO": "Pago y suscripción",
+  "USER.MENU.DARK_MODE": "Modo oscuro",
+  "USER.MENU.LOGOUT": "Salir",
+  "USER.MENU.LANGUAGE": "Idioma"
+}

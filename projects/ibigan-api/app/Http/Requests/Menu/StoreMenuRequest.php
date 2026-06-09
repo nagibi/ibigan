@@ -23,6 +23,7 @@ final class StoreMenuRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255', Rule::unique('menus', 'slug')],
             'icon' => ['nullable', 'string', 'max:255'],
+            'badge' => ['nullable', 'string', 'max:50'],
             'path' => ['nullable', 'string', 'max:255'],
             'target' => ['required', Rule::in(['_self', '_blank'])],
             'parent_id' => ['nullable', 'integer', Rule::exists('menus', 'id')],

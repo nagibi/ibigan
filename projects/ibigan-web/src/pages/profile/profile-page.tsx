@@ -16,6 +16,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
+import { AppearanceSettingsCard } from '@/components/settings/appearance-settings-card';
 import { toast } from 'sonner';
 
 const profileSchema = z.object({
@@ -184,6 +185,8 @@ export function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <AppearanceSettingsCard />
 
       <Card className="mb-6">
         <CardHeader><CardTitle>Dados pessoais</CardTitle></CardHeader>
