@@ -43,9 +43,7 @@ class Menu extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logFillable()
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
+            ->logAll();
     }
 
     public function parent(): BelongsTo

@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Campaign;
+use App\Models\Menu;
+use App\Models\MessageTemplate;
+use App\Models\Organization;
+use App\Models\User;
+use App\Models\Webhook;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
+use ReflectionClass;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Permission\PermissionRegistrar;
 use Stancl\JobPipeline\JobPipeline;
 use Stancl\Tenancy\Contracts\Tenant;
@@ -20,6 +29,16 @@ use Stancl\Tenancy\Middleware;
 class TenancyServiceProvider extends ServiceProvider
 {
     public static string $controllerNamespace = '';
+
+    /** @var list<class-string<Model>> */
+    private const ACTIVITY_LOG_MODELS = [
+        User::class,
+        Menu::class,
+        Organization::class,
+        MessageTemplate::class,
+        Webhook::class,
+        Campaign::class,
+    ];
 
     private ?string $originalPublicDiskUrl = null;
 
@@ -101,6 +120,8 @@ class TenancyServiceProvider extends ServiceProvider
         Event::listen(Events\TenancyInitialized::class, function (Events\TenancyInitialized $event) {
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             $this->configureTenantPublicDiskUrl($event->tenancy->tenant);
+
+            $this->reregisterActivityLogObservers();
         });
 
         Event::listen(Events\TenancyEnded::class, function () {
@@ -128,6 +149,31 @@ class TenancyServiceProvider extends ServiceProvider
         ]);
 
         Storage::forgetDisk('public');
+    }
+
+    private function reregisterActivityLogObservers(): void
+    {
+        $modelReflection = new ReflectionClass(Model::class);
+        $booted = $modelReflection->getStaticPropertyValue('booted');
+
+        foreach (self::ACTIVITY_LOG_MODELS as $model) {
+            if (! in_array(LogsActivity::class, class_uses_recursive($model), true)) {
+                continue;
+            }
+
+            $model::flushEventListeners();
+            unset($booted[$model]);
+        }
+
+        $modelReflection->setStaticPropertyValue('booted', $booted);
+
+        foreach (self::ACTIVITY_LOG_MODELS as $model) {
+            if (! in_array(LogsActivity::class, class_uses_recursive($model), true)) {
+                continue;
+            }
+
+            new $model;
+        }
     }
 
     protected function bootEvents(): void

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bell,
   Building2,
   LayoutDashboard,
@@ -67,6 +68,11 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Segurança',
     icon: Shield,
     path: '/security',
+  },
+  {
+    title: 'Activity Log',
+    icon: Activity,
+    path: '/activity-logs',
   },
 ];
 

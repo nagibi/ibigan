@@ -36,8 +36,6 @@ class MessageTemplate extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logFillable()
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
+            ->logAll();
     }
 }

@@ -157,5 +157,17 @@ class MenuSeeder extends Seeder
             'requires_auth' => true,
             'roles' => ['admin'],
         ]);
+
+        Menu::create([
+            'title' => 'Activity Log',
+            'slug' => 'activity-log',
+            'icon' => 'Activity',
+            'path' => '/activity-logs',
+            'parent_id' => $config->id,
+            'order' => 5,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin'],
+        ]);
     }
 }

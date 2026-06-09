@@ -25,6 +25,10 @@ final class ActivityLogData extends Data
 
     public static function fromModel(Activity $activity): self
     {
+        $changes = $activity->attribute_changes?->toArray()
+            ?? $activity->properties?->toArray()
+            ?? [];
+
         return new self(
             id: $activity->id,
             log_name: $activity->log_name,
@@ -34,7 +38,7 @@ final class ActivityLogData extends Data
             causer_type: $activity->causer_type,
             causer_id: $activity->causer_id,
             causer_name: $activity->causer?->name,
-            properties: $activity->properties?->toArray() ?? [],
+            properties: $changes,
             created_at: $activity->created_at->toIso8601String(),
         );
     }

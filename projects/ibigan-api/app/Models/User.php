@@ -52,9 +52,7 @@ class User extends Authenticatable implements HasMedia
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logFillable()
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
+            ->logAll();
     }
 
     public function registerMediaCollections(): void

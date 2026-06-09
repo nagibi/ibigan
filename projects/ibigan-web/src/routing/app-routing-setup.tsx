@@ -1,3 +1,4 @@
+import { ActivityLogsPage } from '@/pages/activity-logs/activity-logs-page';
 import { CampaignDetailPage } from '@/pages/campaigns/campaign-detail-page';
 import { CampaignFormPage } from '@/pages/campaigns/campaign-form-page';
 import { CampaignsPage } from '@/pages/campaigns/campaigns-page';
@@ -97,6 +98,7 @@ export function AppRoutingSetup() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/activity-logs" element={<ActivityLogsPage />} />
         <Route path="/invites" element={<InvitesPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/nova" element={<CampaignFormPage />} />

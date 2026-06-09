@@ -38,9 +38,7 @@ class Organization extends Model implements HasMedia
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logFillable()
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
+            ->logAll();
     }
 
     public function registerMediaCollections(): void
