@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck, LoaderCircle } from 'lucide-react';
+import { Bell, CheckCheck, LoaderCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { notificationsService } from '@/services/notifications.service';
 import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
@@ -17,6 +18,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
   const queryClient = useQueryClient();
@@ -25,7 +27,7 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationsService.list(),
-    refetchInterval: 30000,
+    refetchInterval: open ? 30000 : false,
   });
 
   const markAsReadMutation = useMutation({
@@ -48,7 +50,45 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
 
   const notifications = data?.data.result.data ?? [];
   const unread = data?.data.result.meta.unread
-    ?? notifications.filter((n) => !n.read_at).length;
+    ?? notifications.filter((notification) => !notification.read_at).length;
+  const unreadNotifications = useMemo(
+    () => notifications.filter((notification) => !notification.read_at),
+    [notifications],
+  );
+
+  function renderNotifications(items: typeof notifications) {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-12">
+          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
+    if (items.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Bell className="mb-2 size-10 opacity-30" />
+          <p className="text-sm">Nenhuma notificação</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-5 overflow-y-auto pb-5">
+        {items.map((notification, index) => (
+          <Fragment key={notification.id}>
+            <NotificationItem
+              notification={notification}
+              onMarkRead={(id) => markAsReadMutation.mutate(id)}
+              onDelete={(id) => deleteMutation.mutate(id)}
+            />
+            {index < items.length - 1 && <div className="border-b border-border" />}
+          </Fragment>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -56,69 +96,74 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
         <div className="relative">
           {trigger}
           {unread > 0 && (
-            <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px] bg-destructive">
+            <Badge className="absolute -right-1 -top-1 flex size-5 items-center justify-center bg-destructive p-0 text-[10px]">
               {unread > 9 ? '9+' : unread}
             </Badge>
           )}
         </div>
       </SheetTrigger>
-      <SheetContent className="p-0 gap-0 sm:w-[500px] sm:max-w-none inset-5 start-auto h-auto rounded-lg [&_[data-slot=sheet-close]]:top-4.5 [&_[data-slot=sheet-close]]:end-5">
-        <SheetHeader className="mb-0 px-5 py-4 border-b">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2 p-0">
-              <Bell className="size-4" />
-              Notificações
-              {unread > 0 && (
-                <Badge variant="destructive" className="text-xs">{unread} novas</Badge>
-              )}
-            </SheetTitle>
-            {unread > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllMutation.mutate()}
-                disabled={markAllMutation.isPending}
-              >
-                <CheckCheck className="size-4 mr-1" />
-                Marcar todas
-              </Button>
-            )}
-          </div>
+      <SheetContent className="inset-5 start-auto h-auto w-full gap-0 rounded-lg p-0 sm:max-w-none sm:w-[500px] [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
+        <SheetHeader className="mb-0 border-b px-5 py-4">
+          <SheetTitle className="p-0">Notifications</SheetTitle>
         </SheetHeader>
 
         <SheetBody className="grow p-0">
           <ScrollArea className="h-[calc(100vh-10.5rem)]">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Bell className="size-10 mb-2 opacity-30" />
-                <p className="text-sm">Nenhuma notificação</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-0 py-2">
-                {notifications.map((n, index) => (
-                  <div key={n.id}>
-                    <NotificationItem
-                      notification={n}
-                      onMarkRead={(id) => markAsReadMutation.mutate(id)}
-                      onDelete={(id) => deleteMutation.mutate(id)}
-                    />
-                    {index < notifications.length - 1 && (
-                      <div className="border-b border-border mx-5" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <Tabs defaultValue="all" className="relative w-full">
+              <TabsList variant="line" className="mb-5 w-full px-5">
+                <TabsTrigger value="all">Todas</TabsTrigger>
+                <TabsTrigger value="unread" className="relative">
+                  Não lidas
+                  {unread > 0 && (
+                    <span className="absolute -end-1 top-1 size-1.5 rounded-full bg-green-500" />
+                  )}
+                </TabsTrigger>
+                <div className="flex grow items-center justify-end">
+                  <Button variant="ghost" size="sm" mode="icon" className="mb-1" asChild>
+                    <Link to="/notification-preferences" onClick={() => setOpen(false)}>
+                      <Settings className="size-4.5!" />
+                    </Link>
+                  </Button>
+                </div>
+              </TabsList>
+
+              <TabsContent value="all" className="mt-0">
+                {renderNotifications(notifications)}
+              </TabsContent>
+
+              <TabsContent value="unread" className="mt-0">
+                {renderNotifications(unreadNotifications)}
+              </TabsContent>
+            </Tabs>
           </ScrollArea>
         </SheetBody>
 
-        <SheetFooter className="border-t border-border p-5">
-          <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(false)}>
-            Fechar
+        <SheetFooter className="grid grid-cols-2 gap-2.5 border-t border-border p-5">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const readIds = notifications.filter((notification) => notification.read_at).map((n) => n.id);
+              if (readIds.length === 0) {
+                toast.info('Nenhuma notificação lida para arquivar.');
+                return;
+              }
+              Promise.all(readIds.map((id) => notificationsService.destroy(id)))
+                .then(() => {
+                  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                  toast.success('Notificações lidas arquivadas.');
+                })
+                .catch(() => toast.error('Erro ao arquivar notificações.'));
+            }}
+          >
+            Arquivar lidas
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => markAllMutation.mutate()}
+            disabled={unread === 0 || markAllMutation.isPending}
+          >
+            <CheckCheck className="mr-1 size-4" />
+            Marcar todas
           </Button>
         </SheetFooter>
       </SheetContent>

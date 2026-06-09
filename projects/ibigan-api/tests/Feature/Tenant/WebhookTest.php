@@ -199,6 +199,41 @@ it('job registra delivery com sucesso', function (): void {
     });
 });
 
+it('ativa registro', function (): void {
+    $webhook = $this->tenant->run(fn () => Webhook::factory()->inactive()->create());
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/webhooks/{$webhook->id}/toggle-active", [
+        'is_active' => true,
+    ], ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true);
+});
+
+it('inativa registro', function (): void {
+    $webhook = $this->tenant->run(fn () => Webhook::factory()->create(['is_active' => true]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/webhooks/{$webhook->id}/toggle-active", [
+        'is_active' => false,
+    ], ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false);
+});
+
+it('nega toggle para viewer', function (): void {
+    $webhook = $this->tenant->run(fn () => Webhook::factory()->create());
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/webhooks/{$webhook->id}/toggle-active", [
+        'is_active' => false,
+    ], ['X-Tenant-ID' => $this->tenant->id])
+        ->assertForbidden();
+});
+
 it('job registra delivery como failed em caso de erro HTTP', function (): void {
     Http::fake(['*' => Http::response('Server Error', 500)]);
 

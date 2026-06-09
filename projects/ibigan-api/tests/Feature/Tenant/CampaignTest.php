@@ -277,6 +277,49 @@ it('lista deliveries da campanha', function (): void {
         ->assertJsonPath('status', 1);
 });
 
+it('ativa registro', function (): void {
+    $campaign = $this->tenant->run(fn () => Campaign::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => false,
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/campaigns/{$campaign->id}/toggle-active", [
+        'is_active' => true,
+    ], campaignHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true);
+});
+
+it('inativa registro', function (): void {
+    $campaign = $this->tenant->run(fn () => Campaign::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => true,
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/campaigns/{$campaign->id}/toggle-active", [
+        'is_active' => false,
+    ], campaignHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false);
+});
+
+it('nega toggle para viewer', function (): void {
+    $campaign = $this->tenant->run(fn () => Campaign::factory()->create([
+        'created_by' => $this->admin->id,
+    ]));
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/campaigns/{$campaign->id}/toggle-active", [
+        'is_active' => false,
+    ], campaignHeaders($this->tenant->id))
+        ->assertForbidden();
+});
+
 // --- ProcessCampaignJob ---
 
 it('ProcessCampaignJob resolve destinatários por role e cria deliveries', function (): void {

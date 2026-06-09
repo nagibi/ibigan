@@ -36,6 +36,12 @@ export const menusService = {
   destroy: (id: number) =>
     api.delete(`/v1/menus/${id}`),
 
+  toggleActive: (id: number, isActive: boolean) =>
+    api.patch<{ status: number; result: ApiMenu }>(
+      `/v1/menus/${id}/toggle-active`,
+      { is_active: isActive },
+    ),
+
   reorder: (items: { id: number; order: number; parent_id?: number | null }[]) =>
     api.patch<{ status: number; result: ApiMenu[] }>('/v1/menus/reorder', { items }),
 };

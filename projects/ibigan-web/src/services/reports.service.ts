@@ -70,6 +70,12 @@ export const reportsService = {
   destroy: (id: number) =>
     api.delete(`/v1/reports/${id}`),
 
+  toggleActive: (id: number, isActive: boolean) =>
+    api.patch<{ status: number; result: ReportTemplate }>(
+      `/v1/reports/${id}/toggle-active`,
+      { is_active: isActive },
+    ),
+
   execute: (id: number, parameters: Record<string, string>) =>
     api.post<{ status: number; result: { rows: Record<string, unknown>[]; count: number; duration: number } }>(
       `/v1/reports/${id}/execute`, { parameters },

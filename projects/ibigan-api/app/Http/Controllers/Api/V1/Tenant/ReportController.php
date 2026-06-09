@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Tenant;
 
+use App\Http\Controllers\Concerns\TogglesModelActive;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ToggleActiveRequest;
 use App\Models\ReportExecution;
 use App\Models\ReportTemplate;
 use App\Services\ReportService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +18,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class ReportController extends Controller
 {
+    use TogglesModelActive;
+
     public function __construct(
         private readonly ReportService $reportService,
     ) {}
@@ -116,6 +121,27 @@ final class ReportController extends Controller
             'message' => 'MSG000425',
             'result'  => $report->fresh(),
         ]);
+    }
+
+    /**
+     * Ativar ou inativar template de relatório.
+     *
+     * Requer permissão `relatorio-gerenciar`.
+     */
+    public function toggleActive(ToggleActiveRequest $request, ReportTemplate $report): JsonResponse
+    {
+        return $this->performToggleActive($request, $report);
+    }
+
+    protected function toggleActivePermission(): string
+    {
+        return 'relatorio-gerenciar';
+    }
+
+    protected function formatToggleActiveResult(Model $model): ReportTemplate
+    {
+        /** @var ReportTemplate $model */
+        return $model;
     }
 
     public function destroy(Request $request, ReportTemplate $report): JsonResponse

@@ -7,17 +7,22 @@ namespace App\Http\Controllers\Api\V1\Tenant;
 use App\Data\CampaignData;
 use App\Data\CampaignDeliveryData;
 use App\Enums\CampaignStatus;
+use App\Http\Controllers\Concerns\TogglesModelActive;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ToggleActiveRequest;
 use App\Http\Requests\Campaign\StoreCampaignRequest;
 use App\Http\Requests\Campaign\UpdateCampaignRequest;
 use App\Models\Campaign;
 use App\Services\CampaignService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class CampaignController extends Controller
 {
+    use TogglesModelActive;
+
     public function __construct(
         private readonly CampaignService $campaignService,
     ) {}
@@ -144,6 +149,27 @@ final class CampaignController extends Controller
             'message' => 'MSG000425',
             'result' => CampaignData::fromModel($campaign->fresh()),
         ]);
+    }
+
+    /**
+     * Ativar ou inativar campanha.
+     *
+     * Requer permissão `campanha-gerenciar`.
+     */
+    public function toggleActive(ToggleActiveRequest $request, Campaign $campaign): JsonResponse
+    {
+        return $this->performToggleActive($request, $campaign);
+    }
+
+    protected function toggleActivePermission(): string
+    {
+        return 'campanha-gerenciar';
+    }
+
+    protected function formatToggleActiveResult(Model $model): CampaignData
+    {
+        /** @var Campaign $model */
+        return CampaignData::fromModel($model);
     }
 
     /**

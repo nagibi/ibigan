@@ -81,9 +81,11 @@ Route::prefix('v1')
         Route::delete('tenant/settings/logo', [TenantSettingsController::class, 'deleteLogo']);
 
         Route::get('users/export', [UserController::class, 'export']);
+        Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive']);
         Route::apiResource('users', UserController::class);
         Route::post('users/{user}/avatar', [UserController::class, 'uploadAvatar']);
         Route::get('organizations/export', [OrganizationController::class, 'export']);
+        Route::patch('organizations/{organization}/toggle-active', [OrganizationController::class, 'toggleActive']);
         Route::apiResource('organizations', OrganizationController::class);
         Route::post('organizations/{organization}/logo', [OrganizationController::class, 'uploadLogo']);
 
@@ -95,8 +97,10 @@ Route::prefix('v1')
 
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::post('message-templates/{messageTemplate}/duplicate', [MessageTemplateController::class, 'duplicate']);
+        Route::patch('message-templates/{messageTemplate}/toggle-active', [MessageTemplateController::class, 'toggleActive']);
         Route::apiResource('message-templates', MessageTemplateController::class);
 
+        Route::patch('campaigns/{campaign}/toggle-active', [CampaignController::class, 'toggleActive']);
         Route::patch('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel']);
         Route::get('campaigns/{campaign}/deliveries', [CampaignController::class, 'deliveries']);
         Route::apiResource('campaigns', CampaignController::class);
@@ -112,9 +116,11 @@ Route::prefix('v1')
         Route::patch('notification-preferences', [NotificationPreferenceController::class, 'update']);
 
         Route::get('webhooks/{webhook}/deliveries', [WebhookController::class, 'deliveries']);
+        Route::patch('webhooks/{webhook}/toggle-active', [WebhookController::class, 'toggleActive']);
         Route::apiResource('webhooks', WebhookController::class);
 
         Route::get('reports/executions/my', [ReportController::class, 'myExecutions']);
+        Route::patch('reports/{report}/toggle-active', [ReportController::class, 'toggleActive']);
         Route::post('reports/{report}/execute', [ReportController::class, 'execute']);
         Route::get('reports/{report}/executions', [ReportController::class, 'executions']);
         Route::get('reports/{report}/executions/{execution}/result', [ReportController::class, 'result']);

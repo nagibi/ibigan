@@ -237,3 +237,38 @@ it('nega remoção para viewer', function (): void {
     $this->deleteJson("/api/v1/message-templates/{$template->id}", [], templateHeaders($this->tenant->id))
         ->assertForbidden();
 });
+
+it('ativa registro', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create(['is_active' => false]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/message-templates/{$template->id}/toggle-active", [
+        'is_active' => true,
+    ], templateHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true);
+});
+
+it('inativa registro', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create(['is_active' => true]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/message-templates/{$template->id}/toggle-active", [
+        'is_active' => false,
+    ], templateHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false);
+});
+
+it('nega toggle para viewer', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create());
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/message-templates/{$template->id}/toggle-active", [
+        'is_active' => false,
+    ], templateHeaders($this->tenant->id))
+        ->assertForbidden();
+});

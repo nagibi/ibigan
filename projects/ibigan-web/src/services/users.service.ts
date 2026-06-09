@@ -1,5 +1,10 @@
 import api from '@/lib/axios';
 
+export interface UserAuditRef {
+  id: number;
+  name: string;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -7,6 +12,11 @@ export interface User {
   status: string;
   roles: string[];
   created_at: string;
+  updated_at?: string | null;
+  created_by?: UserAuditRef | null;
+  updated_by?: UserAuditRef | null;
+  created_by_name?: string | null;
+  updated_by_name?: string | null;
   avatar_url?: string | null;
 }
 
@@ -39,8 +49,30 @@ export interface UpdateUserPayload {
 }
 
 export const usersService = {
-  list: (page = 1, perPage = 10) =>
-    api.get<UsersPaginatedResponse>('/v1/users', { params: { page, per_page: perPage } }),
+  list: (
+    page = 1,
+    perPage = 10,
+    search?: string,
+    sort?: string | null,
+    direction?: 'asc' | 'desc',
+    columnFilters?: Record<string, string>,
+  ) => {
+    const filterParams = Object.fromEntries(
+      Object.entries(columnFilters ?? {})
+        .filter(([, value]) => value.trim().length > 0)
+        .map(([key, value]) => [`filter_${key}`, value]),
+    );
+
+    return api.get<UsersPaginatedResponse>('/v1/users', {
+      params: {
+        page,
+        per_page: perPage,
+        ...(search ? { search } : {}),
+        ...(sort ? { sort, direction: direction ?? 'asc' } : {}),
+        ...filterParams,
+      },
+    });
+  },
 
   show: (id: number) =>
     api.get<{ result: User }>(`/v1/users/${id}`),
@@ -53,4 +85,7 @@ export const usersService = {
 
   destroy: (id: number) =>
     api.delete(`/v1/users/${id}`),
+
+  toggleActive: (id: number, isActive: boolean) =>
+    api.patch<{ result: User }>(`/v1/users/${id}/toggle-active`, { is_active: isActive }),
 };

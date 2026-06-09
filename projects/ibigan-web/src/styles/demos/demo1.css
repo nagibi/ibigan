@@ -204,4 +204,18 @@
       var(--sidebar-transition-timing);
   }
 
+  /* Full-width layout with comfortable lateral spacing */
+  .demo1 .container,
+  .demo1 .container-fluid {
+    width: 100%;
+    max-width: none !important;
+    padding-inline: 1rem !important;
+  }
+
+  @media (min-width: theme(--breakpoint-lg)) {
+    .demo1 .container,
+    .demo1 .container-fluid {
+      padding-inline: 1.5rem !important;
+    }
+  }
 }

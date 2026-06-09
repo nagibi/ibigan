@@ -50,6 +50,12 @@ export const webhooksService = {
   destroy: (id: number) =>
     api.delete(`/v1/webhooks/${id}`),
 
+  toggleActive: (id: number, isActive: boolean) =>
+    api.patch<{ status: number; result: Webhook }>(
+      `/v1/webhooks/${id}/toggle-active`,
+      { is_active: isActive },
+    ),
+
   deliveries: (id: number, page = 1) =>
     api.get<{ status: number; result: { data: WebhookDelivery[]; meta: { total: number; current_page: number; last_page: number } } }>(
       `/v1/webhooks/${id}/deliveries`, { params: { page } },

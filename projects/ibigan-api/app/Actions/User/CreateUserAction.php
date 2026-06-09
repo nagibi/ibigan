@@ -16,14 +16,18 @@ final class CreateUserAction
 
     public function execute(StoreUserRequest $request): User
     {
+        $actorId = $request->user()->id;
+
         $user = $this->userRepository->create([
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
             'password' => $request->validated('password'),
+            'created_by' => $actorId,
+            'updated_by' => $actorId,
         ]);
 
         $user->assignRole($request->input('role', 'viewer'));
 
-        return $user->load('roles');
+        return $user->load(['roles', 'creator', 'updater']);
     }
 }

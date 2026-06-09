@@ -8,7 +8,9 @@ use App\Actions\MessageTemplate\CreateMessageTemplateAction;
 use App\Actions\MessageTemplate\DuplicateMessageTemplateAction;
 use App\Actions\MessageTemplate\UpdateMessageTemplateAction;
 use App\Data\MessageTemplateData;
+use App\Http\Controllers\Concerns\TogglesModelActive;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ToggleActiveRequest;
 use App\Http\Requests\MessageTemplate\SendMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\StoreMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\UpdateMessageTemplateRequest;
@@ -16,12 +18,15 @@ use App\Jobs\SendTemplateEmailJob;
 use App\Jobs\SendTemplateNotificationJob;
 use App\Models\MessageTemplate;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class MessageTemplateController extends Controller
 {
+    use TogglesModelActive;
+
     public function __construct(
         private readonly MessageTemplateRepositoryInterface $messageTemplateRepository,
         private readonly CreateMessageTemplateAction $createMessageTemplateAction,
@@ -124,6 +129,27 @@ final class MessageTemplateController extends Controller
             'message' => 'MSG000424',
             'result' => MessageTemplateData::fromModel($duplicate),
         ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Ativar ou inativar template de mensagem.
+     *
+     * Requer permissão `template-gerenciar`.
+     */
+    public function toggleActive(ToggleActiveRequest $request, MessageTemplate $messageTemplate): JsonResponse
+    {
+        return $this->performToggleActive($request, $messageTemplate);
+    }
+
+    protected function toggleActivePermission(): string
+    {
+        return 'template-gerenciar';
+    }
+
+    protected function formatToggleActiveResult(Model $model): MessageTemplateData
+    {
+        /** @var MessageTemplate $model */
+        return MessageTemplateData::fromModel($model);
     }
 
     /**

@@ -8,7 +8,9 @@ use App\Actions\Organization\CreateOrganizationAction;
 use App\Actions\Organization\UpdateOrganizationAction;
 use App\Data\OrganizationData;
 use App\Enums\WebhookEvent;
+use App\Http\Controllers\Concerns\TogglesModelActive;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ToggleActiveRequest;
 use App\Http\Requests\Organization\StoreOrganizationRequest;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
 use App\Jobs\ExportOrganizationsJob;
@@ -17,12 +19,15 @@ use App\Models\User;
 use App\Notifications\OrganizationCreatedNotification;
 use App\Repositories\Contracts\OrganizationRepositoryInterface;
 use App\Services\WebhookDispatchService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class OrganizationController extends Controller
 {
+    use TogglesModelActive;
+
     public function __construct(
         private readonly OrganizationRepositoryInterface $organizationRepository,
         private readonly CreateOrganizationAction $createOrganizationAction,
@@ -170,6 +175,27 @@ final class OrganizationController extends Controller
                 'message' => 'Exportação iniciada. Você receberá uma notificação quando estiver pronta.',
             ],
         ]);
+    }
+
+    /**
+     * Ativar ou inativar organização.
+     *
+     * Requer permissão `empresa-gerenciar`.
+     */
+    public function toggleActive(ToggleActiveRequest $request, Organization $organization): JsonResponse
+    {
+        return $this->performToggleActive($request, $organization);
+    }
+
+    protected function toggleActivePermission(): string
+    {
+        return 'empresa-gerenciar';
+    }
+
+    protected function formatToggleActiveResult(Model $model): OrganizationData
+    {
+        /** @var Organization $model */
+        return OrganizationData::fromModel($model);
     }
 
     /**

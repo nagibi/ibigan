@@ -19,6 +19,7 @@ final class CampaignData extends Data
         /** @var array<int, string>|null */
         public ?array $channels,
         public string $status,
+        public bool $is_active,
         public string $type,
         public ?string $scheduled_at,
         public ?string $started_at,
@@ -40,6 +41,7 @@ final class CampaignData extends Data
             body: $campaign->body,
             channels: $campaign->channels,
             status: $campaign->status->value,
+            is_active: (bool) $campaign->is_active,
             type: $campaign->type->value,
             scheduled_at: $campaign->scheduled_at?->toIso8601String(),
             started_at: $campaign->started_at?->toIso8601String(),

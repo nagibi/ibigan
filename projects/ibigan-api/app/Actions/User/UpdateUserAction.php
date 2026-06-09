@@ -16,6 +16,11 @@ final class UpdateUserAction
 
     public function execute(User $user, UpdateUserRequest $request): User
     {
-        return $this->userRepository->update($user, $request->validated());
+        $updatedUser = $this->userRepository->update($user, [
+            ...$request->validated(),
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return $updatedUser->load(['roles', 'creator', 'updater']);
     }
 }

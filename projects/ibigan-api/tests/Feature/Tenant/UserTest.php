@@ -64,7 +64,7 @@ it('retorna lista paginada de usuários para quem tem permissão de visualizar',
             'message',
             'result' => [
                 'data' => [
-                    ['id', 'name', 'email', 'status', 'roles', 'permissions', 'created_at'],
+                    ['id', 'name', 'email', 'status', 'roles', 'permissions', 'created_at', 'updated_at', 'created_by', 'updated_by'],
                 ],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ],
@@ -100,7 +100,9 @@ it('cria um usuário para quem tem permissão de gerenciar', function (): void {
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.name', 'New User')
         ->assertJsonPath('result.email', 'newuser@example.com')
-        ->assertJsonPath('result.roles', ['viewer']);
+        ->assertJsonPath('result.roles', ['viewer'])
+        ->assertJsonPath('result.created_by.id', $this->admin->id)
+        ->assertJsonPath('result.updated_by.id', $this->admin->id);
 
     $this->tenant->run(function () use ($payload): void {
         expect(User::where('email', $payload['email'])->exists())->toBeTrue();
@@ -121,7 +123,8 @@ it('atualiza um usuário para quem tem permissão de gerenciar', function (): vo
         ->assertOk()
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.name', 'Updated Name')
-        ->assertJsonPath('result.email', 'updated@example.com');
+        ->assertJsonPath('result.email', 'updated@example.com')
+        ->assertJsonPath('result.updated_by.id', $this->admin->id);
 });
 
 it('remove um usuário para quem tem permissão de gerenciar', function (): void {
@@ -177,5 +180,54 @@ it('nega remoção de usuário para perfil viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
     $this->deleteJson("/api/v1/users/{$targetUser->id}", [], tenantHeaders($this->tenant->id))
+        ->assertForbidden();
+});
+
+it('ativa registro', function (): void {
+    $targetUser = $this->tenant->run(fn () => User::factory()->create([
+        'is_active' => false,
+        'status' => 'inactive',
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/users/{$targetUser->id}/toggle-active", [
+        'is_active' => true,
+    ], tenantHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true)
+        ->assertJsonPath('result.status', 'active');
+
+    $this->tenant->run(function () use ($targetUser): void {
+        $user = User::query()->findOrFail($targetUser->id);
+        expect($user->is_active)->toBeTrue()
+            ->and($user->status)->toBe('active');
+    });
+});
+
+it('inativa registro', function (): void {
+    $targetUser = $this->tenant->run(fn () => User::factory()->create([
+        'is_active' => true,
+        'status' => 'active',
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/users/{$targetUser->id}/toggle-active", [
+        'is_active' => false,
+    ], tenantHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false)
+        ->assertJsonPath('result.status', 'inactive');
+});
+
+it('nega toggle para viewer', function (): void {
+    $targetUser = $this->tenant->run(fn () => User::factory()->create());
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/users/{$targetUser->id}/toggle-active", [
+        'is_active' => false,
+    ], tenantHeaders($this->tenant->id))
         ->assertForbidden();
 });

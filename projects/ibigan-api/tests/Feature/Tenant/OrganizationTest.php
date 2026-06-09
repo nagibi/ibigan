@@ -232,3 +232,46 @@ it('nega upload de logo para perfil viewer', function (): void {
         ->post("/api/v1/organizations/{$organization->id}/logo", ['logo' => $logo])
         ->assertForbidden();
 });
+
+it('ativa registro', function (): void {
+    $organization = $this->tenant->run(fn () => Organization::factory()->create([
+        'is_active' => false,
+        'status' => 'inactive',
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/organizations/{$organization->id}/toggle-active", [
+        'is_active' => true,
+    ], tenantHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true)
+        ->assertJsonPath('result.status', 'active');
+});
+
+it('inativa registro', function (): void {
+    $organization = $this->tenant->run(fn () => Organization::factory()->create([
+        'is_active' => true,
+        'status' => 'active',
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/organizations/{$organization->id}/toggle-active", [
+        'is_active' => false,
+    ], tenantHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false)
+        ->assertJsonPath('result.status', 'inactive');
+});
+
+it('nega toggle para viewer', function (): void {
+    $organization = $this->tenant->run(fn () => Organization::factory()->create());
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/organizations/{$organization->id}/toggle-active", [
+        'is_active' => false,
+    ], tenantHeaders($this->tenant->id))
+        ->assertForbidden();
+});

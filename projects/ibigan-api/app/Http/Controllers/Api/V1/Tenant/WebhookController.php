@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Tenant;
 
+use App\Actions\ToggleActiveAction;
 use App\Data\WebhookData;
+use App\Http\Requests\ToggleActiveRequest;
 use App\Data\WebhookDeliveryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Webhook\StoreWebhookRequest;
@@ -87,6 +89,27 @@ final class WebhookController extends Controller
             'status' => 1,
             'message' => 'MSG000425',
             'result' => WebhookData::fromModel($webhook->fresh()),
+        ]);
+    }
+
+    /**
+     * Ativar ou inativar webhook.
+     *
+     * Requer role admin ou super-admin.
+     */
+    public function toggleActive(ToggleActiveRequest $request, Webhook $webhook): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $updated = app(ToggleActiveAction::class)->execute(
+            $webhook,
+            $request->boolean('is_active'),
+        );
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000425',
+            'result' => WebhookData::fromModel($updated),
         ]);
     }
 

@@ -25,6 +25,7 @@ class Organization extends Model implements HasMedia
         'name',
         'slug',
         'status',
+        'is_active',
         'description',
     ];
 
@@ -32,6 +33,7 @@ class Organization extends Model implements HasMedia
     {
         return [
             'status' => OrganizationStatus::class,
+            'is_active' => 'boolean',
         ];
     }
 

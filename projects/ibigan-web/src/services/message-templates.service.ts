@@ -42,6 +42,12 @@ export const messageTemplatesService = {
   destroy: (id: number) =>
     api.delete(`/v1/message-templates/${id}`),
 
+  toggleActive: (id: number, isActive: boolean) =>
+    api.patch<{ status: number; result: MessageTemplate }>(
+      `/v1/message-templates/${id}/toggle-active`,
+      { is_active: isActive },
+    ),
+
   duplicate: (id: number) =>
     api.post<{ status: number; result: MessageTemplate }>(
       `/v1/message-templates/${id}/duplicate`,

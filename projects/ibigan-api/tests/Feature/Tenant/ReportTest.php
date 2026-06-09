@@ -176,3 +176,44 @@ it('admin remove template', function (): void {
     $this->deleteJson("/api/v1/reports/{$template->id}", [], reportHeaders($this->tenant->id))
         ->assertOk();
 });
+
+it('ativa registro', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => false,
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/reports/{$template->id}/toggle-active", [
+        'is_active' => true,
+    ], reportHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true);
+});
+
+it('inativa registro', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => true,
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/reports/{$template->id}/toggle-active", [
+        'is_active' => false,
+    ], reportHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false);
+});
+
+it('nega toggle para viewer', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/reports/{$template->id}/toggle-active", [
+        'is_active' => false,
+    ], reportHeaders($this->tenant->id))
+        ->assertForbidden();
+});

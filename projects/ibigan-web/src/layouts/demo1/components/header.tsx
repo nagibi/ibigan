@@ -20,7 +20,6 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { type MenuMode } from '@/config/types';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useScrollPosition } from '@/hooks/use-scroll-position';
 import { useSettings } from '@/providers/settings-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -49,9 +48,6 @@ export function Header() {
   const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
   const isHorizontalMenu = menuMode === 'horizontal';
 
-  const scrollPosition = useScrollPosition();
-  const headerSticky: boolean = scrollPosition > 0;
-
   useEffect(() => {
     setIsSidebarSheetOpen(false);
     setIsMegaMenuSheetOpen(false);
@@ -63,8 +59,7 @@ export function Header() {
   return (
     <header
       className={cn(
-        'header fixed top-0 z-10 start-0 flex items-stretch shrink-0 border-b border-transparent bg-background end-0 pe-[var(--removed-body-scroll-bar-size,0px)]',
-        headerSticky && 'border-b border-border',
+        'header fixed top-0 z-10 start-0 flex items-stretch shrink-0 border-b border-border bg-background end-0 pe-[var(--removed-body-scroll-bar-size,0px)]',
       )}
     >
       <Container className="flex w-full grow items-stretch justify-between gap-4">

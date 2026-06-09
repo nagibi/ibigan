@@ -23,7 +23,7 @@ export function PageToolbarBar() {
         'top-[var(--header-height)] min-h-[var(--toolbar-height)]',
       )}
     >
-      <Container className="flex w-full items-center justify-end gap-2 py-2">
+      <Container className="flex w-full items-center justify-start gap-2 py-2">
         {config?.actions}
       </Container>
     </div>
