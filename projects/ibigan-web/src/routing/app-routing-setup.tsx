@@ -14,6 +14,10 @@ import { MenuFormPage } from '@/pages/menus/menu-form-page';
 import { MenusPage } from '@/pages/menus/menus-page';
 import { MessageTemplateFormPage } from '@/pages/message-templates/message-template-form-page';
 import { MessageTemplatesPage } from '@/pages/message-templates/message-templates-page';
+import { MyExecutionsPage } from '@/pages/reports/my-executions-page';
+import { ReportExecutePage } from '@/pages/reports/report-execute-page';
+import { ReportFormPage } from '@/pages/reports/report-form-page';
+import { ReportsPage } from '@/pages/reports/reports-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
 import { SettingsPage } from '@/pages/settings/settings-page';
@@ -99,6 +103,11 @@ export function AppRoutingSetup() {
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/reports/novo" element={<ReportFormPage />} />
+        <Route path="/reports/executions" element={<MyExecutionsPage />} />
+        <Route path="/reports/:id/executar" element={<ReportExecutePage />} />
+        <Route path="/reports/:id/editar" element={<ReportFormPage />} />
         <Route path="/invites" element={<InvitesPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/nova" element={<CampaignFormPage />} />

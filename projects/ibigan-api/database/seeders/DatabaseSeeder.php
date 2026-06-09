@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
 
         $tenant->run(function () {
             $this->call(RolePermissionSeeder::class);
+            $this->call(MenuSeeder::class);
 
             $user = User::firstOrCreate(
                 ['email' => 'super@ibigan.com'],

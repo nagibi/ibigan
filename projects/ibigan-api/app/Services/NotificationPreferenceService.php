@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\UserNotificationPreference;
+
+final class NotificationPreferenceService
+{
+    /** @var array<string, array{email: bool, app: bool}> */
+    public const EVENTS = [
+        'report.completed' => ['email' => true, 'app' => true],
+        'campaign.sent' => ['email' => false, 'app' => true],
+        'invite.accepted' => ['email' => true, 'app' => true],
+        'user.created' => ['email' => false, 'app' => true],
+    ];
+
+    public function getForUser(User $user): array
+    {
+        $saved = UserNotificationPreference::where('user_id', $user->id)
+            ->get()
+            ->groupBy('event');
+
+        $result = [];
+        foreach (self::EVENTS as $event => $defaults) {
+            foreach (['email', 'app'] as $channel) {
+                $pref = $saved[$event]?->firstWhere('channel', $channel);
+                $result[$event][$channel] = $pref
+                    ? $pref->enabled
+                    : $defaults[$channel];
+            }
+        }
+
+        return $result;
+    }
+
+    public function update(User $user, string $event, string $channel, bool $enabled): void
+    {
+        UserNotificationPreference::updateOrCreate(
+            ['user_id' => $user->id, 'event' => $event, 'channel' => $channel],
+            ['enabled' => $enabled],
+        );
+    }
+
+    public function isEnabled(User $user, string $event, string $channel): bool
+    {
+        $pref = UserNotificationPreference::where('user_id', $user->id)
+            ->where('event', $event)
+            ->where('channel', $channel)
+            ->first();
+
+        return $pref ? $pref->enabled : (self::EVENTS[$event][$channel] ?? false);
+    }
+}

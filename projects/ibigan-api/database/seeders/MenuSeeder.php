@@ -147,10 +147,10 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Menus',
-            'slug' => 'menus',
-            'icon' => 'Menu',
-            'path' => '/menus',
+            'title' => 'Relatórios',
+            'slug' => 'relatorios',
+            'icon' => 'BarChart2',
+            'path' => '/reports',
             'parent_id' => $config->id,
             'order' => 4,
             'is_active' => true,
@@ -159,12 +159,48 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
+            'title' => 'Minhas Execuções',
+            'slug' => 'minhas-execucoes',
+            'icon' => 'FileBarChart',
+            'path' => '/reports/executions',
+            'parent_id' => $config->id,
+            'order' => 5,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer'],
+        ]);
+
+        Menu::create([
             'title' => 'Activity Log',
             'slug' => 'activity-log',
             'icon' => 'Activity',
             'path' => '/activity-logs',
             'parent_id' => $config->id,
-            'order' => 5,
+            'order' => 6,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Segurança',
+            'slug' => 'seguranca',
+            'icon' => 'Shield',
+            'path' => '/security',
+            'parent_id' => $config->id,
+            'order' => 7,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer'],
+        ]);
+
+        Menu::create([
+            'title' => 'Menus',
+            'slug' => 'menus',
+            'icon' => 'Menu',
+            'path' => '/menus',
+            'parent_id' => $config->id,
+            'order' => 8,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin'],

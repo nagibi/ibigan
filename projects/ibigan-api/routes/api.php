@@ -11,8 +11,10 @@ use App\Http\Controllers\Api\V1\Tenant\InviteController;
 use App\Http\Controllers\Api\V1\Tenant\MenuController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
+use App\Http\Controllers\Api\V1\Tenant\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
 use App\Http\Controllers\Api\V1\Tenant\ProfileController;
+use App\Http\Controllers\Api\V1\Tenant\ReportController;
 use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
@@ -106,8 +108,18 @@ Route::prefix('v1')
         Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
 
+        Route::get('notification-preferences', [NotificationPreferenceController::class, 'index']);
+        Route::patch('notification-preferences', [NotificationPreferenceController::class, 'update']);
+
         Route::get('webhooks/{webhook}/deliveries', [WebhookController::class, 'deliveries']);
         Route::apiResource('webhooks', WebhookController::class);
+
+        Route::get('reports/executions/my', [ReportController::class, 'myExecutions']);
+        Route::post('reports/{report}/execute', [ReportController::class, 'execute']);
+        Route::get('reports/{report}/executions', [ReportController::class, 'executions']);
+        Route::get('reports/{report}/executions/{execution}/result', [ReportController::class, 'result']);
+        Route::get('reports/{report}/executions/{execution}/status', [ReportController::class, 'executionStatus']);
+        Route::apiResource('reports', ReportController::class);
     });
 
 // Rotas centrais — superusuário (sem InitializeTenancyByHeader)

@@ -17,15 +17,37 @@ export function useNotifications() {
     channel.notification((notification: {
       type: string;
       user_name?: string;
+      template_name?: string;
+      rows_count?: number;
+      subject?: string;
       [key: string]: unknown;
     }) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-      toast.info('Nova notificação', {
-        description: notification.user_name
-          ? `Usuário ${notification.user_name} criado`
-          : 'Você tem uma nova notificação',
-      });
+      const type = notification.type?.split('\\').pop() ?? '';
+
+      if (type === 'ReportCompletedNotification') {
+        toast.success('Relatório pronto', {
+          description: `${notification.template_name ?? 'Relatório'} — ${notification.rows_count ?? 0} registros`,
+        });
+        return;
+      }
+
+      if (type === 'UserCreatedNotification' && notification.user_name) {
+        toast.info('Novo usuário', {
+          description: `${notification.user_name} foi criado`,
+        });
+        return;
+      }
+
+      if (notification.subject) {
+        toast.info(String(notification.subject), {
+          description: notification.body ? String(notification.body).substring(0, 80) : undefined,
+        });
+        return;
+      }
+
+      toast.info('Nova notificação');
     });
 
     return () => {
