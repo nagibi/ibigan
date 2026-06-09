@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
+import api from '@/lib/axios';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { authService } from '@/services/auth.service';
+import { Icons } from '@/components/layouts/layout-1/shared/common/icons';
 import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,15 +32,46 @@ type FormData = z.infer<typeof schema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth, setRequires2FA } = useAuthStore();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { tenant_id: '', email: '', password: '' },
   });
+
+  useEffect(() => {
+    const authError = searchParams.get('error');
+    if (authError === 'auth_failed') {
+      setError('Falha na autenticação com Google. Tente novamente.');
+    } else if (authError) {
+      setError('Erro ao autenticar. Tente novamente.');
+    }
+  }, [searchParams]);
+
+  async function handleGoogleLogin() {
+    const tenantId = form.getValues('tenant_id');
+    if (!tenantId) {
+      form.setError('tenant_id', { message: 'ID da organização é obrigatório.' });
+      return;
+    }
+
+    try {
+      setIsGoogleLoading(true);
+      setError(null);
+      const { data } = await api.get<{ result: { url: string } }>(
+        `/v1/auth/google?tenant_id=${tenantId}`,
+      );
+      window.location.href = data.result.url;
+    } catch {
+      setError('Erro ao iniciar login com Google.');
+      setIsGoogleLoading(false);
+    }
+  }
 
   async function onSubmit(values: FormData) {
     try {
@@ -212,6 +245,30 @@ export function LoginPage() {
                 </p>
               </form>
             </Form>
+
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">ou</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <LoaderCircle className="size-4 mr-2 animate-spin" />
+              ) : (
+                <Icons.googleColorful className="size-4 mr-2" />
+              )}
+              Continuar com Google
+            </Button>
           </CardContent>
         </Card>
       </div>
