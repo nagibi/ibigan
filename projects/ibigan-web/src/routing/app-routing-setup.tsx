@@ -8,6 +8,8 @@ import { DashboardPage } from '@/pages/dashboard/dashboard-page';
 import { InvitesPage } from '@/pages/invites/invites-page';
 import { MenuFormPage } from '@/pages/menus/menu-form-page';
 import { MenusPage } from '@/pages/menus/menus-page';
+import { MessageTemplateFormPage } from '@/pages/message-templates/message-template-form-page';
+import { MessageTemplatesPage } from '@/pages/message-templates/message-templates-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
 import { SettingsPage } from '@/pages/settings/settings-page';
@@ -93,6 +95,21 @@ export function AppRoutingSetup() {
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/invites" element={<InvitesPage />} />
+        <Route path="/message-templates" element={<MessageTemplatesPage />} />
+        <Route
+          path="/message-templates/novo"
+          element={<MessageTemplateFormPage />}
+        />
+        <Route
+          path="/message-templates/:id/editar"
+          element={<MessageTemplateFormPage />}
+        />
+        {/* <Route path="/webhooks" element={<WebhooksPage />} />
+        <Route path="/webhooks/novo" element={<WebhookFormPage />} />
+        <Route path="/webhooks/:id/editar" element={<WebhookFormPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications/novo" element={<NotificationFormPage />} />
+        <Route path="/notifications/:id/editar" element={<NotificationFormPage />} /> */}
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

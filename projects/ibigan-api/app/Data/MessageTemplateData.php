@@ -14,7 +14,6 @@ final class MessageTemplateData extends Data
         public string $name,
         public string $slug,
         public string $subject,
-        public string $channel,
         public string $body,
         /** @var array<int, string>|null */
         public ?array $merge_tags,
@@ -29,7 +28,6 @@ final class MessageTemplateData extends Data
             name: $messageTemplate->name,
             slug: $messageTemplate->slug,
             subject: $messageTemplate->subject,
-            channel: $messageTemplate->channel->value,
             body: $messageTemplate->body,
             merge_tags: $messageTemplate->merge_tags,
             is_active: $messageTemplate->is_active,

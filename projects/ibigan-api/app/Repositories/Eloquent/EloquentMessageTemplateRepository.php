@@ -27,10 +27,6 @@ final class EloquentMessageTemplateRepository extends BaseRepository implements 
                 })
             )
             ->when(
-                isset($filters['channel']),
-                fn (Builder $q) => $q->where('channel', $filters['channel'])
-            )
-            ->when(
                 isset($filters['is_active']),
                 fn (Builder $q) => $q->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN))
             );

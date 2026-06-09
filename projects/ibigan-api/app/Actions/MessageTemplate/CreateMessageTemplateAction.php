@@ -20,7 +20,6 @@ final class CreateMessageTemplateAction
             'name' => $request->validated('name'),
             'slug' => $request->validated('slug'),
             'subject' => $request->validated('subject'),
-            'channel' => $request->validated('channel'),
             'body' => $request->validated('body'),
             'merge_tags' => $request->validated('merge_tags'),
             'is_active' => $request->validated('is_active', true),

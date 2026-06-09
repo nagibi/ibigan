@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\MessageTemplate;
 
-use App\Enums\MessageTemplateChannel;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +28,6 @@ final class UpdateMessageTemplateRequest extends FormRequest
                 Rule::unique('message_templates', 'slug')->ignore($this->route('message_template')),
             ],
             'subject' => ['required', 'string', 'max:255'],
-            'channel' => ['required', Rule::enum(MessageTemplateChannel::class)],
             'body' => ['required', 'string'],
             'merge_tags' => ['nullable', 'array'],
             'merge_tags.*' => ['string', 'max:255'],

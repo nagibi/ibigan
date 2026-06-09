@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
@@ -25,6 +26,8 @@ Broadcast::routes([
 // Rotas públicas
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
+        Route::get('google', [GoogleAuthController::class, 'redirect']);
+        Route::get('google/callback', [GoogleAuthController::class, 'callback']);
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('register', [AuthController::class, 'register'])->middleware('throttle:register');
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
@@ -88,6 +91,7 @@ Route::prefix('v1')
         Route::apiResource('menus', MenuController::class);
 
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
+        Route::post('message-templates/{messageTemplate}/duplicate', [MessageTemplateController::class, 'duplicate']);
         Route::apiResource('message-templates', MessageTemplateController::class);
 
         Route::apiResource('invites', InviteController::class)->only(['index', 'store', 'destroy']);

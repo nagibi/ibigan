@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Tenant;
 
 use App\Actions\MessageTemplate\CreateMessageTemplateAction;
+use App\Actions\MessageTemplate\DuplicateMessageTemplateAction;
 use App\Actions\MessageTemplate\UpdateMessageTemplateAction;
 use App\Data\MessageTemplateData;
 use App\Http\Controllers\Controller;
@@ -12,6 +13,7 @@ use App\Http\Requests\MessageTemplate\SendMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\StoreMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\UpdateMessageTemplateRequest;
 use App\Jobs\SendTemplateEmailJob;
+use App\Jobs\SendTemplateNotificationJob;
 use App\Models\MessageTemplate;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +25,7 @@ final class MessageTemplateController extends Controller
     public function __construct(
         private readonly MessageTemplateRepositoryInterface $messageTemplateRepository,
         private readonly CreateMessageTemplateAction $createMessageTemplateAction,
+        private readonly DuplicateMessageTemplateAction $duplicateMessageTemplateAction,
         private readonly UpdateMessageTemplateAction $updateMessageTemplateAction,
     ) {}
 
@@ -37,7 +40,7 @@ final class MessageTemplateController extends Controller
 
         $messageTemplates = $this->messageTemplateRepository->paginate(
             perPage: $request->integer('per_page', 15),
-            filters: $request->only(['search', 'channel', 'is_active']),
+            filters: $request->only(['search', 'is_active']),
         );
 
         return response()->json([
@@ -106,6 +109,24 @@ final class MessageTemplateController extends Controller
     }
 
     /**
+     * Duplicar template de mensagem.
+     *
+     * Requer permissão `template-gerenciar`. A cópia é criada inativa.
+     */
+    public function duplicate(Request $request, MessageTemplate $messageTemplate): JsonResponse
+    {
+        abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
+
+        $duplicate = $this->duplicateMessageTemplateAction->execute($messageTemplate);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000424',
+            'result' => MessageTemplateData::fromModel($duplicate),
+        ], Response::HTTP_CREATED);
+    }
+
+    /**
      * Remover template de mensagem.
      */
     public function destroy(Request $request, MessageTemplate $messageTemplate): JsonResponse
@@ -122,7 +143,7 @@ final class MessageTemplateController extends Controller
     }
 
     /**
-     * Enviar e-mail usando template e merge tags.
+     * Enviar mensagem usando template e merge tags nos canais informados.
      *
      * Requer permissão `template-gerenciar`. O envio é processado em fila.
      */
@@ -132,17 +153,37 @@ final class MessageTemplateController extends Controller
 
         abort_unless($messageTemplate->is_active, Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        SendTemplateEmailJob::dispatch(
-            $messageTemplate->slug,
-            $request->validated('to'),
-            $request->validated('data', []),
-        );
+        $channels = $request->validated('channels');
+        $recipients = $request->validated('recipients');
+        $data = $request->validated('data', []);
+
+        foreach ($channels as $channel) {
+            foreach ($recipients as $recipient) {
+                match ($channel) {
+                    'email' => SendTemplateEmailJob::dispatch(
+                        $messageTemplate->slug,
+                        $recipient,
+                        $data,
+                    ),
+                    'notification' => SendTemplateNotificationJob::dispatch(
+                        $messageTemplate->slug,
+                        $recipient,
+                        $data,
+                    ),
+                    default => null,
+                };
+            }
+        }
 
         return response()->json([
             'status' => 1,
             'message' => 'MSG000067',
-            'description' => 'E-mail enfileirado com sucesso!',
-            'result' => null,
+            'description' => 'Mensagens enfileiradas com sucesso!',
+            'result' => [
+                'queued' => count($channels) * count($recipients),
+                'channels' => $channels,
+                'recipients' => count($recipients),
+            ],
         ]);
     }
 }

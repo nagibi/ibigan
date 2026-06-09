@@ -59,7 +59,6 @@ function templatePayload(array $overrides = []): array
         'name' => 'Boas-vindas',
         'slug' => 'boas-vindas',
         'subject' => 'Bem-vindo ao {{empresa}}!',
-        'channel' => 'email',
         'body' => 'Olá {{nome}}, seja bem-vindo!',
         'merge_tags' => ['{{nome}}', '{{empresa}}'],
         'is_active' => true,
@@ -80,7 +79,7 @@ it('retorna lista paginada de templates para quem tem permissão de visualizar',
         ->assertJsonPath('status', 1)
         ->assertJsonStructure([
             'result' => [
-                'data' => [['id', 'name', 'slug', 'subject', 'channel', 'body', 'merge_tags', 'is_active', 'created_at']],
+                'data' => [['id', 'name', 'slug', 'subject', 'body', 'merge_tags', 'is_active', 'created_at']],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ],
         ]);
@@ -119,8 +118,7 @@ it('cria um template para quem tem permissão de gerenciar', function (): void {
     $this->postJson('/api/v1/message-templates', templatePayload(), templateHeaders($this->tenant->id))
         ->assertCreated()
         ->assertJsonPath('status', 1)
-        ->assertJsonPath('result.slug', 'boas-vindas')
-        ->assertJsonPath('result.channel', 'email');
+        ->assertJsonPath('result.slug', 'boas-vindas');
 });
 
 it('nega criação para viewer', function (): void {
@@ -138,25 +136,6 @@ it('nega criação com slug duplicado', function (): void {
     $this->postJson('/api/v1/message-templates', templatePayload(), templateHeaders($this->tenant->id))
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['slug']);
-});
-
-it('nega criação com canal inválido', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
-
-    $this->postJson('/api/v1/message-templates', templatePayload(['channel' => 'fax']), templateHeaders($this->tenant->id))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['channel']);
-});
-
-it('cria template com canal whatsapp', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
-
-    $this->postJson('/api/v1/message-templates', templatePayload([
-        'slug' => 'whatsapp-boas-vindas',
-        'channel' => 'whatsapp',
-    ]), templateHeaders($this->tenant->id))
-        ->assertCreated()
-        ->assertJsonPath('result.channel', 'whatsapp');
 });
 
 // --- Update ---
@@ -182,6 +161,59 @@ it('nega atualização para viewer', function (): void {
     $this->putJson("/api/v1/message-templates/{$template->id}", templatePayload([
         'slug' => $template->slug,
     ]), templateHeaders($this->tenant->id))
+        ->assertForbidden();
+});
+
+// --- Duplicate ---
+
+it('duplica um template para quem tem permissão de gerenciar', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create([
+        'name' => 'Boas-vindas',
+        'slug' => 'boas-vindas',
+        'subject' => 'Assunto original',
+        'body' => 'Corpo original',
+        'merge_tags' => ['{{nome}}'],
+        'is_active' => true,
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson("/api/v1/message-templates/{$template->id}/duplicate", [], templateHeaders($this->tenant->id))
+        ->assertCreated()
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.name', 'Boas-vindas (cópia)')
+        ->assertJsonPath('result.slug', 'boas-vindas-copia')
+        ->assertJsonPath('result.subject', 'Assunto original')
+        ->assertJsonPath('result.body', 'Corpo original')
+        ->assertJsonPath('result.is_active', false);
+
+    $this->tenant->run(function (): void {
+        expect(MessageTemplate::count())->toBe(2);
+    });
+});
+
+it('gera slug único ao duplicar template com cópia existente', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create([
+        'slug' => 'boas-vindas',
+    ]));
+
+    $this->tenant->run(fn () => MessageTemplate::factory()->create([
+        'slug' => 'boas-vindas-copia',
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson("/api/v1/message-templates/{$template->id}/duplicate", [], templateHeaders($this->tenant->id))
+        ->assertCreated()
+        ->assertJsonPath('result.slug', 'boas-vindas-copia-2');
+});
+
+it('nega duplicação para viewer', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create());
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->postJson("/api/v1/message-templates/{$template->id}/duplicate", [], templateHeaders($this->tenant->id))
         ->assertForbidden();
 });
 

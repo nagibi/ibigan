@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 use App\Jobs\SendTemplateEmailJob;
+use App\Jobs\SendTemplateNotificationJob;
 use App\Mail\TemplateMailable;
 use App\Models\MessageTemplate;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\TemplateNotification;
 use App\Services\TemplateMailService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -48,7 +51,6 @@ beforeEach(function (): void {
         'slug' => 'boas-vindas',
         'subject' => 'Bem-vindo, {{nome}}!',
         'body' => 'Olá {{nome}}, bem-vindo à {{empresa}}!',
-        'channel' => 'email',
         'is_active' => true,
         'merge_tags' => ['{{nome}}', '{{empresa}}'],
     ]));
@@ -62,6 +64,15 @@ afterEach(function (): void {
     }
 });
 
+function sendPayload(array $overrides = []): array
+{
+    return array_merge([
+        'recipients' => ['destino@test.com'],
+        'channels' => ['email'],
+        'data' => ['nome' => 'João', 'empresa' => 'Acme'],
+    ], $overrides);
+}
+
 // --- Endpoint send ---
 
 it('enfileira job ao enviar template por email', function (): void {
@@ -69,33 +80,71 @@ it('enfileira job ao enviar template por email', function (): void {
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", [
-        'to' => 'destino@test.com',
-        'data' => ['nome' => 'João', 'empresa' => 'Acme'],
-    ], ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()
-        ->assertJsonPath('status', 1);
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.queued', 1)
+        ->assertJsonPath('result.channels', ['email'])
+        ->assertJsonPath('result.recipients', 1);
 
     Queue::assertPushed(SendTemplateEmailJob::class);
+});
+
+it('enfileira job ao enviar template por notificação', function (): void {
+    Queue::fake();
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
+        'channels' => ['notification'],
+        'recipients' => [$this->admin->email],
+    ]), ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.channels', ['notification']);
+
+    Queue::assertPushed(SendTemplateNotificationJob::class);
+});
+
+it('enfileira jobs para múltiplos destinatários e canais', function (): void {
+    Queue::fake();
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
+        'recipients' => ['a@test.com', 'b@test.com'],
+        'channels' => ['email', 'sms'],
+    ]), ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.queued', 4);
+
+    Queue::assertPushed(SendTemplateEmailJob::class, 2);
 });
 
 it('nega envio para viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", [
-        'to' => 'destino@test.com',
-    ], ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
         ->assertForbidden();
 });
 
 it('nega envio com email inválido', function (): void {
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", [
-        'to' => 'email-invalido',
-    ], ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
+        'recipients' => ['email-invalido'],
+    ]), ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['to']);
+        ->assertJsonValidationErrors(['recipients.0']);
+});
+
+it('nega envio com canal inválido', function (): void {
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
+        'channels' => ['fax'],
+    ]), ['X-Tenant-ID' => $this->tenant->id])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['channels.0']);
 });
 
 it('nega envio de template inativo', function (): void {
@@ -103,9 +152,7 @@ it('nega envio de template inativo', function (): void {
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", [
-        'to' => 'destino@test.com',
-    ], ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable();
 });
 
@@ -128,7 +175,6 @@ it('mantém tags não substituídas intactas', function (): void {
 
     $resolved = $service->resolve($this->template, [
         'nome' => 'João',
-        // empresa não fornecida
     ]);
 
     expect($resolved['body'])->toContain('{{empresa}}');
@@ -166,4 +212,36 @@ it('job envia email ao ser processado', function (): void {
     });
 
     Mail::assertSent(TemplateMailable::class);
+});
+
+it('job de notificação envia para usuário existente', function (): void {
+    Notification::fake();
+
+    $this->tenant->run(function (): void {
+        $job = new SendTemplateNotificationJob(
+            'boas-vindas',
+            $this->admin->email,
+            ['nome' => 'João', 'empresa' => 'Acme'],
+        );
+
+        $job->handle(new TemplateMailService);
+    });
+
+    Notification::assertSentTo($this->admin, TemplateNotification::class);
+});
+
+it('job de notificação ignora destinatário sem usuário cadastrado', function (): void {
+    Notification::fake();
+
+    $this->tenant->run(function (): void {
+        $job = new SendTemplateNotificationJob(
+            'boas-vindas',
+            'inexistente@test.com',
+            ['nome' => 'João'],
+        );
+
+        $job->handle(new TemplateMailService);
+    });
+
+    Notification::assertNothingSent();
 });
