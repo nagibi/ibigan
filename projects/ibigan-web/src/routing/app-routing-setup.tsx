@@ -1,3 +1,6 @@
+import { CampaignDetailPage } from '@/pages/campaigns/campaign-detail-page';
+import { CampaignFormPage } from '@/pages/campaigns/campaign-form-page';
+import { CampaignsPage } from '@/pages/campaigns/campaigns-page';
 import { CallbackPage } from '@/pages/auth/callback-page';
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password-page';
 import { InvitePage } from '@/pages/auth/invite-page';
@@ -95,6 +98,10 @@ export function AppRoutingSetup() {
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/invites" element={<InvitesPage />} />
+        <Route path="/campaigns" element={<CampaignsPage />} />
+        <Route path="/campaigns/nova" element={<CampaignFormPage />} />
+        <Route path="/campaigns/:id/editar" element={<CampaignFormPage />} />
+        <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
         <Route path="/message-templates" element={<MessageTemplatesPage />} />
         <Route
           path="/message-templates/novo"

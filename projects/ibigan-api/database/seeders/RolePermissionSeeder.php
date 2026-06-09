@@ -19,6 +19,7 @@ class RolePermissionSeeder extends Seeder
         'permissao',
         'notificacao',
         'template',
+        'campanha',
     ];
 
     public function run(): void
@@ -47,6 +48,10 @@ class RolePermissionSeeder extends Seeder
                 'notificacao-gerenciar',
             ])->get()
         );
-        $viewer->syncPermissions(Permission::where('name', 'like', '%-visualizar')->get());
+        $viewer->syncPermissions(
+            Permission::where('name', 'like', '%-visualizar')
+                ->where('name', '!=', 'campanha-visualizar')
+                ->get()
+        );
     }
 }

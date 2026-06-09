@@ -1,0 +1,25 @@
+import api from '@/lib/axios';
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+
+export const notificationsService = {
+  list: (page = 1) =>
+    api.get<{ status: number; result: { data: AppNotification[]; meta: { total: number; unread: number } } }>(
+      '/v1/notifications', { params: { page } },
+    ),
+
+  markAsRead: (id: string) =>
+    api.patch(`/v1/notifications/${id}/read`),
+
+  markAllAsRead: () =>
+    api.patch('/v1/notifications/read-all'),
+
+  destroy: (id: string) =>
+    api.delete(`/v1/notifications/${id}`),
+};

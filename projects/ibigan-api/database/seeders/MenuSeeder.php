@@ -74,6 +74,18 @@ class MenuSeeder extends Seeder
             'roles' => ['admin'],
         ]);
 
+        Menu::create([
+            'title' => 'Campanhas',
+            'slug' => 'campanhas',
+            'icon' => 'Megaphone',
+            'path' => '/campaigns',
+            'parent_id' => $gestao->id,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager'],
+        ]);
+
         // CONFIGURAÇÕES
         $config = Menu::create([
             'title' => 'CONFIGURAÇÕES',

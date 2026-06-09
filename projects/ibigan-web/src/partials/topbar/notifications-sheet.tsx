@@ -1,17 +1,13 @@
-import { ReactNode } from 'react';
-import { Calendar, Settings, Settings2, Shield, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Bell, Check, CheckCheck, LoaderCircle, Trash2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { notificationsService, type AppNotification } from '@/services/notifications.service';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
@@ -22,264 +18,168 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Item1 from './notifications/item-1';
-import Item2 from './notifications/item-2';
-import Item3 from './notifications/item-3';
-import Item4 from './notifications/item-4';
-import Item5 from './notifications/item-5';
-import Item6 from './notifications/item-6';
-import Item10 from './notifications/item-10';
-import Item11 from './notifications/item-11';
-import Item13 from './notifications/item-13';
-import Item14 from './notifications/item-14';
-import Item15 from './notifications/item-15';
-import Item16 from './notifications/item-16';
-import Item17 from './notifications/item-17';
-import Item18 from './notifications/item-18';
-import Item19 from './notifications/item-19';
-import Item20 from './notifications/item-20';
+import { cn } from '@/lib/utils';
+
+function getNotificationTitle(notification: AppNotification): string {
+  const data = notification.data;
+  const type = notification.type.split('\\').pop() ?? '';
+
+  if (data.subject) return String(data.subject);
+  if (data.user_name) return `Usuário ${data.user_name} criado`;
+  if (type === 'UserCreatedNotification') return 'Novo usuário criado';
+  if (type === 'TemplateNotification') return String(data.subject ?? 'Nova mensagem');
+  return 'Nova notificação';
+}
+
+function getNotificationBody(notification: AppNotification): string {
+  const data = notification.data;
+  if (data.body) {
+    const body = String(data.body);
+    return body.substring(0, 100) + (body.length > 100 ? '...' : '');
+  }
+  if (data.user_email) return String(data.user_email);
+  return '';
+}
 
 export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationsService.list(),
+    refetchInterval: 30000,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: (id: string) => notificationsService.markAsRead(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
+  const markAllMutation = useMutation({
+    mutationFn: () => notificationsService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('Todas marcadas como lidas.');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationsService.destroy(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
+  const notifications = data?.data.result.data ?? [];
+  const unread = data?.data.result.meta.unread
+    ?? notifications.filter((n) => !n.read_at).length;
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent className="p-0 gap-0 sm:w-[500px] sm:max-w-none inset-5 start-auto h-auto rounded-lg p-0 sm:max-w-none [&_[data-slot=sheet-close]]:top-4.5 [&_[data-slot=sheet-close]]:end-5">
-        <SheetHeader className="mb-0">
-          <SheetTitle className="p-3">
-            Notifications
-          </SheetTitle>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <div className="relative">
+          {trigger}
+          {unread > 0 && (
+            <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px] bg-destructive">
+              {unread > 9 ? '9+' : unread}
+            </Badge>
+          )}
+        </div>
+      </SheetTrigger>
+      <SheetContent className="p-0 gap-0 sm:w-[420px] sm:max-w-none inset-5 start-auto h-auto rounded-lg [&_[data-slot=sheet-close]]:top-4.5 [&_[data-slot=sheet-close]]:end-5">
+        <SheetHeader className="px-5 py-4 border-b">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="flex items-center gap-2">
+              <Bell className="size-4" />
+              Notificações
+              {unread > 0 && (
+                <Badge variant="destructive" className="text-xs">{unread} novas</Badge>
+              )}
+            </SheetTitle>
+            {unread > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllMutation.mutate()}
+                disabled={markAllMutation.isPending}
+              >
+                <CheckCheck className="size-4 mr-1" />
+                Marcar todas
+              </Button>
+            )}
+          </div>
         </SheetHeader>
-        <SheetBody className="grow p-0">
-          <ScrollArea className="h-[calc(100vh-10.5rem)]">
-            <Tabs defaultValue="all" className="w-full relative">
-              <TabsList variant="line" className="w-full px-5 mb-5">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="inbox" className="relative">
-                  Inbox
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 absolute top-1 -end-1" />
-                </TabsTrigger>
-                <TabsTrigger value="team">Team</TabsTrigger>
-                <TabsTrigger value="following">Following</TabsTrigger>
-                <div className="grow flex items-center justify-end">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+
+        <SheetBody className="p-0">
+          <ScrollArea className="h-[500px]">
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Bell className="size-8 mb-2 opacity-30" />
+                <p className="text-sm">Nenhuma notificação</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className={cn(
+                      'flex gap-3 px-5 py-4 hover:bg-muted/50 transition-colors',
+                      !n.read_at && 'bg-primary/5',
+                    )}
+                  >
+                    <div className={cn(
+                      'size-2 rounded-full mt-2 shrink-0',
+                      n.read_at ? 'bg-muted-foreground/30' : 'bg-primary',
+                    )} />
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('text-sm', !n.read_at && 'font-medium')}>
+                        {getNotificationTitle(n)}
+                      </p>
+                      {getNotificationBody(n) && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                          {getNotificationBody(n)}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      {!n.read_at && (
+                        <Button
+                          variant="ghost"
+                          mode="icon"
+                          size="sm"
+                          className="size-7"
+                          onClick={() => markAsReadMutation.mutate(n.id)}
+                        >
+                          <Check className="size-3" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
-                        size="sm"
                         mode="icon"
-                        className="mb-1"
+                        size="sm"
+                        className="size-7"
+                        onClick={() => deleteMutation.mutate(n.id)}
                       >
-                        <Settings className="size-4.5!" />
+                        <Trash2 className="size-3 text-destructive" />
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="w-44"
-                      side="bottom"
-                      align="end"
-                    >
-                      <DropdownMenuItem asChild>
-                        <Link to="/account/members/teams">
-                          <Users /> Invite Users
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Settings2 />
-                          <span>Team Settings</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                          <DropdownMenuSubContent className="w-44">
-                            <DropdownMenuItem asChild>
-                              <Link to="/account/members/import-members">
-                                <Shield />
-                                Find Members
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to="/account/members/import-members">
-                                <Calendar /> Meetings
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to="/account/members/import-members">
-                                <Shield /> Group Settings
-                              </Link>
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                      </DropdownMenuSub>
-                      <DropdownMenuItem asChild>
-                        <Link to="/account/security/privacy-settings">
-                          <Shield /> Group Settings
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </TabsList>
-
-              {/* All Tab */}
-              <TabsContent value="all" className="mt-0">
-                <div className="flex flex-col gap-5 overflow-y-auto">
-                  <Item1
-                    userName="Joe Lincoln"
-                    avatar="300-4.png"
-                    description="mentioned you in"
-                    link="Latest Trends"
-                    label="topic"
-                    time="18 mins ago"
-                    specialist="Web Design 2024"
-                    text="For an expert opinion, check out what Mike has to say on this topic!"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item2 />
-                  <div className="border-b border-b-border"></div>
-                  <Item3
-                    userName="Guy Hawkins"
-                    avatar="300-27.png"
-                    badgeColor="offline"
-                    description="requested access to"
-                    link="AirSpace"
-                    day="project"
-                    date="14 hours ago"
-                    info="Dev Team"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item4 />
-                  <div className="border-b border-b-border"></div>
-                  <Item5
-                    userName="Raymond Pawell"
-                    avatar="300-11.png"
-                    badgeColor="online"
-                    description="posted a new article"
-                    link="2024 Roadmap"
-                    day=""
-                    date="1 hour ago"
-                    info="Roadmap"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item6 />
-                </div>
-              </TabsContent>
-
-              {/* Inbox Tab */}
-              <TabsContent value="inbox" className="mt-0">
-                <div className="flex flex-col gap-5">
-                  <Item13 />
-                  <div className="border-b border-b-border"></div>
-                  <Item14 />
-                  <div className="border-b border-b-border"></div>
-                  <Item15 />
-                  <div className="border-b border-b-border"></div>
-                  <Item16 />
-                  <div className="border-b border-b-border"></div>
-                  <Item3
-                    userName="Benjamin Harris"
-                    avatar="300-30.png"
-                    badgeColor="offline"
-                    description="requested to upgrade plan"
-                    link=""
-                    day=""
-                    date="4 days ago"
-                    info="Marketing"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item5
-                    userName="Isaac Morgan"
-                    avatar="300-24.png"
-                    badgeColor="online"
-                    description="mentioned you in"
-                    link="Data Transmission"
-                    day="topic"
-                    date="6 days ago"
-                    info="Dev Team"
-                  />
-                </div>
-              </TabsContent>
-
-              {/* Team Tab */}
-              <TabsContent value="team" className="mt-0">
-                <div className="flex flex-col gap-5">
-                  <Item10 />
-                  <div className="border-b border-b-border"></div>
-                  <Item5
-                    userName="Adrian Vale"
-                    avatar="300-6.png"
-                    badgeColor="offline"
-                    description="posted a new article"
-                    link="Marketing"
-                    day="to 13 May"
-                    date="2 days ago"
-                    info="Marketing"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item11 />
-                  <div className="border-b border-b-border"></div>
-                  <Item1
-                    userName="Selene Silverleaf"
-                    avatar="300-21.png"
-                    description="commented on"
-                    link="SiteSculpt"
-                    label=""
-                    time="4 days ago"
-                    specialist="Manager"
-                    text="This design is simply stunning! From layout to color, it's a work of art!"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item3
-                    userName="Thalia Fox"
-                    avatar="300-13.png"
-                    badgeColor="online"
-                    description="has invited you to join"
-                    link="Design Research"
-                    day=""
-                    date="4 days ago"
-                    info="Dev Team"
-                  />
-                </div>
-              </TabsContent>
-
-              {/* Following Tab */}
-              <TabsContent value="following" className="mt-0">
-                <div className="flex flex-col gap-5">
-                  <Item18 />
-                  <div className="border-b border-b-border"></div>
-                  <Item17 />
-                  <div className="border-b border-b-border"></div>
-                  <Item19 />
-                  <div className="border-b border-b-border"></div>
-                  <Item5
-                    userName="Chloe Morgan"
-                    avatar="300-34.png"
-                    badgeColor="online"
-                    description="posted a new article"
-                    link="User Experience"
-                    day=""
-                    date="1 day ago"
-                    info="Nexus"
-                  />
-                  <div className="border-b border-b-border"></div>
-                  <Item20 />
-                  <div className="border-b border-b-border"></div>
-                  <Item3
-                    userName="Thalia Fox"
-                    avatar="300-13.png"
-                    badgeColor="offline"
-                    description="has invited you to join"
-                    link="Design Research"
-                    day=""
-                    date="4 days ago"
-                    info="Dev Team"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </SheetBody>
-        <SheetFooter className="border-t border-border p-5 grid grid-cols-2 gap-2.5">
-          <Button variant="outline">Archive all</Button>
-          <Button variant="outline">Mark all as read</Button>
+
+        <SheetFooter className="border-t px-5 py-3">
+          <Button variant="ghost" size="sm" className="w-full" onClick={() => setOpen(false)}>
+            Fechar
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

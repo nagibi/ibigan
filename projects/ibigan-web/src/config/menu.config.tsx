@@ -3,6 +3,7 @@ import {
   Building2,
   LayoutDashboard,
   Mail,
+  Megaphone,
   Settings,
   Shield,
   Users,
@@ -33,6 +34,11 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Convites',
     icon: Mail,
     path: '/invites',
+  },
+  {
+    title: 'Campanhas',
+    icon: Megaphone,
+    path: '/campaigns',
   },
   {
     heading: 'CONFIGURAÇÕES',

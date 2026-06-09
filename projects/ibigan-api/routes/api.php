@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
+use App\Http\Controllers\Api\V1\Tenant\CampaignController;
 use App\Http\Controllers\Api\V1\Tenant\InviteController;
 use App\Http\Controllers\Api\V1\Tenant\MenuController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
@@ -93,6 +94,10 @@ Route::prefix('v1')
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::post('message-templates/{messageTemplate}/duplicate', [MessageTemplateController::class, 'duplicate']);
         Route::apiResource('message-templates', MessageTemplateController::class);
+
+        Route::patch('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel']);
+        Route::get('campaigns/{campaign}/deliveries', [CampaignController::class, 'deliveries']);
+        Route::apiResource('campaigns', CampaignController::class);
 
         Route::apiResource('invites', InviteController::class)->only(['index', 'store', 'destroy']);
 
