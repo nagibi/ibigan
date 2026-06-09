@@ -18,10 +18,13 @@ import { MyExecutionsPage } from '@/pages/reports/my-executions-page';
 import { ReportExecutePage } from '@/pages/reports/report-execute-page';
 import { ReportFormPage } from '@/pages/reports/report-form-page';
 import { ReportsPage } from '@/pages/reports/reports-page';
+import { NotificationPreferencesPage } from '@/pages/profile/notification-preferences-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
 import { SettingsPage } from '@/pages/settings/settings-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
+import { WebhookFormPage } from '@/pages/webhooks/webhook-form-page';
+import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
 import { Navigate, Route, Routes } from 'react-router';
@@ -100,6 +103,7 @@ export function AppRoutingSetup() {
         <Route path="/menus/novo" element={<MenuFormPage />} />
         <Route path="/menus/:id/editar" element={<MenuFormPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
@@ -122,10 +126,10 @@ export function AppRoutingSetup() {
           path="/message-templates/:id/editar"
           element={<MessageTemplateFormPage />}
         />
-        {/* <Route path="/webhooks" element={<WebhooksPage />} />
+        <Route path="/webhooks" element={<WebhooksPage />} />
         <Route path="/webhooks/novo" element={<WebhookFormPage />} />
         <Route path="/webhooks/:id/editar" element={<WebhookFormPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
+        {/* <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/notifications/novo" element={<NotificationFormPage />} />
         <Route path="/notifications/:id/editar" element={<NotificationFormPage />} /> */}
       </Route>

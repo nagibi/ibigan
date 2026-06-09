@@ -20,13 +20,12 @@ final class NotificationPreferenceService
     public function getForUser(User $user): array
     {
         $saved = UserNotificationPreference::where('user_id', $user->id)
-            ->get()
-            ->groupBy('event');
+            ->get();
 
         $result = [];
         foreach (self::EVENTS as $event => $defaults) {
             foreach (['email', 'app'] as $channel) {
-                $pref = $saved[$event]?->firstWhere('channel', $channel);
+                $pref = $saved->first(fn ($p) => $p->event === $event && $p->channel === $channel);
                 $result[$event][$channel] = $pref
                     ? $pref->enabled
                     : $defaults[$channel];
