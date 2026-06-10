@@ -50,7 +50,8 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
             }
 
             $instance = new self();
-            $instance->setRawAttributes((array) $record);
+            $instance->setRawAttributes((array) $record, true);
+            $instance->exists = true;
             $instance->setConnection('central');
             $instance->setRelation('tokenable', $model);
 

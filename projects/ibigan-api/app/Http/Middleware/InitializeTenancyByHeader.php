@@ -43,13 +43,17 @@ class InitializeTenancyByHeader
             return null;
         }
 
-        // Buscar tenant_id via tenant_users pelo token_id
         $record = DB::connection('central')
             ->table('personal_access_tokens')
             ->where('id', $id)
             ->first();
 
         if (! $record) {
+            return null;
+        }
+
+        // CentralUser (super-admin de plataforma) NÃO opera sob tenancy
+        if ($record->tokenable_type === 'App\\Models\\Central\\CentralUser') {
             return null;
         }
 
