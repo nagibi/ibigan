@@ -13,7 +13,7 @@ function BreadcrumbItemContent({ item }: { item: PageBreadcrumbItem }) {
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      {Icon ? <Icon className="size-3.5 shrink-0" aria-hidden="true" /> : null}
+      {Icon ? <Icon className="size-3 shrink-0" aria-hidden="true" /> : null}
       {item.title}
     </span>
   );
@@ -38,7 +38,7 @@ function PageBreadcrumbs() {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="mb-1 flex items-center gap-1 text-xs font-normal lg:text-sm"
+      className="mb-1 flex items-center gap-1 text-[0.6875rem] font-normal lg:text-xs"
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
@@ -61,7 +61,7 @@ function PageBreadcrumbs() {
                 <BreadcrumbItemContent item={item} />
               </span>
             )}
-            {!isLast && <ChevronRight className="size-3.5 text-muted-foreground" />}
+            {!isLast && <ChevronRight className="size-3 text-muted-foreground" />}
           </Fragment>
         );
       })}
@@ -96,7 +96,7 @@ export function PageContentHeader() {
         </h1>
       ) : null}
       {description ? (
-        <p className="mt-1 text-sm text-foreground">{description}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       ) : null}
     </Container>
   );
