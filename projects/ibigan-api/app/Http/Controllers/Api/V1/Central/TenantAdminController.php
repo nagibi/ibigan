@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Central;
 
 use App\Data\ActivityLogData;
 use App\Http\Controllers\Controller;
+use App\Models\Central\CentralUser;
 use App\Models\Tenant;
 use App\Rules\Cnpj;
 use App\Support\BrazilianDocuments;
@@ -27,11 +28,7 @@ final class TenantAdminController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        abort_unless(
-            $request->user() instanceof \App\Models\Central\CentralUser
-                && $request->user()->is_super_admin,
-            Response::HTTP_FORBIDDEN
-        );
+        $this->ensureSuperAdmin($request);
 
         $sort = $request->string('sort', 'created_at')->toString();
         $allowedSorts = ['id', 'name', 'cnpj', 'is_active', 'users_count', 'created_at', 'updated_at'];
@@ -104,7 +101,7 @@ final class TenantAdminController extends Controller
 
     public function show(Request $request, string $tenant): JsonResponse
     {
-        abort_unless($request->user()->hasRole('super-admin'), Response::HTTP_FORBIDDEN);
+        $this->ensureSuperAdmin($request);
 
         $model = Tenant::query()
             ->withCount('tenantUsers as users_count')
@@ -119,7 +116,7 @@ final class TenantAdminController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        abort_unless($request->user()->hasRole('super-admin'), Response::HTTP_FORBIDDEN);
+        $this->ensureSuperAdmin($request);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -153,7 +150,7 @@ final class TenantAdminController extends Controller
 
     public function update(Request $request, string $tenant): JsonResponse
     {
-        abort_unless($request->user()->hasRole('super-admin'), Response::HTTP_FORBIDDEN);
+        $this->ensureSuperAdmin($request);
 
         $model = Tenant::findOrFail($tenant);
 
@@ -180,7 +177,7 @@ final class TenantAdminController extends Controller
 
     public function toggleActive(Request $request, string $tenant): JsonResponse
     {
-        abort_unless($request->user()->hasRole('super-admin'), Response::HTTP_FORBIDDEN);
+        $this->ensureSuperAdmin($request);
 
         $validated = $request->validate([
             'is_active' => ['required', 'boolean'],
@@ -198,7 +195,7 @@ final class TenantAdminController extends Controller
 
     public function activityLogs(Request $request, string $tenant): JsonResponse
     {
-        abort_unless($request->user()->hasRole('super-admin'), Response::HTTP_FORBIDDEN);
+        $this->ensureSuperAdmin($request);
 
         $model = Tenant::findOrFail($tenant);
 
@@ -226,7 +223,7 @@ final class TenantAdminController extends Controller
 
     public function destroy(Request $request, string $tenant): JsonResponse
     {
-        abort_unless($request->user()->hasRole('super-admin'), Response::HTTP_FORBIDDEN);
+        $this->ensureSuperAdmin($request);
 
         $model = Tenant::findOrFail($tenant);
         $model->delete();
@@ -264,5 +261,13 @@ final class TenantAdminController extends Controller
         }
 
         return BrazilianDocuments::digitsOnly($value);
+    }
+
+    private function ensureSuperAdmin(Request $request): void
+    {
+        abort_unless(
+            $request->user() instanceof CentralUser && $request->user()->is_super_admin,
+            Response::HTTP_FORBIDDEN
+        );
     }
 }

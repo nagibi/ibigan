@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Central\CentralUser;
 use App\Models\Central\TenantUser;
 use App\Models\Tenant;
 use App\Models\User;
@@ -14,14 +15,16 @@ use Tests\TestCase;
 /**
  * @property Tenant $tenant
  * @property Tenant $otherTenant
- * @property User $superUser
- * @property User $adminUser
+ * @property CentralUser $superUser
+ * @property CentralUser $adminUser
  * @property array<int, string> $createdTenantIds
  */
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    /** @var TestCase&object{tenant: Tenant, otherTenant: Tenant, superUser: User, adminUser: User, createdTenantIds: array<int, string>} $this */
+    /** @var TestCase&object{tenant: Tenant, otherTenant: Tenant, superUser: CentralUser, adminUser: CentralUser, createdTenantIds: array<int, string>} $this */
+    cleanupTenantDatabaseFiles('acme', 'beta');
+
     $this->tenant = Tenant::create([
         'id' => 'acme',
         'slug' => 'acme',
@@ -43,29 +46,30 @@ beforeEach(function (): void {
         $this->seed(RolePermissionSeeder::class);
     });
 
-    $this->superUser = $this->tenant->run(function (): User {
-        $user = User::factory()->create([
-            'email' => 'super@ibigan.com',
-            'name' => 'Super Admin',
-        ]);
-        $user->assignRole('super-admin');
+    $this->superUser = CentralUser::create([
+        'name' => 'Super Admin',
+        'email' => 'super@ibigan.com',
+        'password' => 'senha123',
+        'is_super_admin' => true,
+        'is_active' => true,
+    ]);
 
-        return $user;
-    });
+    $this->adminUser = CentralUser::create([
+        'name' => 'Common Admin',
+        'email' => 'admin@ibigan.com',
+        'password' => 'senha123',
+        'is_super_admin' => false,
+        'is_active' => true,
+    ]);
 
-    $this->adminUser = $this->tenant->run(function (): User {
-        $user = User::factory()->create([
-            'email' => 'admin@ibigan.com',
-            'name' => 'Tenant Admin',
-        ]);
-        $user->assignRole('admin');
-
-        return $user;
+    // popula contagem de usuários do tenant (para o teste users_count)
+    $tenantUser = $this->tenant->run(function (): User {
+        return User::factory()->create(['email' => 'membro@acme.com']);
     });
 
     TenantUser::create([
         'tenant_id' => $this->tenant->id,
-        'user_id' => $this->superUser->id,
+        'user_id' => $tenantUser->id,
         'role' => 'admin',
         'is_default' => true,
         'joined_at' => now(),
@@ -75,27 +79,17 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    tenancy()->end();
-
-    foreach ($this->createdTenantIds as $tenantId) {
-        $databasePath = database_path('ibigan_tenant_' . $tenantId);
-
-        if (file_exists($databasePath)) {
-            unlink($databasePath);
-        }
-    }
+    cleanupTenantDatabaseFiles(...$this->createdTenantIds);
 });
 
-function actingAsSuperAdmin(User $user): void
+function actingAsSuperAdmin(CentralUser $user): void
 {
-    tenancy()->initialize(Tenant::find('acme'));
-    Sanctum::actingAs($user, ['*'], 'sanctum');
+    Sanctum::actingAs($user, ['*'], 'central');
 }
 
-function actingAsAdmin(User $user): void
+function actingAsAdmin(CentralUser $user): void
 {
-    tenancy()->initialize(Tenant::find('acme'));
-    Sanctum::actingAs($user, ['*'], 'sanctum');
+    Sanctum::actingAs($user, ['*'], 'central');
 }
 
 // --- Index ---

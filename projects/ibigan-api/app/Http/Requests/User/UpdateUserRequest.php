@@ -49,8 +49,8 @@ final class UpdateUserRequest extends FormRequest
             'gender' => ['nullable', 'string', 'in:male,female,other,prefer_not_to_say'],
             'bio' => ['nullable', 'string', 'max:500'],
             'roles' => ['sometimes', 'array', 'min:1'],
-            'roles.*' => ['string', new AssignableRole],
-            'role' => ['sometimes', 'string', new AssignableRole],
+            'roles.*' => ['string', new AssignableRole($this->user())],
+            'role' => ['sometimes', 'string', new AssignableRole($this->user())],
         ];
     }
 }

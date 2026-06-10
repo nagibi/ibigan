@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Rules;
 
+use App\Models\User;
+use App\Support\SystemRoles;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Spatie\Permission\Models\Role;
 
 final class AssignableRole implements ValidationRule
 {
+    public function __construct(
+        private readonly ?User $actor = null,
+    ) {}
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || $value === '') {
@@ -18,8 +24,8 @@ final class AssignableRole implements ValidationRule
             return;
         }
 
-        if ($value === 'super-admin') {
-            $fail('O papel super-admin não pode ser atribuído por esta rota.');
+        if (SystemRoles::isProtected($value) && ! $this->actorCanAssignProtected()) {
+            $fail('Apenas super-admin pode atribuir este papel.');
 
             return;
         }
@@ -29,5 +35,10 @@ final class AssignableRole implements ValidationRule
 
             return;
         }
+    }
+
+    private function actorCanAssignProtected(): bool
+    {
+        return $this->actor?->hasRole('super-admin') ?? false;
     }
 }

@@ -26,7 +26,11 @@ final class UpdateUserAction
         ]);
 
         if ($request->has('roles') || $request->has('role')) {
-            UserRoleAssignment::sync($updatedUser, UserRoleAssignment::assignableFromRequest($request));
+            UserRoleAssignment::sync(
+                $updatedUser,
+                UserRoleAssignment::assignableFromRequest($request),
+                $request->user()?->hasRole('super-admin') ?? false,
+            );
         }
 
         return $updatedUser->load(['roles', 'creator', 'updater']);

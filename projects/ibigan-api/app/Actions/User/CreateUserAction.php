@@ -33,7 +33,11 @@ final class CreateUserAction
         ]);
 
         $roles = UserRoleAssignment::assignableFromRequest($request);
-        UserRoleAssignment::sync($user, $roles !== [] ? $roles : ['viewer']);
+        UserRoleAssignment::sync(
+            $user,
+            $roles !== [] ? $roles : ['viewer'],
+            $request->user()?->hasRole('super-admin') ?? false,
+        );
 
         return $user->load(['roles', 'creator', 'updater']);
     }

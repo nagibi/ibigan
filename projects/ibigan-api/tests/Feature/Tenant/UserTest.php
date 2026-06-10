@@ -197,6 +197,46 @@ it('preserva super-admin ao atualizar papéis do usuário', function (): void {
     expect($response->json('result.roles'))->toEqualCanonicalizing(['admin', 'super-admin']);
 });
 
+it('super-admin pode remover super-admin de outro usuário', function (): void {
+    $superAdmin = $this->tenant->run(function (): User {
+        $u = User::factory()->create();
+        $u->assignRole('super-admin');
+
+        return $u;
+    });
+
+    $target = $this->tenant->run(function (): User {
+        $u = User::factory()->create();
+        $u->assignRole('super-admin');
+
+        return $u;
+    });
+
+    Sanctum::actingAs($superAdmin, ['*'], 'sanctum');
+
+    $response = $this->putJson("/api/v1/users/{$target->id}", [
+        'name' => $target->name,
+        'email' => $target->email,
+        'roles' => ['admin'],
+    ], tenantHeaders($this->tenant->id))->assertOk();
+
+    expect($response->json('result.roles'))->toEqualCanonicalizing(['admin']);
+});
+
+it('nega admin atribuir super-admin via payload', function (): void {
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->postJson('/api/v1/users', [
+        'name' => 'Blocked Super',
+        'email' => 'blocked-super@example.com',
+        'password' => 'Password1',
+        'password_confirmation' => 'Password1',
+        'roles' => ['super-admin', 'admin'],
+    ], tenantHeaders($this->tenant->id))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['roles.0']);
+});
+
 it('remove um usuário para quem tem permissão de gerenciar', function (): void {
     $targetUser = $this->tenant->run(fn () => User::factory()->create());
 

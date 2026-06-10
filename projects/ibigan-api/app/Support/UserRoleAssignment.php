@@ -33,8 +33,16 @@ final class UserRoleAssignment
         return [];
     }
 
-    public static function sync(User $user, array $assignableRoles): void
+    public static function sync(User $user, array $assignableRoles, bool $actorCanAssignProtected = false): void
     {
+        if ($actorCanAssignProtected) {
+            // payload é a verdade — super-admin entra/sai conforme enviado
+            $user->syncRoles(array_values(array_unique($assignableRoles)));
+
+            return;
+        }
+
+        // actor sem poder: preserva protegidos existentes (comportamento atual)
         $protected = $user->getRoleNames()
             ->filter(fn (string $role): bool => in_array($role, self::PROTECTED, true))
             ->values()

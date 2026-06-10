@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\CentralAuthController;
+use App\Http\Controllers\Api\V1\Central\CentralUserController;
 use App\Http\Controllers\Api\V1\Central\TenantAdminController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
@@ -75,7 +76,11 @@ Route::prefix('central/v1')
             Route::get('tenants/{tenant}', [TenantAdminController::class, 'show']);
             Route::put('tenants/{tenant}', [TenantAdminController::class, 'update']);
             Route::patch('tenants/{tenant}/toggle-active', [TenantAdminController::class, 'toggleActive']);
+            Route::get('tenants/{tenant}/activity-logs', [TenantAdminController::class, 'activityLogs']);
             Route::delete('tenants/{tenant}', [TenantAdminController::class, 'destroy']);
+
+            Route::get('central-users', [CentralUserController::class, 'index']);
+            Route::patch('central-users/{centralUser}/toggle-super-admin', [CentralUserController::class, 'toggleSuperAdmin']);
         });
     });
 

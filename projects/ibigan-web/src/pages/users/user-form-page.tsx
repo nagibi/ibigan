@@ -18,6 +18,7 @@ import {
 import { isUserActive, usersService } from '@/services/users.service';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
 import { splitUserRoles, UserRolesField } from '@/components/users/user-roles-field';
+import { useAuthStore } from '@/stores/auth.store';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
@@ -98,6 +99,9 @@ export function UserFormPage() {
   const user = userData?.data.result;
   const isActive = user ? isUserActive(user) : true;
 
+  const currentUser = useAuthStore((s) => s.user);
+  const canAssignProtected = currentUser?.roles?.includes('super-admin') ?? false;
+
   const apiNotify = useApiToolbarAlert();
 
   const formPage = useFormPage({
@@ -152,13 +156,13 @@ export function UserFormPage() {
   }, [isEditing, createForm, location.key]);
 
   const lockedRoles = useMemo(
-    () => splitUserRoles(user?.roles).lockedRoles,
-    [user?.roles],
+    () => splitUserRoles(user?.roles, canAssignProtected).lockedRoles,
+    [canAssignProtected, user?.roles],
   );
 
   useEffect(() => {
     if (user) {
-      const { assignableRoles } = splitUserRoles(user.roles);
+      const { assignableRoles } = splitUserRoles(user.roles, canAssignProtected);
       editForm.reset(
         {
           ...mapUserProfileToFormValues(user),
@@ -167,7 +171,7 @@ export function UserFormPage() {
         { keepDirty: false, keepErrors: false },
       );
     }
-  }, [user, editForm]);
+  }, [canAssignProtected, user, editForm]);
 
   const saveMutation = useMutation({
     mutationFn: (data: CreateData | EditData) => {
@@ -334,6 +338,7 @@ export function UserFormPage() {
                   control={form.control}
                   name="roles"
                   lockedRoles={lockedRoles}
+                  canAssignProtected={canAssignProtected}
                 />
               </FormFieldGridItem>
             </FormFieldGrid>

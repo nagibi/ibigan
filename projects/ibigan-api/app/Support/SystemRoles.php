@@ -23,4 +23,9 @@ final class SystemRoles
     {
         return $name === 'super-admin';
     }
+
+    public static function isProtected(string $name): bool
+    {
+        return in_array($name, ['super-admin'], true);
+    }
 }
