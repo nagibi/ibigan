@@ -25,7 +25,7 @@ final class OrganizationsExport implements FromQuery, ShouldQueue, WithHeadings,
 
     public function headings(): array
     {
-        return ['ID', 'Nome', 'Slug', 'Status', 'Descrição', 'Criado em'];
+        return ['Id', 'Nome', 'Slug', 'CNPJ', 'Status', 'Descrição', 'Criado em'];
     }
 
     /**
@@ -37,6 +37,7 @@ final class OrganizationsExport implements FromQuery, ShouldQueue, WithHeadings,
             $organization->id,
             $organization->name,
             $organization->slug,
+            $organization->cnpj,
             $organization->status->value,
             $organization->description,
             $organization->created_at->format('d/m/Y H:i'),

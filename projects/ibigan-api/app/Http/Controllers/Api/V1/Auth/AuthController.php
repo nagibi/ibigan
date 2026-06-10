@@ -76,6 +76,7 @@ final class AuthController extends Controller
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
+        $request->setUserResolver(fn () => $user);
 
         return response()->json([
             'status' => 1,

@@ -67,6 +67,7 @@ final class TwoFactorChallengeController extends Controller
         Cache::forget('two_factor:'.$request->string('two_factor_token'));
 
         $token = $user->createToken('api-token')->plainTextToken;
+        $request->setUserResolver(fn () => $user);
 
         return response()->json([
             'status' => 1,

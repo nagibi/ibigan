@@ -14,7 +14,12 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
         'id',
         'name',
         'email',
+        'cpf',
+        'phone',
+        'birth_date',
+        'gender',
         'status',
+        'last_login_at',
         'created_at',
         'updated_at',
     ];
@@ -143,6 +148,52 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
                     'updater',
                     fn (Builder $updaterQuery) => $updaterQuery->where('name', 'like', "%{$filters['filter_updated_by']}%")
                 )
+            )
+            ->when(
+                filled($filters['filter_cpf'] ?? null),
+                fn (Builder $q) => $q->where('cpf', 'like', '%'.preg_replace('/\D+/', '', (string) $filters['filter_cpf']).'%')
+            )
+            ->when(
+                filled($filters['filter_phone'] ?? null),
+                fn (Builder $q) => $q->where('phone', 'like', '%'.preg_replace('/\D+/', '', (string) $filters['filter_phone']).'%')
+            )
+            ->when(
+                filled($filters['filter_gender'] ?? null),
+                fn (Builder $q) => $q->where('gender', $filters['filter_gender'])
+            )
+            ->when(
+                filled($filters['filter_bio'] ?? null),
+                fn (Builder $q) => $q->where('bio', 'like', "%{$filters['filter_bio']}%")
+            )
+            ->when(
+                filled($filters['filter_birth_date_from'] ?? null) || filled($filters['filter_birth_date_to'] ?? null),
+                function (Builder $q) use ($filters): void {
+                    if (filled($filters['filter_birth_date_from'] ?? null)) {
+                        $q->whereDate('birth_date', '>=', $filters['filter_birth_date_from']);
+                    }
+                    if (filled($filters['filter_birth_date_to'] ?? null)) {
+                        $q->whereDate('birth_date', '<=', $filters['filter_birth_date_to']);
+                    }
+                }
+            )
+            ->when(
+                filled($filters['filter_last_login_at_from'] ?? null) || filled($filters['filter_last_login_at_to'] ?? null),
+                function (Builder $q) use ($filters): void {
+                    if (filled($filters['filter_last_login_at_from'] ?? null)) {
+                        $q->whereDate('last_login_at', '>=', $filters['filter_last_login_at_from']);
+                    }
+                    if (filled($filters['filter_last_login_at_to'] ?? null)) {
+                        $q->whereDate('last_login_at', '<=', $filters['filter_last_login_at_to']);
+                    }
+                }
+            )
+            ->when(
+                filled($filters['filter_last_login_ip'] ?? null),
+                fn (Builder $q) => $q->where('last_login_ip', 'like', "%{$filters['filter_last_login_ip']}%")
+            )
+            ->when(
+                filled($filters['filter_last_login_device'] ?? null),
+                fn (Builder $q) => $q->where('last_login_device', 'like', "%{$filters['filter_last_login_device']}%")
             );
     }
 }

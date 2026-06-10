@@ -95,6 +95,7 @@ Route::prefix('v1')
         Route::patch('menus/reorder', [MenuController::class, 'reorder']);
         Route::apiResource('menus', MenuController::class);
 
+        Route::post('message-templates/upload-image', [MessageTemplateController::class, 'uploadImage']);
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::post('message-templates/{messageTemplate}/duplicate', [MessageTemplateController::class, 'duplicate']);
         Route::patch('message-templates/{messageTemplate}/toggle-active', [MessageTemplateController::class, 'toggleActive']);

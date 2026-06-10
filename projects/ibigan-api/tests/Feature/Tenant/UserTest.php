@@ -7,10 +7,17 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
+/**
+ * @property Tenant $tenant
+ * @property User $admin
+ * @property User $viewer
+ */
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    /** @var TestCase&object{tenant: Tenant, admin: User, viewer: User} $this */
     $tenantId = 'tenant-'.uniqid();
 
     $this->tenant = Tenant::create([
@@ -64,7 +71,7 @@ it('retorna lista paginada de usuários para quem tem permissão de visualizar',
             'message',
             'result' => [
                 'data' => [
-                    ['id', 'name', 'email', 'status', 'roles', 'permissions', 'created_at', 'updated_at', 'created_by', 'updated_by'],
+                    ['id', 'name', 'email', 'cpf', 'phone', 'birth_date', 'gender', 'bio', 'status', 'is_active', 'roles', 'permissions', 'created_at', 'updated_at', 'created_by', 'updated_by'],
                 ],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ],
@@ -90,6 +97,11 @@ it('cria um usuário para quem tem permissão de gerenciar', function (): void {
     $payload = [
         'name' => 'New User',
         'email' => 'newuser@example.com',
+        'cpf' => '52998224725',
+        'phone' => '11999887766',
+        'birth_date' => '1995-06-20',
+        'gender' => 'male',
+        'bio' => 'Usuário de teste',
         'password' => 'Password1',
         'password_confirmation' => 'Password1',
         'role' => 'viewer',
@@ -100,6 +112,11 @@ it('cria um usuário para quem tem permissão de gerenciar', function (): void {
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.name', 'New User')
         ->assertJsonPath('result.email', 'newuser@example.com')
+        ->assertJsonPath('result.cpf', '52998224725')
+        ->assertJsonPath('result.phone', '11999887766')
+        ->assertJsonPath('result.birth_date', '1995-06-20')
+        ->assertJsonPath('result.gender', 'male')
+        ->assertJsonPath('result.bio', 'Usuário de teste')
         ->assertJsonPath('result.roles', ['viewer'])
         ->assertJsonPath('result.created_by.id', $this->admin->id)
         ->assertJsonPath('result.updated_by.id', $this->admin->id);
@@ -117,6 +134,11 @@ it('atualiza um usuário para quem tem permissão de gerenciar', function (): vo
     $payload = [
         'name' => 'Updated Name',
         'email' => 'updated@example.com',
+        'cpf' => '11144477735',
+        'phone' => '21988776655',
+        'birth_date' => '1988-03-10',
+        'gender' => 'female',
+        'bio' => 'Perfil atualizado',
     ];
 
     $this->putJson("/api/v1/users/{$targetUser->id}", $payload, tenantHeaders($this->tenant->id))
@@ -124,6 +146,11 @@ it('atualiza um usuário para quem tem permissão de gerenciar', function (): vo
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.name', 'Updated Name')
         ->assertJsonPath('result.email', 'updated@example.com')
+        ->assertJsonPath('result.cpf', '11144477735')
+        ->assertJsonPath('result.phone', '21988776655')
+        ->assertJsonPath('result.birth_date', '1988-03-10')
+        ->assertJsonPath('result.gender', 'female')
+        ->assertJsonPath('result.bio', 'Perfil atualizado')
         ->assertJsonPath('result.updated_by.id', $this->admin->id);
 });
 

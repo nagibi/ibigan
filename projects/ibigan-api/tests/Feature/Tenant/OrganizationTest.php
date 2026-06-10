@@ -11,10 +11,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
+/**
+ * @property Tenant $tenant
+ * @property User $admin
+ * @property User $viewer
+ */
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    /** @var TestCase&object{tenant: Tenant, admin: User, viewer: User} $this */
     $tenantId = 'tenant-'.uniqid();
 
     $this->tenant = Tenant::create([
@@ -63,7 +70,7 @@ it('retorna lista paginada de organizações para quem tem permissão de visuali
             'message',
             'result' => [
                 'data' => [
-                    ['id', 'name', 'slug', 'status', 'description', 'created_at'],
+                    ['id', 'name', 'slug', 'cnpj', 'status', 'description', 'created_at'],
                 ],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ],
@@ -89,6 +96,7 @@ it('cria uma organização para quem tem permissão de gerenciar', function (): 
     $payload = [
         'name' => 'Nova Empresa',
         'slug' => 'nova-empresa',
+        'cnpj' => '11222333000181',
         'description' => 'Descrição da empresa',
     ];
 
@@ -97,6 +105,7 @@ it('cria uma organização para quem tem permissão de gerenciar', function (): 
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.name', 'Nova Empresa')
         ->assertJsonPath('result.slug', 'nova-empresa')
+        ->assertJsonPath('result.cnpj', '11222333000181')
         ->assertJsonPath('result.status', 'active');
 
     $this->tenant->run(function () use ($payload): void {
@@ -112,12 +121,14 @@ it('atualiza uma organização para quem tem permissão de gerenciar', function 
     $payload = [
         'name' => 'Empresa Atualizada',
         'slug' => 'empresa-atualizada',
+        'cnpj' => '19131243000197',
         'status' => 'inactive',
     ];
 
     $this->putJson("/api/v1/organizations/{$organization->id}", $payload, tenantHeaders($this->tenant->id))
         ->assertOk()
         ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.cnpj', '19131243000197')
         ->assertJsonPath('result.name', 'Empresa Atualizada')
         ->assertJsonPath('result.slug', 'empresa-atualizada')
         ->assertJsonPath('result.status', 'inactive');

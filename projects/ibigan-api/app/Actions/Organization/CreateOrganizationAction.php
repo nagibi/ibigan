@@ -20,6 +20,7 @@ final class CreateOrganizationAction
         return $this->organizationRepository->create([
             'name' => $request->validated('name'),
             'slug' => $request->validated('slug'),
+            'cnpj' => $request->validated('cnpj'),
             'status' => $request->validated('status', OrganizationStatus::Active->value),
             'description' => $request->validated('description'),
         ]);

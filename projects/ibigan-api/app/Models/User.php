@@ -27,12 +27,20 @@ class User extends Authenticatable implements HasMedia
     protected $fillable = [
         'name',
         'email',
+        'cpf',
         'password',
+        'phone',
+        'birth_date',
+        'gender',
+        'bio',
         'status',
         'is_active',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'last_login_at',
+        'last_login_ip',
+        'last_login_device',
         'created_by',
         'updated_by',
     ];
@@ -51,6 +59,8 @@ class User extends Authenticatable implements HasMedia
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_active' => 'boolean',
+            'birth_date' => 'date',
+            'last_login_at' => 'datetime',
         ];
     }
 

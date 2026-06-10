@@ -44,9 +44,20 @@ final class OrganizationController extends Controller
     {
         abort_unless($request->user()->can('empresa-visualizar'), Response::HTTP_FORBIDDEN);
 
+        $columnFilters = collect($request->query())
+            ->filter(
+                fn (mixed $value, string|int $key): bool => is_string($key)
+                    && str_starts_with($key, 'filter_')
+                    && filled($value)
+            )
+            ->all();
+
         $organizations = $this->organizationRepository->paginate(
             perPage: $request->integer('per_page', 15),
-            filters: $request->only(['search', 'status']),
+            filters: [
+                ...$request->only(['search', 'status', 'sort', 'direction']),
+                ...$columnFilters,
+            ],
         );
 
         return response()->json([

@@ -27,7 +27,7 @@ final class ProfileController extends Controller
     }
 
     /**
-     * Atualizar nome e e-mail do perfil.
+     * Atualizar dados do perfil.
      */
     public function update(UpdateProfileRequest $request): JsonResponse
     {

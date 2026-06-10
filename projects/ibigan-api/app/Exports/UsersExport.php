@@ -25,7 +25,7 @@ final class UsersExport implements FromQuery, ShouldQueue, WithHeadings, WithMap
 
     public function headings(): array
     {
-        return ['ID', 'Nome', 'Email', 'Status', 'Roles', 'Criado em'];
+        return ['Id', 'Nome', 'Email', 'CPF', 'Telefone', 'Status', 'Roles', 'Criado em'];
     }
 
     /**
@@ -37,6 +37,8 @@ final class UsersExport implements FromQuery, ShouldQueue, WithHeadings, WithMap
             $user->id,
             $user->name,
             $user->email,
+            $user->cpf,
+            $user->phone,
             $user->status,
             $user->roles->pluck('name')->implode(', '),
             $user->created_at->format('d/m/Y H:i'),

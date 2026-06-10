@@ -19,8 +19,10 @@ use App\Jobs\SendTemplateNotificationJob;
 use App\Models\MessageTemplate;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 final class MessageTemplateController extends Controller
@@ -45,7 +47,7 @@ final class MessageTemplateController extends Controller
 
         $messageTemplates = $this->messageTemplateRepository->paginate(
             perPage: $request->integer('per_page', 15),
-            filters: $request->only(['search', 'is_active']),
+            filters: $request->only(['search', 'is_active', 'filter_name', 'filter_slug']),
         );
 
         return response()->json([
@@ -165,6 +167,31 @@ final class MessageTemplateController extends Controller
             'status' => 1,
             'message' => 'MSG000426',
             'result' => null,
+        ]);
+    }
+
+    /**
+     * Fazer upload de imagem para uso no corpo HTML do template.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
+
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+        ]);
+
+        $path = $request->file('image')->store('message-templates/images', 'public');
+
+        /** @var FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000425',
+            'result' => [
+                'url' => $publicDisk->url($path),
+            ],
         ]);
     }
 

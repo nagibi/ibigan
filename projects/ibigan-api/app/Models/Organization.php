@@ -24,6 +24,7 @@ class Organization extends Model implements HasMedia
     protected $fillable = [
         'name',
         'slug',
+        'cnpj',
         'status',
         'is_active',
         'description',

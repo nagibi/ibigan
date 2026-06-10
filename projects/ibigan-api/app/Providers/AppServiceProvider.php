@@ -15,10 +15,12 @@ use App\Repositories\Eloquent\EloquentCentralUserRepository;
 use App\Repositories\Eloquent\EloquentInviteRepository;
 use App\Repositories\Eloquent\EloquentMessageTemplateRepository;
 use App\Repositories\Eloquent\EloquentOrganizationRepository;
+use App\Models\MultiTenantPersonalAccessToken;
 use App\Repositories\Eloquent\EloquentUserRepository;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Sanctum::usePersonalAccessTokenModel(MultiTenantPersonalAccessToken::class);
+
         Scramble::registerUiRoute('docs/api');
         Scramble::registerJsonSpecificationRoute('docs/api.json');
 

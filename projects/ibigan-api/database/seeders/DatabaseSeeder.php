@@ -26,6 +26,11 @@ class DatabaseSeeder extends Seeder
                 ['email' => 'super@ibigan.com'],
                 [
                     'name' => 'Super Admin',
+                    'cpf' => '39053344705',
+                    'phone' => '11987654321',
+                    'birth_date' => '1990-01-15',
+                    'gender' => 'prefer_not_to_say',
+                    'bio' => 'Usuário administrador da plataforma.',
                     'password' => Hash::make('A12345'),
                     'status' => 'active',
                     'is_super_admin' => true,
