@@ -8,10 +8,10 @@ import {
   Building2,
   Globe,
   Moon,
-  Settings,
-  Shield,
   User,
 } from 'lucide-react';
+import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
+import { resolveMenuIcon } from '@/lib/menu-icons';
 import { I18N_LANGUAGES } from '@/i18n/config';
 import { getInitials } from '@/lib/helpers';
 import { resetEcho } from '@/lib/echo';
@@ -66,6 +66,30 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     staleTime: 5 * 60 * 1000,
   });
 
+  const profileMenu = useApiMenuByPath('/profile');
+  const myNotificationsMenu = useApiMenuByPath('/notifications');
+
+  const profileLabel = profileMenu?.title ?? intl.formatMessage({ id: 'USER.MENU.MY_PROFILE' });
+  const myNotificationsLabel = myNotificationsMenu?.title
+    ?? intl.formatMessage({ id: 'USER.MENU.NOTIFICATIONS' });
+
+  const ProfileIcon = profileMenu
+    ? resolveMenuIcon({
+      icon: profileMenu.icon,
+      path: profileMenu.path,
+      slug: profileMenu.slug,
+      title: profileMenu.title,
+    })
+    : User;
+  const MyNotificationsIcon = myNotificationsMenu
+    ? resolveMenuIcon({
+      icon: myNotificationsMenu.icon,
+      path: myNotificationsMenu.path,
+      slug: myNotificationsMenu.slug,
+      title: myNotificationsMenu.title,
+    })
+    : Bell;
+
   const avatarUrl = profileData?.data.result.avatar_url ?? null;
   const displayName = profileData?.data.result.name ?? user?.name ?? 'Usuário';
   const displayEmail = profileData?.data.result.email ?? user?.email ?? '';
@@ -93,7 +117,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {trigger ?? (
-          <Avatar className="size-9 cursor-pointer border-2 border-green-500">
+          <Avatar className="size-9 cursor-pointer">
             <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
               {getInitials(displayName, 2)}
@@ -109,10 +133,10 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
               <img
                 src={avatarUrl}
                 alt={displayName}
-                className="size-9 shrink-0 rounded-full border-2 border-green-500 object-cover"
+                className="size-9 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <Avatar className="size-9 shrink-0 border-2 border-green-500">
+              <Avatar className="size-9 shrink-0">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {getInitials(displayName, 2)}
                 </AvatarFallback>
@@ -144,20 +168,19 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem onClick={() => navigate('/profile')}>
-          <User className="size-4" />
-          {intl.formatMessage({ id: 'USER.MENU.MY_PROFILE' })}
+          <ProfileIcon className="size-4" />
+          {profileLabel}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/security')}>
-          <Shield className="size-4" />
-          {intl.formatMessage({ id: 'USER.MENU.SECURITY' })}
+        <DropdownMenuItem onClick={() => navigate('/notifications')}>
+          <MyNotificationsIcon className="size-4" />
+          {myNotificationsLabel}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/notification-preferences')}>
-          <Bell className="size-4" />
-          {intl.formatMessage({ id: 'USER.MENU.NOTIFICATIONS' })}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/settings')}>
-          <Settings className="size-4" />
-          {intl.formatMessage({ id: 'USER.MENU.SETTINGS' })}
+
+        <DropdownMenuItem
+          onClick={() => navigate('/auth/select-tenant', { state: { manual: true } })}
+        >
+          <Building2 className="size-4" />
+          Trocar organização
         </DropdownMenuItem>
 
         <DropdownMenuSub>
@@ -200,15 +223,6 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem
-          onClick={() => navigate('/auth/select-tenant', { state: { manual: true } })}
-        >
-          <Building2 className="size-4" />
-          Trocar organização
-        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

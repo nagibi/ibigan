@@ -26,8 +26,13 @@ export interface GridColumnFilterDef {
   inputMode?: GridColumnFilterInputMode;
 }
 
-export function useGridFilters(onFilterChange?: () => void) {
-  const [filters, setFilters] = useState<Record<string, string>>({});
+export function useGridFilters(
+  onFilterChange?: () => void,
+  options?: { defaultFilters?: Record<string, string> },
+) {
+  const [filters, setFilters] = useState<Record<string, string>>(
+    options?.defaultFilters ?? {},
+  );
   const debouncedFilters = useDebounce(filters, 400);
 
   const setFilter = useCallback(

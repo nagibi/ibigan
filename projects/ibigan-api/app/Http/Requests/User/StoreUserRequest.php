@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\User;
 
 use App\Http\Requests\Concerns\SanitizesBrazilianFields;
+use App\Rules\AssignableRole;
 use App\Rules\Cpf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,6 +39,9 @@ final class StoreUserRequest extends FormRequest
             'birth_date' => ['nullable', 'date', 'before:today'],
             'gender' => ['nullable', 'string', 'in:male,female,other,prefer_not_to_say'],
             'bio' => ['nullable', 'string', 'max:500'],
+            'roles' => ['sometimes', 'array', 'min:1'],
+            'roles.*' => ['string', new AssignableRole],
+            'role' => ['sometimes', 'string', new AssignableRole],
         ];
     }
 }

@@ -16,40 +16,55 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
      */
     public static function findToken($token)
     {
-        $token = (string) $token;
-
-        // Tentar no banco atual (tenant ou central)
+        // Tentar no banco atual (tenant)
         $instance = parent::findToken($token);
-
         if ($instance) {
             return $instance;
         }
 
-        // Se não encontrou, tentar no banco central
-        $instance = self::findTokenOnConnection('central', $token);
+        // Tentar no banco central
+        try {
+            $parts = explode('|', $token, 2);
+            $id    = $parts[0] ?? null;
+            $plain = $parts[1] ?? null;
 
-        if ($instance) {
-            return $instance;
-        }
-
-        // Sem contexto de tenant, buscar nos bancos dos tenants
-        if (tenant()) {
-            return null;
-        }
-
-        foreach (Tenant::query()->cursor() as $tenant) {
-            tenancy()->initialize($tenant);
-
-            $instance = parent::findToken($token);
-
-            if ($instance) {
-                return $instance;
+            if (! $id || ! $plain) {
+                return null;
             }
 
-            tenancy()->end();
-        }
+            $record = DB::connection('central')
+                ->table('personal_access_tokens')
+                ->where('id', $id)
+                ->first();
 
-        return null;
+            if (! $record) {
+                return null;
+            }
+
+            if (! hash_equals(hash('sha256', $plain), $record->token)) {
+                return null;
+            }
+
+            // Resolver tokenable
+            $model = match ($record->tokenable_type) {
+                'App\\Models\\Central\\CentralUser' =>
+                \App\Models\Central\CentralUser::find($record->tokenable_id),
+                default => null,
+            };
+
+            if (! $model) {
+                return null;
+            }
+
+            $instance = new self();
+            $instance->setRawAttributes((array) $record);
+            $instance->setConnection('central');
+            $instance->setRelation('tokenable', $model);
+
+            return $instance;
+        } catch (\Exception) {
+            return null;
+        }
     }
 
     private static function findTokenOnConnection(string $connection, string $token): ?self
@@ -80,7 +95,6 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
             $model->setConnection($connection);
 
             return $model;
-
         } catch (\Exception) {
             return null;
         }

@@ -17,6 +17,8 @@ export type ToolbarAlertConfig = {
   autoDismissMs?: number | false;
   /** Identificador para reexibir o alert após novo disparo. */
   id?: string | number;
+  /** Chamado ao clicar em Fechar no overlay do alerta. */
+  onClose?: () => void;
 };
 
 export function getToolbarAlertIcon(variant: ToolbarAlertVariant = 'info') {
@@ -168,7 +170,13 @@ export function ToolbarAlertHost({
       </div>
 
       {visible && alert ? (
-        <ToolbarAlertOverlay alert={alert} onClose={dismiss} />
+        <ToolbarAlertOverlay
+          alert={alert}
+          onClose={() => {
+            alert.onClose?.();
+            dismiss();
+          }}
+        />
       ) : null}
     </div>
   );

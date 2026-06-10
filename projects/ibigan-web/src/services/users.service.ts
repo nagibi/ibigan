@@ -55,13 +55,13 @@ export interface StoreUserPayload extends UserProfilePayload {
   email: string;
   password: string;
   password_confirmation: string;
-  role?: string;
+  roles: string[];
 }
 
 export interface UpdateUserPayload extends UserProfilePayload {
   name?: string;
   email?: string;
-  role?: string;
+  roles?: string[];
   status?: string;
 }
 

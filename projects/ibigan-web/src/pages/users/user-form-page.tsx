@@ -17,6 +17,7 @@ import {
 } from '@/lib/user-profile-fields';
 import { isUserActive, usersService } from '@/services/users.service';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
+import { splitUserRoles, UserRolesField } from '@/components/users/user-roles-field';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
@@ -33,10 +34,6 @@ import { Input } from '@/components/ui/input';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-
 const createSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
   email: z.string().email('E-mail inválido.'),
@@ -45,7 +42,7 @@ const createSchema = z.object({
     .min(8, 'Mínimo 8 caracteres.')
     .regex(/\d/, 'A senha deve conter pelo menos um número.'),
   password_confirmation: z.string(),
-  role: z.string().min(1, 'Selecione um papel.'),
+  roles: z.array(z.string()).min(1, 'Selecione ao menos um papel.'),
   ...userProfileFieldsSchema,
 }).refine((d) => d.password === d.password_confirmation, {
   message: 'As senhas não coincidem.',
@@ -55,7 +52,7 @@ const createSchema = z.object({
 const editSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
   email: z.string().email('E-mail inválido.'),
-  role: z.string().min(1, 'Selecione um papel.'),
+  roles: z.array(z.string()).min(1, 'Selecione ao menos um papel.'),
   ...userProfileFieldsSchema,
 });
 
@@ -69,7 +66,7 @@ const CREATE_DEFAULT_VALUES: CreateData = {
   email: '',
   password: '',
   password_confirmation: '',
-  role: 'viewer',
+  roles: ['viewer'],
   ...USER_PROFILE_DEFAULT_VALUES,
 };
 
@@ -129,7 +126,7 @@ export function UserFormPage() {
 
   const editForm = useForm<EditData>({
     resolver: zodResolver(editSchema),
-    defaultValues: { name: '', email: '', role: 'viewer', ...USER_PROFILE_DEFAULT_VALUES },
+    defaultValues: { name: '', email: '', roles: ['viewer'], ...USER_PROFILE_DEFAULT_VALUES },
   });
 
   const form = isEditing ? editForm : createForm;
@@ -154,12 +151,18 @@ export function UserFormPage() {
     }
   }, [isEditing, createForm, location.key]);
 
+  const lockedRoles = useMemo(
+    () => splitUserRoles(user?.roles).lockedRoles,
+    [user?.roles],
+  );
+
   useEffect(() => {
     if (user) {
+      const { assignableRoles } = splitUserRoles(user.roles);
       editForm.reset(
         {
           ...mapUserProfileToFormValues(user),
-          role: user.roles?.[0] ?? 'viewer',
+          roles: assignableRoles.length > 0 ? assignableRoles : ['viewer'],
         },
         { keepDirty: false, keepErrors: false },
       );
@@ -326,26 +329,12 @@ export function UserFormPage() {
                 </FormFieldGridItem>
               )}
               <UserProfileFields control={form.control} />
-              <FormFieldGridItem>
-                <FormField control={form.control} name="role" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Papel</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        if (value !== field.value) field.onChange(value);
-                      }}
-                      value={field.value}
-                    >
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+              <FormFieldGridItem span={2}>
+                <UserRolesField
+                  control={form.control}
+                  name="roles"
+                  lockedRoles={lockedRoles}
+                />
               </FormFieldGridItem>
             </FormFieldGrid>
           </FormPanel>

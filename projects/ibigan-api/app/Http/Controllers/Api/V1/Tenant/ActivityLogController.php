@@ -24,7 +24,7 @@ final class ActivityLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('log-visualizar'), Response::HTTP_FORBIDDEN);
 
         $logs = $this->activityLogRepository->paginate(
             perPage: $request->integer('per_page', 15),
@@ -54,7 +54,7 @@ final class ActivityLogController extends Controller
      */
     public function forSubject(Request $request, string $type, int $id): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('log-visualizar'), Response::HTTP_FORBIDDEN);
 
         $logs = $this->activityLogRepository->forSubject(
             type: $type,

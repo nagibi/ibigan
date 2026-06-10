@@ -1,36 +1,60 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart2, Check, CheckCheck, Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { BarChart2, Check, CheckCheck, Download, ExternalLink, Eye, MailOpen, Settings, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { resolveMenuIcon } from '@/lib/menu-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import {
+  dateRangeFilterFromKey,
+  dateRangeFilterToKey,
+  useGridFilters,
+} from '@/hooks/use-grid-filters';
 import {
   getNotificationTitle,
   getNotificationType,
   getReportDownloadMeta,
   isReportNotification,
 } from '@/lib/notification-utils';
-import { notificationsService, type AppNotification } from '@/services/notifications.service';
+import {
+  invalidateNotifications,
+  markAllNotificationsReadInCache,
+  removeNotificationFromCache,
+  upsertNotificationInCache,
+} from '@/lib/notification-cache';
+import {
+  notificationsService,
+  type AppNotification,
+  type NotificationQuickFilter,
+} from '@/services/notifications.service';
+import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { downloadReportResultCsv } from '@/services/reports.service';
+import { NotificationDetailSheet } from '@/components/notifications/notification-detail-sheet';
 import { PageBody } from '@/components/common/page-body';
+import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { GridFiltersControl } from '@/components/grid/grid-filters-control';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination } from '@/components/grid/grid-pagination';
+import { GridQuickFilters } from '@/components/grid/grid-quick-filters';
+import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import {
   GridPanelToolbar,
   GridToolbarButton,
   GridToolbarGroup,
-  GridToolbarRoot,
+  StandardGridToolbar,
 } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,22 +68,49 @@ import {
 
 const GRID_COLUMNS_KEY = 'grid-columns:notifications';
 
-type NotificationTab = 'all' | 'reports';
+const READ_STATUS_FILTER_OPTIONS = [
+  { label: 'Lida', value: 'read' },
+  { label: 'Não lida', value: 'unread' },
+];
 
 export function NotificationsPage() {
   const navigate = useNavigate();
+  const { open: openPreferences } = useNotificationPreferencesSheet();
+  const notificationsMenu = useApiMenuByPath('/notifications');
+  const notificationPreferencesMenu = useApiMenuByPath('/notification-preferences');
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useApiToolbarAlert();
   const grid = useGrid();
-  const [activeTab, setActiveTab] = useState<NotificationTab>('all');
+  const columnFilters = useGridFilters(() => grid.setPage(1));
+  const [activeFilter, setActiveFilter] = useState<NotificationQuickFilter>('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewingNotification, setViewingNotification] = useState<AppNotification | null>(null);
+  const selectedRef = useRef<string[]>([]);
+  selectedRef.current = selected;
+
+  const listParams = useMemo(
+    () => ({
+      page: grid.page,
+      perPage: grid.perPage,
+      search: grid.debouncedSearch,
+      quickFilter: activeFilter,
+      columnFilters: columnFilters.activeFilterParams,
+    }),
+    [
+      activeFilter,
+      columnFilters.activeFilterParams,
+      grid.debouncedSearch,
+      grid.page,
+      grid.perPage,
+    ],
+  );
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['notifications', grid.page, grid.perPage],
-    queryFn: () => notificationsService.list(grid.page, grid.perPage),
+    queryKey: ['notifications', listParams],
+    queryFn: () => notificationsService.list(listParams),
     refetchInterval: 30000,
   });
 
@@ -72,15 +123,63 @@ export function NotificationsPage() {
     unread: 0,
   };
 
+  const reportCount = useMemo(
+    () => notifications.filter(isReportNotification).length,
+    [notifications],
+  );
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.read_at).length,
+    [notifications],
+  );
+  const readCount = useMemo(
+    () => notifications.filter((notification) => Boolean(notification.read_at)).length,
+    [notifications],
+  );
+
+  const PreferencesIcon = notificationPreferencesMenu
+    ? resolveMenuIcon({
+      icon: notificationPreferencesMenu.icon,
+      path: notificationPreferencesMenu.path,
+      slug: notificationPreferencesMenu.slug,
+      title: notificationPreferencesMenu.title,
+    })
+    : Settings;
+
+  const activeViewNotification = useMemo(() => {
+    if (!viewingNotification) return null;
+    return notifications.find((item) => item.id === viewingNotification.id) ?? viewingNotification;
+  }, [notifications, viewingNotification]);
+
+  const syncViewingNotification = useCallback((notification: AppNotification) => {
+    setViewingNotification((current) => (
+      current?.id === notification.id ? notification : current
+    ));
+  }, []);
+
   const markAsReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markAsRead(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: (response) => {
+      const updated = response.data.result;
+      upsertNotificationInCache(queryClient, updated);
+      syncViewingNotification(updated);
+    },
+    onError: (error) => showError('Erro ao marcar notificação como lida.', error),
+  });
+
+  const markAsUnreadMutation = useMutation({
+    mutationFn: (id: string) => notificationsService.markAsUnread(id),
+    onSuccess: (response) => {
+      const updated = response.data.result;
+      upsertNotificationInCache(queryClient, updated);
+      syncViewingNotification(updated);
+    },
+    onError: (error) => showError('Erro ao marcar notificação como não lida.', error),
   });
 
   const markAllMutation = useMutation({
     mutationFn: () => notificationsService.markAllAsRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      markAllNotificationsReadInCache(queryClient);
       setSelected([]);
       showSuccess('Todas marcadas como lidas.');
     },
@@ -108,8 +207,8 @@ export function NotificationsPage() {
       setDownloadingId(notification.id);
       await downloadReportResultCsv(templateId, executionId, templateName);
       if (!notification.read_at) {
-        await notificationsService.markAsRead(notification.id);
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        const response = await notificationsService.markAsRead(notification.id);
+        upsertNotificationInCache(queryClient, response.data.result);
       }
       showSuccess('Download iniciado.');
     } catch {
@@ -120,23 +219,56 @@ export function NotificationsPage() {
   }, [queryClient, showError, showSuccess]);
 
   const handleMarkSelectedRead = useCallback(async () => {
-    if (selected.length === 0) return;
+    const ids = selectedRef.current;
+    if (ids.length === 0) return;
+
     try {
-      await Promise.all(selected.map((id) => notificationsService.markAsRead(id)));
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      showSuccess(selected.length === 1 ? 'Notificação marcada como lida.' : 'Notificações marcadas como lidas.');
+      const responses = await Promise.all(ids.map((id) => notificationsService.markAsRead(id)));
+      responses.forEach((response) => {
+        upsertNotificationInCache(queryClient, response.data.result);
+      });
+      showSuccess(ids.length === 1 ? 'Notificação marcada como lida.' : 'Notificações marcadas como lidas.');
       clearSelection();
     } catch (error) {
       showError('Erro ao marcar notificações.', error);
+      void invalidateNotifications(queryClient);
     }
-  }, [clearSelection, queryClient, selected, showError, showSuccess]);
+  }, [clearSelection, queryClient, showError, showSuccess]);
+
+  const handleMarkSelectedUnread = useCallback(async () => {
+    const ids = selectedRef.current;
+    if (ids.length === 0) return;
+
+    try {
+      const responses = await Promise.all(ids.map((id) => notificationsService.markAsUnread(id)));
+      responses.forEach((response) => {
+        upsertNotificationInCache(queryClient, response.data.result);
+      });
+      showSuccess(
+        ids.length === 1
+          ? 'Notificação marcada como não lida.'
+          : 'Notificações marcadas como não lidas.',
+      );
+      clearSelection();
+    } catch (error) {
+      showError('Erro ao marcar notificações.', error);
+      void invalidateNotifications(queryClient);
+    }
+  }, [clearSelection, queryClient, showError, showSuccess]);
+
+  const handleViewNotification = useCallback((notification: AppNotification) => {
+    setViewingNotification(notification);
+  }, []);
 
   const handleDelete = useCallback(async () => {
     if (deleteIds.length === 0) return;
     try {
       setIsDeleting(true);
-      await Promise.all(deleteIds.map((id) => notificationsService.destroy(id)));
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      await Promise.all(deleteIds.map((id) => {
+        removeNotificationFromCache(queryClient, id);
+        return notificationsService.destroy(id);
+      }));
+      void invalidateNotifications(queryClient);
       showSuccess(deleteIds.length === 1 ? 'Notificação removida.' : 'Notificações removidas.');
       setDeleteIds([]);
       clearSelection();
@@ -147,21 +279,7 @@ export function NotificationsPage() {
     }
   }, [clearSelection, deleteIds, queryClient, showError, showSuccess]);
 
-  const tabNotifications = useMemo(() => {
-    const base = activeTab === 'reports'
-      ? notifications.filter(isReportNotification)
-      : notifications;
-
-    const q = grid.debouncedSearch.trim().toLowerCase();
-    if (!q) return base;
-
-    return base.filter((notification) =>
-      getNotificationTitle(notification).toLowerCase().includes(q)
-      || getNotificationType(notification).toLowerCase().includes(q),
-    );
-  }, [activeTab, grid.debouncedSearch, notifications]);
-
-  const visibleIds = tabNotifications.map((notification) => notification.id);
+  const visibleIds = notifications.map((notification) => notification.id);
   const allVisibleSelected = visibleIds.length > 0
     && visibleIds.every((id) => selected.includes(id));
 
@@ -185,6 +303,7 @@ export function NotificationsPage() {
         id: 'id',
         label: 'Id',
         className: 'w-[70px] text-sm text-muted-foreground',
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID' },
         render: (notification) => notification.id,
       },
       {
@@ -195,6 +314,11 @@ export function NotificationsPage() {
         render: (notification) => (
           <GridRowActions
             actions={[
+              {
+                label: 'Visualizar',
+                icon: Eye,
+                onClick: () => handleViewNotification(notification),
+              },
               ...(isReportNotification(notification)
                 ? [
                     {
@@ -210,13 +334,6 @@ export function NotificationsPage() {
                     },
                   ]
                 : []),
-              ...(!notification.read_at
-                ? [{
-                    label: 'Marcar como lida',
-                    icon: Check,
-                    onClick: () => markAsReadMutation.mutate(notification.id),
-                  }]
-                : []),
               {
                 label: 'Remover',
                 icon: Trash2,
@@ -231,6 +348,7 @@ export function NotificationsPage() {
         id: 'title',
         label: 'Notificação',
         className: 'min-w-[240px]',
+        filter: { type: 'text', filterKey: 'title', placeholder: 'Notificação' },
         render: (notification) => (
           <div className="min-w-0">
             <p className={`truncate text-sm ${notification.read_at ? 'text-muted-foreground' : 'font-medium'}`}>
@@ -243,154 +361,297 @@ export function NotificationsPage() {
         ),
       },
       {
-        id: 'status',
+        id: 'read',
         label: 'Status',
-        className: 'w-[100px]',
-        render: (notification) => (
-          <Badge variant={notification.read_at ? 'outline' : 'primary'}>
-            {notification.read_at ? 'Lida' : 'Não lida'}
-          </Badge>
-        ),
+        className: 'w-[80px]',
+        filter: {
+          type: 'select',
+          filterKey: 'read_status',
+          placeholder: 'Status',
+          options: READ_STATUS_FILTER_OPTIONS,
+        },
+        render: (notification) => {
+          const isToggling = (
+            (markAsReadMutation.isPending && markAsReadMutation.variables === notification.id)
+            || (markAsUnreadMutation.isPending && markAsUnreadMutation.variables === notification.id)
+          );
+
+          return (
+            <div
+              className="flex justify-center"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Switch
+                size="sm"
+                checked={Boolean(notification.read_at)}
+                disabled={isToggling}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    markAsReadMutation.mutate(notification.id);
+                  } else {
+                    markAsUnreadMutation.mutate(notification.id);
+                  }
+                }}
+              />
+            </div>
+          );
+        },
       },
       {
         id: 'created_at',
         label: 'Recebida',
         className: 'w-[140px] text-sm text-muted-foreground',
+        filter: { type: 'dateRange', filterKey: 'created_at', placeholder: 'Período' },
         render: (notification) => formatDistanceToNow(new Date(notification.created_at), {
           addSuffix: true,
           locale: ptBR,
         }),
       },
     ],
-    [downloadingId, handleDownloadReport, markAsReadMutation, navigate, selected, toggleSelect],
+    [downloadingId, handleDownloadReport, handleViewNotification, markAsReadMutation, markAsUnreadMutation, navigate, selected, toggleSelect],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const toolbarActions = useMemo(
-    () => (
-      <GridToolbarRoot>
-        <GridToolbarGroup>
-          <GridToolbarButton
-            label="Marcar todas como lidas"
-            icon={CheckCheck}
-            onClick={() => markAllMutation.mutate()}
-            disabled={markAllMutation.isPending || meta.unread === 0}
-            loading={markAllMutation.isPending}
-          />
-          <GridToolbarButton
-            label="Marcar selecionadas"
-            icon={Check}
-            onClick={() => void handleMarkSelectedRead()}
-            disabled={selected.length === 0}
-          />
-          <GridToolbarButton
-            label="Remover selecionadas"
-            icon={Trash2}
-            tone="destructive"
-            onClick={() => selected.length > 0 && setDeleteIds(selected)}
-            disabled={selected.length === 0}
-          />
-          {activeTab === 'reports' && (
-            <Button variant="outline" size="sm" className="h-8" asChild>
-              <Link to="/reports/executions">
-                <ExternalLink className="mr-1 size-3.5" />
-                Ver execuções
-              </Link>
-            </Button>
-          )}
-        </GridToolbarGroup>
-        <GridToolbarButton
-          label="Atualizar"
-          icon={RefreshCw}
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['notifications'] })}
-          loading={isLoading || isFetching}
-        />
-      </GridToolbarRoot>
-    ),
-    [
-      activeTab,
-      handleMarkSelectedRead,
-      isFetching,
-      isLoading,
-      markAllMutation,
-      meta.unread,
-      queryClient,
-      selected.length,
-    ],
-  );
+  const activeFilters = useMemo(() => {
+    const items = [];
+
+    if (grid.search.trim()) {
+      items.push({
+        id: 'search',
+        label: 'Busca',
+        value: grid.search.trim(),
+        onRemove: grid.clearSearch,
+      });
+    }
+
+    for (const column of columnDefinitions) {
+      if (!column.filter) continue;
+
+      if (column.filter.type === 'dateRange') {
+        const from = columnFilters.filters[dateRangeFilterFromKey(column.filter.filterKey)]?.trim() ?? '';
+        const to = columnFilters.filters[dateRangeFilterToKey(column.filter.filterKey)]?.trim() ?? '';
+        if (!from && !to) continue;
+
+        items.push({
+          id: column.filter.filterKey,
+          label: column.label,
+          value: formatDateRangeFilterLabel(from, to),
+          onRemove: () => columnFilters.clearDateRangeFilter(column.filter!.filterKey),
+        });
+        continue;
+      }
+
+      const value = columnFilters.filters[column.filter.filterKey]?.trim();
+      if (!value) continue;
+
+      const displayValue =
+        column.filter.type === 'select'
+          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
+          : column.filter.type === 'multi'
+            ? parseMultiFilterValue(value).join(', ')
+            : value;
+
+      items.push({
+        id: column.filter.filterKey,
+        label: column.label,
+        value: displayValue,
+        onRemove: () => columnFilters.clearFilter(column.filter!.filterKey),
+      });
+    }
+
+    return items;
+  }, [
+    columnDefinitions,
+    columnFilters.clearDateRangeFilter,
+    columnFilters.clearFilter,
+    columnFilters.filters,
+    grid.clearSearch,
+    grid.search,
+  ]);
+
+  const handleClearFilters = useCallback(() => {
+    grid.clearSearch();
+    columnFilters.clearAllFilters();
+    showSuccess('Filtros removidos.');
+  }, [columnFilters, grid, showSuccess]);
+
+  const handleFilterChange = useCallback((value: NotificationQuickFilter) => {
+    setActiveFilter(value);
+    clearSelection();
+    grid.setPage(1);
+  }, [clearSelection, grid]);
+
+  const handleResetGrid = useCallback(() => {
+    gridColumns.resetColumns();
+    grid.resetSettings();
+    columnFilters.clearAllFilters();
+    setActiveFilter('all');
+    clearSelection();
+    showSuccess('Grid restaurado ao padrão.');
+  }, [clearSelection, columnFilters, grid, gridColumns, showSuccess]);
+
+  const isGridCustomized = grid.isCustomized
+    || gridColumns.isCustomized
+    || columnFilters.hasFilters
+    || activeFilter !== 'all';
 
   usePageToolbar({
-    title: 'Notificações',
-    description: activeTab === 'reports'
-      ? 'Notificações de relatórios com download direto e acesso às execuções.'
-      : 'Central de notificações do sistema.',
-    actions: toolbarActions,
+    title: notificationsMenu?.title ?? 'Minhas notificações',
+    description: 'Central de notificações do sistema.',
+    actions: (
+      <StandardGridToolbar
+        onDelete={() => selectedRef.current.length > 0 && setDeleteIds([...selectedRef.current])}
+        hasSelection={selected.length > 0}
+        extra={(
+          <GridToolbarGroup>
+            <GridToolbarButton
+              label="Marcar todas como lidas"
+              icon={CheckCheck}
+              onClick={() => markAllMutation.mutate()}
+              disabled={markAllMutation.isPending || meta.unread === 0}
+              loading={markAllMutation.isPending}
+            />
+            <GridToolbarButton
+              label="Marcar selecionadas como lidas"
+              icon={Check}
+              onClick={() => void handleMarkSelectedRead()}
+              disabled={selected.length === 0}
+            />
+            <GridToolbarButton
+              label="Marcar selecionadas como não lidas"
+              icon={MailOpen}
+              onClick={() => void handleMarkSelectedUnread()}
+              disabled={selected.length === 0}
+            />
+            {activeFilter === 'reports' && (
+              <Button variant="outline" size="sm" className="h-8" asChild>
+                <Link to="/reports/executions">
+                  <ExternalLink className="mr-1 size-3.5" />
+                  Ver execuções
+                </Link>
+              </Button>
+            )}
+          </GridToolbarGroup>
+        )}
+      />
+    ),
   });
+
+  const emptyMessage = activeFilter === 'reports'
+    ? 'Nenhuma notificação de relatório encontrada.'
+    : activeFilter === 'unread'
+      ? 'Nenhuma notificação não lida encontrada.'
+      : activeFilter === 'read'
+        ? 'Nenhuma notificação lida encontrada.'
+        : 'Nenhuma notificação encontrada.';
 
   return (
     <PageBody>
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => {
-          setActiveTab(value as NotificationTab);
-          clearSelection();
-          grid.setPage(1);
-        }}
-        className="space-y-4"
+      <GridPanel
+        header={(
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              {notificationsMenu?.title ?? 'Minhas notificações'}
+            </h2>
+            <Button
+              variant="primary"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={openPreferences}
+            >
+              <PreferencesIcon className="mr-1.5 size-3.5" />
+              Configurações
+            </Button>
+          </div>
+        )}
+        toolbar={(
+          <GridPanelToolbar
+            onSelectAll={() => toggleSelectAll(visibleIds)}
+            isAllSelected={allVisibleSelected}
+            selectedCount={selected.length}
+            onClearSelection={clearSelection}
+            onRefresh={() => void invalidateNotifications(queryClient)}
+            isRefreshing={isLoading || isFetching}
+            search={grid.search}
+            onSearch={grid.setSearch}
+            searchPlaceholder="Buscar notificações..."
+            filtersControl={(
+              <GridFiltersControl
+                filters={activeFilters}
+                onClearAll={activeFilters.length > 0 ? handleClearFilters : undefined}
+              />
+            )}
+            columnsControl={(
+              <GridColumnsControl
+                columns={columnDefinitions}
+                order={gridColumns.order}
+                hidden={gridColumns.hidden}
+                visibleCount={gridColumns.visibleCount}
+                totalCount={gridColumns.totalCount}
+                isCustomized={gridColumns.isCustomized}
+                onOrderChange={gridColumns.setColumnOrder}
+                onSetVisibility={gridColumns.setColumnVisibility}
+                canHideColumn={gridColumns.canHideColumn}
+                onShowAll={gridColumns.showAllColumns}
+                onHideAll={gridColumns.hideAllColumns}
+                onResetDefault={gridColumns.resetColumns}
+              />
+            )}
+            resetControl={(
+              <GridResetControl
+                disabled={!isGridCustomized}
+                onReset={handleResetGrid}
+              />
+            )}
+            quickFiltersControl={(
+              <GridQuickFilters
+                value={activeFilter}
+                onChange={handleFilterChange}
+                options={[
+                  { value: 'all', label: 'Todas', count: notifications.length },
+                  { value: 'unread', label: 'Não lidas', count: unreadCount },
+                  { value: 'read', label: 'Lidas', count: readCount },
+                  { value: 'reports', label: 'Relatórios', icon: BarChart2, count: reportCount },
+                ]}
+              />
+            )}
+          />
+        )}
+        footer={(
+          <GridPagination
+            meta={meta}
+            onPageChange={grid.setPage}
+            onPerPageChange={grid.setPerPage}
+          />
+        )}
       >
-        <TabsList>
-          <TabsTrigger value="all">Todas</TabsTrigger>
-          <TabsTrigger value="reports" className="gap-1.5">
-            <BarChart2 className="size-3.5" />
-            Relatórios
-          </TabsTrigger>
-        </TabsList>
+        <GridTable
+          columns={gridColumns.visibleColumns}
+          data={notifications}
+          getRowKey={(notification) => notification.id}
+          loading={isLoading}
+          emptyMessage={emptyMessage}
+          onColumnOrderChange={gridColumns.reorderDraggableColumns}
+          isRowSelected={(notification) => selected.includes(notification.id)}
+          onRowClick={handleViewNotification}
+          columnFilters={columnFilters.filters}
+          onColumnFilterChange={columnFilters.setFilter}
+          onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+          onColumnFilterClear={columnFilters.clearColumnFilter}
+        />
+      </GridPanel>
 
-        <TabsContent value={activeTab} className="mt-0">
-          <GridPanel
-            toolbar={(
-              <GridPanelToolbar
-                onSelectAll={() => toggleSelectAll(visibleIds)}
-                isAllSelected={allVisibleSelected}
-                selectedCount={selected.length}
-                onClearSelection={clearSelection}
-                onRefresh={() => queryClient.invalidateQueries({ queryKey: ['notifications'] })}
-                isRefreshing={isLoading || isFetching}
-                search={grid.search}
-                onSearch={grid.setSearch}
-                searchPlaceholder={activeTab === 'reports'
-                  ? 'Buscar notificações de relatório...'
-                  : 'Buscar notificações...'}
-              />
-            )}
-            footer={(
-              <GridPagination
-                meta={meta}
-                onPageChange={grid.setPage}
-                onPerPageChange={grid.setPerPage}
-              />
-            )}
-          >
-            <GridTable
-              columns={gridColumns.visibleColumns}
-              data={tabNotifications}
-              getRowKey={(notification) => notification.id}
-              loading={isLoading}
-              emptyMessage={activeTab === 'reports'
-                ? 'Nenhuma notificação de relatório encontrada.'
-                : 'Nenhuma notificação encontrada.'}
-              onColumnOrderChange={gridColumns.reorderDraggableColumns}
-              isRowSelected={(notification) => selected.includes(notification.id)}
-              onRowClick={(notification) => {
-                if (isReportNotification(notification) && !notification.read_at) {
-                  markAsReadMutation.mutate(notification.id);
-                }
-              }}
-            />
-          </GridPanel>
-        </TabsContent>
-      </Tabs>
+      <NotificationDetailSheet
+        notification={activeViewNotification}
+        open={activeViewNotification !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewingNotification(null);
+        }}
+        onMarkRead={(id) => markAsReadMutation.mutate(id)}
+        onMarkUnread={(id) => markAsUnreadMutation.mutate(id)}
+        onDelete={(id) => setDeleteIds([id])}
+      />
 
       <AlertDialog open={deleteIds.length > 0} onOpenChange={(open) => !open && setDeleteIds([])}>
         <AlertDialogContent>

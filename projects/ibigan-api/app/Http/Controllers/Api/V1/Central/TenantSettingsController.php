@@ -30,11 +30,11 @@ final class TenantSettingsController extends Controller
     /**
      * Atualizar configurações do tenant (nome, timezone, locale).
      *
-     * Requer role admin ou super-admin.
+     * Requer permissão `configuracao-gerenciar`.
      */
     public function update(UpdateTenantSettingsRequest $request): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('configuracao-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $tenant = $this->currentTenant();
         $tenant->update($request->validated());
@@ -51,7 +51,7 @@ final class TenantSettingsController extends Controller
      */
     public function uploadLogo(Request $request): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('configuracao-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $request->validate([
             'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
@@ -77,7 +77,7 @@ final class TenantSettingsController extends Controller
      */
     public function deleteLogo(Request $request): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('configuracao-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $tenant = $this->currentTenant();
         $this->deleteStoredLogo($tenant);
@@ -114,11 +114,4 @@ final class TenantSettingsController extends Controller
         }
     }
 
-    private function ensureAdmin(Request $request): void
-    {
-        abort_unless(
-            $request->user()->hasAnyRole(['admin', 'super-admin']),
-            Response::HTTP_FORBIDDEN
-        );
-    }
 }

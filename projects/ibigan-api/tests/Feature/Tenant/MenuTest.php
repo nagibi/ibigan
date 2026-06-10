@@ -77,7 +77,7 @@ it('retorna árvore de menus para quem tem permissão', function (): void {
         Menu::factory()->create(['title' => 'Usuários', 'slug' => 'usuarios', 'parent_id' => $parent->id, 'order' => 1]);
     });
 
-    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
     $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
         ->assertOk()
@@ -85,6 +85,13 @@ it('retorna árvore de menus para quem tem permissão', function (): void {
         ->assertJsonStructure([
             'result' => [['id', 'title', 'slug', 'badge', 'children']],
         ]);
+});
+
+it('nega listagem de menus para viewer', function (): void {
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
+        ->assertForbidden();
 });
 
 it('nega listagem sem autenticação', function (): void {
@@ -97,7 +104,7 @@ it('nega listagem sem autenticação', function (): void {
 it('retorna um menu específico', function (): void {
     $menu = $this->tenant->run(fn () => Menu::factory()->create(['badge' => 'Novo']));
 
-    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
     $this->getJson("/api/v1/menus/{$menu->id}", menuHeaders($this->tenant->id))
         ->assertOk()
@@ -139,7 +146,7 @@ it('retorna badge na árvore de menus', function (): void {
         Menu::factory()->create(['slug' => 'relatorios', 'badge' => 'Beta']);
     });
 
-    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
     $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
         ->assertOk()
@@ -286,4 +293,63 @@ it('nega reorder para viewer', function (): void {
         'items' => [['id' => $menu->id, 'order' => 0]],
     ], menuHeaders($this->tenant->id))
         ->assertForbidden();
+});
+
+it('super-admin vê menu de empresas com role restrita', function (): void {
+    $superAdmin = $this->tenant->run(function (): User {
+        $user = User::factory()->create();
+        $user->assignRole('super-admin');
+
+        return $user;
+    });
+
+    $this->tenant->run(function (): void {
+        $plataforma = Menu::factory()->create([
+            'title' => 'Plataforma',
+            'slug' => 'plataforma',
+            'path' => null,
+            'roles' => ['super-admin'],
+        ]);
+
+        Menu::factory()->create([
+            'title' => 'Empresas',
+            'slug' => 'empresas',
+            'path' => '/admin/tenants',
+            'icon' => 'Building2',
+            'parent_id' => $plataforma->id,
+            'roles' => ['super-admin'],
+        ]);
+    });
+
+    Sanctum::actingAs($superAdmin, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonFragment(['title' => 'Empresas', 'path' => '/admin/tenants']);
+});
+
+it('admin comum não vê menu de empresas restrito a super-admin', function (): void {
+    $this->tenant->run(function (): void {
+        $plataforma = Menu::factory()->create([
+            'title' => 'Plataforma',
+            'slug' => 'plataforma',
+            'path' => null,
+            'roles' => ['super-admin'],
+        ]);
+
+        Menu::factory()->create([
+            'title' => 'Empresas',
+            'slug' => 'empresas',
+            'path' => '/admin/tenants',
+            'parent_id' => $plataforma->id,
+            'roles' => ['super-admin'],
+        ]);
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $response = $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
+        ->assertOk();
+
+    expect(collect($response->json('result'))->pluck('title'))->not->toContain('Empresas');
 });

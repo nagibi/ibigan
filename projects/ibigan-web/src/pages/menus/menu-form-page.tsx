@@ -8,6 +8,7 @@ import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import { formatFormPageTitle } from '@/lib/format-form-page-title';
 import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
 import { menusService } from '@/services/menus.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
@@ -60,11 +61,13 @@ export function MenuFormPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const tenantId = useAuthStore((state) => state.tenantId);
   const isEditing = Boolean(id);
 
   const { data: allMenus } = useQuery({
-    queryKey: ['menus'],
+    queryKey: ['menus', tenantId],
     queryFn: () => menusService.list(),
+    enabled: Boolean(tenantId),
   });
 
   const { data: menuData, isLoading } = useQuery({
@@ -375,9 +378,12 @@ export function MenuFormPage() {
               )}
               <FormFieldGridItem>
                 <FormField control={form.control} name="requires_auth" render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    <FormLabel className="cursor-pointer">Requer autenticação</FormLabel>
+                  <FormItem>
+                    <FormLabel>Requer autenticação</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )} />
               </FormFieldGridItem>

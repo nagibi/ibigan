@@ -25,6 +25,8 @@ export function PageToolbarBar() {
   const alertVisible = Boolean(globalAlert) || pageAlertVisible;
 
   const handleCloseAlert = () => {
+    mergedAlert?.onClose?.();
+
     if (globalAlert && mergedAlert === globalAlert) {
       dismissGlobalAlert();
       return;

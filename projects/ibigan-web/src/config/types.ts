@@ -3,6 +3,8 @@ import { type LucideIcon } from 'lucide-react';
 export interface MenuItem {
   title?: string;
   icon?: LucideIcon;
+  /** Rotas `/admin/*` — visível apenas para super-admin do SaaS. Ver docs/ROUTING.md. */
+  superAdminOnly?: boolean;
   path?: string;
   rootPath?: string;
   childrenIndex?: number;

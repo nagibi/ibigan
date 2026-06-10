@@ -13,9 +13,16 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $tenant = Tenant::firstOrCreate(
+        $tenant = Tenant::updateOrCreate(
             ['id' => 'acme'],
-            ['slug' => 'acme']
+            [
+                'slug' => 'acme',
+                'name' => 'Acme Corp',
+                'cnpj' => '04252011000110',
+                'timezone' => 'UTC',
+                'locale' => 'pt_BR',
+                'is_active' => true,
+            ],
         );
 
         $tenant->run(function () {

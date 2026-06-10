@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Central\TenantUser;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDomains;
@@ -14,9 +16,18 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     use HasDatabase;
     use HasDomains;
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
     public static function getCustomColumns(): array
     {
-        return ['id', 'slug', 'name', 'timezone', 'locale'];
+        return ['id', 'slug', 'name', 'cnpj', 'timezone', 'locale', 'is_active'];
+    }
+
+    public function tenantUsers(): HasMany
+    {
+        return $this->hasMany(TenantUser::class);
     }
 
     // Configurações de segurança (armazenadas em data JSON via VirtualColumn)

@@ -6,6 +6,7 @@ import {
   CheckCircle,
   LoaderCircle,
   Mail,
+  MailOpen,
   Trash2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -157,10 +158,11 @@ function NotificationFileCard({
 interface NotificationItemProps {
   notification: AppNotification;
   onMarkRead: (id: string) => void;
+  onMarkUnread?: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-export function NotificationItem({ notification, onMarkRead, onDelete }: NotificationItemProps) {
+export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDelete }: NotificationItemProps) {
   const [downloading, setDownloading] = useState(false);
   const type = getType(notification);
   const data = notification.data;
@@ -192,7 +194,7 @@ export function NotificationItem({ notification, onMarkRead, onDelete }: Notific
 
   const actions = (
     <div className="flex shrink-0 gap-1 self-start">
-      {isUnread && (
+      {isUnread ? (
         <Button
           variant="ghost"
           mode="icon"
@@ -203,7 +205,18 @@ export function NotificationItem({ notification, onMarkRead, onDelete }: Notific
         >
           <Check className="size-3" />
         </Button>
-      )}
+      ) : onMarkUnread ? (
+        <Button
+          variant="ghost"
+          mode="icon"
+          size="sm"
+          className="size-7"
+          onClick={() => onMarkUnread(notification.id)}
+          title="Marcar como não lida"
+        >
+          <MailOpen className="size-3" />
+        </Button>
+      ) : null}
       <Button
         variant="ghost"
         mode="icon"

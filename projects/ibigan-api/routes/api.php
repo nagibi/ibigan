@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
+use App\Http\Controllers\Api\V1\Central\CentralAuthController;
+use App\Http\Controllers\Api\V1\Central\TenantAdminController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
@@ -12,7 +14,9 @@ use App\Http\Controllers\Api\V1\Tenant\MenuController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\Tenant\PermissionController;
 use App\Http\Controllers\Api\V1\Tenant\ProfileController;
+use App\Http\Controllers\Api\V1\Tenant\RoleController;
 use App\Http\Controllers\Api\V1\Tenant\ReportController;
 use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
 use App\Http\Controllers\Api\V1\Tenant\UserApprovalController;
@@ -25,6 +29,7 @@ use Illuminate\Support\Facades\Route;
 Broadcast::routes([
     'middleware' => [InitializeTenancyByHeader::class, 'auth:sanctum'],
 ]);
+
 
 // Rotas públicas
 Route::prefix('v1')->group(function () {
@@ -42,12 +47,31 @@ Route::prefix('v1')->group(function () {
         ->middleware([InitializeTenancyByHeader::class, 'throttle:invite-accept']);
 });
 
-// Rotas centrais — banco landlord, sem contexto de tenant
-Route::prefix('central/v1')
-    ->middleware(['auth:sanctum', 'throttle:api'])
+// ─── Auth central (público) ───────────────────────────────────────────────
+Route::prefix('central/v1/auth')
+    ->middleware(['throttle:api'])
     ->group(function () {
-        Route::get('tenants', [TenantController::class, 'index']);
-        Route::post('tenants/switch', [TenantController::class, 'switch']);
+        Route::post('login', [CentralAuthController::class, 'login']);
+    });
+
+// ─── Rotas centrais protegidas ────────────────────────────────────────────
+Route::prefix('central/v1')
+    ->middleware(['auth:central', 'throttle:api'])
+    ->group(function () {
+        Route::get('auth/me',      [CentralAuthController::class, 'me']);
+        Route::post('auth/logout', [CentralAuthController::class, 'logout']);
+
+        Route::get('tenants',          [TenantController::class, 'index']);
+        Route::post('tenants/switch',  [TenantController::class, 'switch']);
+
+        Route::prefix('admin')->group(function () {
+            Route::get('tenants',               [TenantAdminController::class, 'index']);
+            Route::post('tenants',              [TenantAdminController::class, 'store']);
+            Route::get('tenants/{tenant}',      [TenantAdminController::class, 'show']);
+            Route::put('tenants/{tenant}',      [TenantAdminController::class, 'update']);
+            Route::patch('tenants/{tenant}/toggle-active', [TenantAdminController::class, 'toggleActive']);
+            Route::delete('tenants/{tenant}',   [TenantAdminController::class, 'destroy']);
+        });
     });
 
 // Rotas protegidas — requer X-Tenant-ID + token Sanctum
@@ -97,6 +121,16 @@ Route::prefix('v1')
         Route::patch('menus/reorder', [MenuController::class, 'reorder']);
         Route::apiResource('menus', MenuController::class);
 
+        Route::apiResource('permissions', PermissionController::class)->only([
+            'index',
+            'show',
+            'store',
+            'update',
+            'destroy',
+        ]);
+        Route::put('roles/{role}/permissions', [RoleController::class, 'syncPermissions']);
+        Route::apiResource('roles', RoleController::class);
+
         Route::post('message-templates/upload-image', [MessageTemplateController::class, 'uploadImage']);
         Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
         Route::post('message-templates/{messageTemplate}/duplicate', [MessageTemplateController::class, 'duplicate']);
@@ -113,6 +147,7 @@ Route::prefix('v1')
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('notifications/{notification}/unread', [NotificationController::class, 'markAsUnread']);
         Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
 
         Route::get('notification-preferences', [NotificationPreferenceController::class, 'index']);
@@ -129,12 +164,4 @@ Route::prefix('v1')
         Route::get('reports/{report}/executions/{execution}/result', [ReportController::class, 'result']);
         Route::get('reports/{report}/executions/{execution}/status', [ReportController::class, 'executionStatus']);
         Route::apiResource('reports', ReportController::class);
-    });
-
-// Rotas centrais — superusuário (sem InitializeTenancyByHeader)
-Route::prefix('central/v1')
-    ->middleware(['auth:sanctum', 'throttle:api'])
-    ->group(function () {
-        Route::get('tenants', [TenantController::class, 'index']);
-        Route::post('tenants/switch', [TenantController::class, 'switch']);
     });

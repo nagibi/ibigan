@@ -1,3 +1,5 @@
+import { AdminTenantFormPage } from '@/pages/admin/tenant-form-page';
+import { AdminTenantsPage } from '@/pages/admin/tenants-page';
 import { ActivityLogsPage } from '@/pages/activity-logs/activity-logs-page';
 import { CampaignDetailPage } from '@/pages/campaigns/campaign-detail-page';
 import { CampaignFormPage } from '@/pages/campaigns/campaign-form-page';
@@ -20,10 +22,13 @@ import { ReportExecutePage } from '@/pages/reports/report-execute-page';
 import { ReportFormPage } from '@/pages/reports/report-form-page';
 import { ReportsPage } from '@/pages/reports/reports-page';
 import { NotificationsPage } from '@/pages/notifications/notifications-page';
+import { PermissionFormPage } from '@/pages/permissions/permission-form-page';
+import { PermissionsPage } from '@/pages/permissions/permissions-page';
+import { RoleFormPage } from '@/pages/roles/role-form-page';
+import { RolesPage } from '@/pages/roles/roles-page';
 import { NotificationPreferencesPage } from '@/pages/profile/notification-preferences-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
-import { SettingsPage } from '@/pages/settings/settings-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
 import { WebhookFormPage } from '@/pages/webhooks/webhook-form-page';
 import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
@@ -32,6 +37,14 @@ import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
 import { Navigate, Route, Routes } from 'react-router';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
+import { RequireSuperAdmin } from '@/routing/require-super-admin';
+
+/**
+ * Convenção de rotas (Opção C) — ver docs/ROUTING.md
+ *
+ * - Sem prefixo (/users, /menus, …) → tenant (admin do tenant)
+ * - Com prefixo /admin/* → SaaS (somente super-admin)
+ */
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -107,6 +120,15 @@ export function AppRoutingSetup() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+
+        {/* SaaS — somente super-admin */}
+        <Route element={<RequireSuperAdmin />}>
+          <Route path="/admin/tenants" element={<AdminTenantsPage />} />
+          <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
+          <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
+        </Route>
+
+        {/* Tenant — admin do tenant atual */}
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/new" element={<UserFormPage key="user-new" />} />
         <Route path="/users/:id" element={<UserFormPage key="user-edit" />} />
@@ -114,11 +136,16 @@ export function AppRoutingSetup() {
         <Route path="/menus" element={<MenusPage />} />
         <Route path="/menus/new" element={<MenuFormPage key="menu-new" />} />
         <Route path="/menus/:id" element={<MenuFormPage key="menu-edit" />} />
+        <Route path="/roles" element={<RolesPage />} />
+        <Route path="/roles/new" element={<RoleFormPage key="role-new" />} />
+        <Route path="/roles/:id" element={<RoleFormPage key="role-edit" />} />
+        <Route path="/permissions" element={<PermissionsPage />} />
+        <Route path="/permissions/new" element={<PermissionFormPage key="permission-new" />} />
+        <Route path="/permissions/:id" element={<PermissionFormPage key="permission-edit" />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
         <Route path="/security" element={<SecurityPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/new" element={<ReportFormPage key="report-new" />} />

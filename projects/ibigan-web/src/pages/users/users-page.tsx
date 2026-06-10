@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Activity, Pencil } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Activity, Pencil, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
+import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
@@ -18,7 +19,10 @@ import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-shee
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { formatCpf, formatPhone } from '@/lib/brazilian-masks';
 import { formatUserGender, USER_GENDER_OPTIONS } from '@/lib/user-gender';
+import { parseGridUrlState } from '@/lib/grid-url-state';
+import { buildRolesUrlWithUserFilter } from '@/lib/roles-user-filter';
 import { isUserActive, usersService, type User } from '@/services/users.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { GridFiltersControl } from '@/components/grid/grid-filters-control';
@@ -88,10 +92,19 @@ const STATUS_FILTER_OPTIONS = [
 
 export function UsersPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialUrlState = useRef(parseGridUrlState(searchParams)).current;
   const loadRef = useRef<() => Promise<void>>(async () => {});
+  const { hasPermission } = useAuthStore();
+  const canViewRoles = hasPermission('permissao-visualizar');
   const { showToggleActive, showError, showSuccess } = useApiToolbarAlert();
 
   const grid = useGrid({
+    defaultPage: initialUrlState.page,
+    defaultPerPage: initialUrlState.perPage,
+    defaultSearch: initialUrlState.search,
+    defaultSort: initialUrlState.sort,
+    defaultSortDir: initialUrlState.sortDir,
     onActivate: async (ids) => {
       try {
         await Promise.all(ids.map((id) => usersService.toggleActive(id, true)));
@@ -114,7 +127,18 @@ export function UsersPage() {
     },
   });
 
-  const columnFilters = useGridFilters(() => grid.setPage(1));
+  const columnFilters = useGridFilters(() => grid.setPage(1), {
+    defaultFilters: initialUrlState.filters,
+  });
+
+  useSyncGridUrl({
+    page: grid.page,
+    perPage: grid.perPage,
+    debouncedSearch: grid.debouncedSearch,
+    sort: grid.sort,
+    sortDir: grid.sortDir,
+    debouncedFilters: columnFilters.debouncedFilters,
+  });
 
   const [users, setUsers] = useState<User[]>([]);
   const [meta, setMeta] = useState<GridPaginationMeta>({
@@ -224,6 +248,11 @@ export function UsersPage() {
     [navigate],
   );
 
+  const handleViewUserRoles = useCallback(
+    (user: User) => navigate(buildRolesUrlWithUserFilter(user)),
+    [navigate],
+  );
+
   function handleExport() {
     toast.info('Exportação em breve.');
   }
@@ -306,6 +335,12 @@ export function UsersPage() {
                 label: 'Editar',
                 icon: Pencil,
                 onClick: () => navigate(`/users/${user.id}`),
+              },
+              {
+                label: 'Papéis associados',
+                icon: ShieldCheck,
+                hidden: !canViewRoles,
+                onClick: () => handleViewUserRoles(user),
               },
               {
                 label: 'Activity Logs',
@@ -479,8 +514,10 @@ export function UsersPage() {
       },
     ],
     [
+      canViewRoles,
       grid.selected,
       grid.toggleSelect,
+      handleViewUserRoles,
       navigate,
       rowStatusId,
     ],

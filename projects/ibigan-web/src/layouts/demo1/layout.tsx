@@ -12,6 +12,7 @@ import {
   PageToolbarProvider,
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
+import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
 import { Footer } from './components/footer';
 import { Header } from './components/header';
 import { PageContentHeader } from './components/page-content-header';
@@ -113,7 +114,7 @@ export function Demo1Layout() {
   }, [isSidebarMode]);
 
   return (
-    <>
+    <NotificationPreferencesSheetProvider>
       <Helmet>
         <title>{item?.title}</title>
       </Helmet>
@@ -123,6 +124,6 @@ export function Demo1Layout() {
       <PageToolbarProvider>
         <Demo1LayoutContent />
       </PageToolbarProvider>
-    </>
+    </NotificationPreferencesSheetProvider>
   );
 }

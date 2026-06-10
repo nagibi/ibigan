@@ -1,11 +1,18 @@
 import {
   Activity,
+  BarChart2,
   Bell,
+  Building2,
+  FileBarChart,
   LayoutDashboard,
   Mail,
   Megaphone,
-  Settings,
+  Menu,
+  Settings2,
   Shield,
+  ShieldCheck,
+  User,
+  UserCheck,
   Users,
   Webhook,
 } from 'lucide-react';
@@ -26,6 +33,11 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/users',
   },
   {
+    title: 'Aprovações',
+    icon: UserCheck,
+    path: '/user-approvals',
+  },
+  {
     title: 'Convites',
     icon: Mail,
     path: '/invites',
@@ -36,12 +48,41 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/campaigns',
   },
   {
-    heading: 'CONFIGURAÇÕES',
+    heading: 'RELATÓRIOS',
   },
   {
-    title: 'Templates',
-    icon: Mail,
-    path: '/message-templates',
+    title: 'Relatórios',
+    icon: BarChart2,
+    path: '/reports',
+  },
+  {
+    title: 'Minhas Execuções',
+    icon: FileBarChart,
+    path: '/reports/executions',
+  },
+  {
+    heading: 'ADMINISTRAÇÃO',
+  },
+  {
+    title: 'Empresas',
+    icon: Building2,
+    path: '/admin/tenants',
+    superAdminOnly: true,
+  },
+  {
+    title: 'Menus',
+    icon: Menu,
+    path: '/menus',
+  },
+  {
+    title: 'Papéis',
+    icon: ShieldCheck,
+    path: '/roles',
+  },
+  {
+    title: 'Permissões',
+    icon: Shield,
+    path: '/permissions',
   },
   {
     title: 'Webhooks',
@@ -49,24 +90,32 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/webhooks',
   },
   {
+    title: 'Activity Log',
+    icon: Activity,
+    path: '/activity-logs',
+  },
+  {
+    heading: 'CONTA',
+  },
+  {
+    title: 'Meu perfil',
+    icon: User,
+    path: '/profile',
+  },
+  {
     title: 'Notificações',
     icon: Bell,
     path: '/notifications',
   },
   {
-    title: 'Configurações',
-    icon: Settings,
-    path: '/settings',
+    title: 'Preferências',
+    icon: Settings2,
+    path: '/notification-preferences',
   },
   {
     title: 'Segurança',
     icon: Shield,
     path: '/security',
-  },
-  {
-    title: 'Activity Log',
-    icon: Activity,
-    path: '/activity-logs',
   },
 ];
 

@@ -9,6 +9,7 @@ export const TOGGLE_ACTIVE_LABELS = {
   template: { singular: 'Template', plural: 'Templates' },
   webhook: { singular: 'Webhook', plural: 'Webhooks' },
   report: { singular: 'Relatório', plural: 'Relatórios' },
+  empresa: { singular: 'Empresa', plural: 'Empresas' },
   record: { singular: 'Registro', plural: 'Registros' },
 } as const satisfies Record<string, ToggleActiveLabels>;
 
@@ -27,6 +28,7 @@ function pluralizeEntityLabel(entityLabel: string): string {
     webhook: TOGGLE_ACTIVE_LABELS.webhook.plural,
     relatório: TOGGLE_ACTIVE_LABELS.report.plural,
     relatorio: TOGGLE_ACTIVE_LABELS.report.plural,
+    empresa: TOGGLE_ACTIVE_LABELS.empresa.plural,
     registro: TOGGLE_ACTIVE_LABELS.record.plural,
   };
 

@@ -201,6 +201,7 @@ export function buildSelectionAlert(
     title: formatToolbarSelectedCount(selectedCount),
     autoDismissMs: false,
     id: selectedCount,
+    onClose: onClearSelection,
     icon: (
       <Checkbox
         checked
@@ -239,6 +240,7 @@ export interface GridPanelToolbarProps {
   columnsControl?: ReactNode;
   filtersControl?: ReactNode;
   resetControl?: ReactNode;
+  quickFiltersControl?: ReactNode;
 }
 
 export function GridPanelToolbar({
@@ -257,6 +259,7 @@ export function GridPanelToolbar({
   columnsControl,
   filtersControl,
   resetControl,
+  quickFiltersControl,
 }: GridPanelToolbarProps) {
   const selectionAlert = buildSelectionAlert(selectedCount, onClearSelection);
 
@@ -296,14 +299,16 @@ export function GridPanelToolbar({
 
         <GridToolbarSpacer />
 
-        {onSearch && (
-          <GridToolbarSearch
-            value={search ?? ''}
-            onChange={onSearch}
-            placeholder={searchPlaceholder}
-            className="ms-auto shrink-0"
-          />
-        )}
+        <div className="ms-auto flex shrink-0 items-center gap-2">
+          {quickFiltersControl}
+          {onSearch && (
+            <GridToolbarSearch
+              value={search ?? ''}
+              onChange={onSearch}
+              placeholder={searchPlaceholder}
+            />
+          )}
+        </div>
       </ToolbarAlertHost>
     </div>
   );

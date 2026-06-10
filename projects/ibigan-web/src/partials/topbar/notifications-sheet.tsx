@@ -1,9 +1,16 @@
 import { Fragment, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart2, Bell, CheckCheck, ExternalLink, LoaderCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  invalidateNotifications,
+  markAllNotificationsReadInCache,
+  removeNotificationFromCache,
+  upsertNotificationInCache,
+} from '@/lib/notification-cache';
 import { notificationsService } from '@/services/notifications.service';
 import { isReportNotification } from '@/lib/notification-utils';
 import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
@@ -24,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const { open: openPreferences } = useNotificationPreferencesSheet();
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -33,20 +41,32 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
 
   const markAsReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markAsRead(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: (response) => {
+      upsertNotificationInCache(queryClient, response.data.result);
+    },
+  });
+
+  const markAsUnreadMutation = useMutation({
+    mutationFn: (id: string) => notificationsService.markAsUnread(id),
+    onSuccess: (response) => {
+      upsertNotificationInCache(queryClient, response.data.result);
+    },
   });
 
   const markAllMutation = useMutation({
     mutationFn: () => notificationsService.markAllAsRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      markAllNotificationsReadInCache(queryClient);
       toast.success('Todas marcadas como lidas.');
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => notificationsService.destroy(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: (_response, id) => {
+      removeNotificationFromCache(queryClient, id);
+      void invalidateNotifications(queryClient);
+    },
   });
 
   const notifications = data?.data.result.data ?? [];
@@ -90,6 +110,7 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
             <NotificationItem
               notification={notification}
               onMarkRead={(id) => markAsReadMutation.mutate(id)}
+              onMarkUnread={(id) => markAsUnreadMutation.mutate(id)}
               onDelete={(id) => deleteMutation.mutate(id)}
             />
             {index < items.length - 1 && <div className="border-b border-border" />}
@@ -135,10 +156,17 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
                   )}
                 </TabsTrigger>
                 <div className="flex grow items-center justify-end">
-                  <Button variant="ghost" size="sm" mode="icon" className="mb-1" asChild>
-                    <Link to="/notification-preferences" onClick={() => setOpen(false)}>
-                      <Settings className="size-4.5!" />
-                    </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    mode="icon"
+                    className="mb-1"
+                    onClick={() => {
+                      setOpen(false);
+                      openPreferences();
+                    }}
+                  >
+                    <Settings className="size-4.5!" />
                   </Button>
                 </div>
               </TabsList>
@@ -180,7 +208,7 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
               }
               Promise.all(readIds.map((id) => notificationsService.destroy(id)))
                 .then(() => {
-                  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                  void invalidateNotifications(queryClient);
                   toast.success('Notificações lidas arquivadas.');
                 })
                 .catch(() => toast.error('Erro ao arquivar notificações.'));

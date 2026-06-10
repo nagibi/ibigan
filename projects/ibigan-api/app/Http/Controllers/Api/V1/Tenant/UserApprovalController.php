@@ -16,12 +16,12 @@ final class UserApprovalController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('aprovacao-visualizar'), Response::HTTP_FORBIDDEN);
 
         $approvals = UserApproval::with('user')
             ->where('status', $request->query('status', 'pending'))
             ->orderByDesc('created_at')
-            ->paginate(15);
+            ->paginate($request->integer('per_page', 15));
 
         return response()->json([
             'status' => 1,
@@ -50,7 +50,7 @@ final class UserApprovalController extends Controller
 
     public function approve(Request $request, UserApproval $userApproval): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('aprovacao-gerenciar'), Response::HTTP_FORBIDDEN);
         abort_if($userApproval->isApproved(), Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $userApproval->update([
@@ -72,10 +72,10 @@ final class UserApprovalController extends Controller
 
     public function reject(Request $request, UserApproval $userApproval): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('aprovacao-gerenciar'), Response::HTTP_FORBIDDEN);
         abort_if($userApproval->isRejected(), Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $request->validate([
+        $validated = $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -83,12 +83,12 @@ final class UserApprovalController extends Controller
             'status' => 'rejected',
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
-            'rejection_reason' => $request->validated('reason'),
+            'rejection_reason' => $validated['reason'] ?? null,
         ]);
 
         $userApproval->user->update(['is_active' => false]);
 
-        $userApproval->user->notify(new UserRejectedNotification($request->validated('reason')));
+        $userApproval->user->notify(new UserRejectedNotification($validated['reason'] ?? null));
 
         return response()->json([
             'status' => 1,

@@ -14,6 +14,8 @@ export interface ApiMenu {
   badge: string | null;
   roles: string[] | null;
   children: ApiMenu[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MenusResponse {

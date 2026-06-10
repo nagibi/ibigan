@@ -127,7 +127,12 @@ it('cria um usuário para quem tem permissão de gerenciar', function (): void {
 });
 
 it('atualiza um usuário para quem tem permissão de gerenciar', function (): void {
-    $targetUser = $this->tenant->run(fn () => User::factory()->create());
+    $targetUser = $this->tenant->run(function (): User {
+        $user = User::factory()->create();
+        $user->assignRole('viewer');
+
+        return $user;
+    });
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
@@ -139,6 +144,7 @@ it('atualiza um usuário para quem tem permissão de gerenciar', function (): vo
         'birth_date' => '1988-03-10',
         'gender' => 'female',
         'bio' => 'Perfil atualizado',
+        'roles' => ['manager', 'viewer'],
     ];
 
     $this->putJson("/api/v1/users/{$targetUser->id}", $payload, tenantHeaders($this->tenant->id))
@@ -151,7 +157,44 @@ it('atualiza um usuário para quem tem permissão de gerenciar', function (): vo
         ->assertJsonPath('result.birth_date', '1988-03-10')
         ->assertJsonPath('result.gender', 'female')
         ->assertJsonPath('result.bio', 'Perfil atualizado')
+        ->assertJsonPath('result.roles', ['manager', 'viewer'])
         ->assertJsonPath('result.updated_by.id', $this->admin->id);
+});
+
+it('cria usuário com múltiplos papéis', function (): void {
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $payload = [
+        'name' => 'Multi Role User',
+        'email' => 'multirole@example.com',
+        'password' => 'Password1',
+        'password_confirmation' => 'Password1',
+        'roles' => ['manager', 'viewer'],
+    ];
+
+    $this->postJson('/api/v1/users', $payload, tenantHeaders($this->tenant->id))
+        ->assertCreated()
+        ->assertJsonPath('result.roles', ['manager', 'viewer']);
+});
+
+it('preserva super-admin ao atualizar papéis do usuário', function (): void {
+    $targetUser = $this->tenant->run(function (): User {
+        $user = User::factory()->create();
+        $user->assignRole('super-admin');
+
+        return $user;
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $response = $this->putJson("/api/v1/users/{$targetUser->id}", [
+        'name' => $targetUser->name,
+        'email' => $targetUser->email,
+        'roles' => ['admin'],
+    ], tenantHeaders($this->tenant->id))
+        ->assertOk();
+
+    expect($response->json('result.roles'))->toEqualCanonicalizing(['admin', 'super-admin']);
 });
 
 it('remove um usuário para quem tem permissão de gerenciar', function (): void {

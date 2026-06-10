@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/stores/auth.store';
+import {
+  invalidateNotifications,
+  upsertNotificationInCache,
+} from '@/lib/notification-cache';
 import { getEcho } from '@/lib/echo';
+import { type AppNotification } from '@/services/notifications.service';
+import { useAuthStore } from '@/stores/auth.store';
 
 export function useNotifications() {
   const { user, isAuthenticated } = useAuthStore();
@@ -14,6 +19,17 @@ export function useNotifications() {
     const echo = getEcho();
     const channel = echo.private(`App.Models.User.${user.id}`);
 
+    const onNotificationUpdated = (notification: AppNotification) => {
+      upsertNotificationInCache(queryClient, notification);
+    };
+
+    const onNotificationsInvalidated = () => {
+      void invalidateNotifications(queryClient);
+    };
+
+    channel.listen('.notification.updated', onNotificationUpdated);
+    channel.listen('.notifications.invalidated', onNotificationsInvalidated);
+
     channel.notification((notification: {
       type: string;
       user_name?: string;
@@ -22,7 +38,7 @@ export function useNotifications() {
       subject?: string;
       [key: string]: unknown;
     }) => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void invalidateNotifications(queryClient);
 
       const type = notification.type?.split('\\').pop() ?? '';
 
@@ -51,6 +67,8 @@ export function useNotifications() {
     });
 
     return () => {
+      channel.stopListening('.notification.updated', onNotificationUpdated);
+      channel.stopListening('.notifications.invalidated', onNotificationsInvalidated);
       echo.leave(`App.Models.User.${user.id}`);
     };
   }, [user?.id, isAuthenticated, queryClient]);

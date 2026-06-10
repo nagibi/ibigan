@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Camera, KeyRound, LoaderCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
+import { Bell, Building2, Camera, ChevronRight, KeyRound, LoaderCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import {
   mapUserProfileToFormValues,
@@ -12,12 +14,17 @@ import {
   type UserProfileFormData,
 } from '@/lib/user-profile-fields';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { authService } from '@/services/auth.service';
 import { profileService } from '@/services/profile.service';
+import { useTenantSwitch } from '@/hooks/use-tenant-switch';
 import { useAuthStore } from '@/stores/auth.store';
 import { getInitials } from '@/lib/helpers';
+import { resolveMenuIcon } from '@/lib/menu-icons';
+import { cn } from '@/lib/utils';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
 import { PageBody } from '@/components/common/page-body';
 import { FormToolbar } from '@/components/grid/form-toolbar';
@@ -51,7 +58,12 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 
 export function ProfilePage() {
   const queryClient = useQueryClient();
+  const { open: openPreferences } = useNotificationPreferencesSheet();
+  const profileMenu = useApiMenuByPath('/profile');
+  const notificationsMenu = useApiMenuByPath('/notifications');
+  const notificationPreferencesMenu = useApiMenuByPath('/notification-preferences');
   const { user, setAuth, tenantId, token } = useAuthStore();
+  const { switchToTenant, switchingId } = useTenantSwitch();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const appearance = useAppearanceSettings();
@@ -62,7 +74,32 @@ export function ProfilePage() {
     queryFn: () => profileService.show(),
   });
 
+  const { data: tenantsData, isLoading: isLoadingTenants } = useQuery({
+    queryKey: ['user-tenants'],
+    queryFn: () => authService.listTenants(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const profile = data?.data.result;
+  const tenants = tenantsData?.data.result ?? [];
+
+  const NotificationsIcon = notificationsMenu
+    ? resolveMenuIcon({
+      icon: notificationsMenu.icon,
+      path: notificationsMenu.path,
+      slug: notificationsMenu.slug,
+      title: notificationsMenu.title,
+    })
+    : Bell;
+
+  const NotificationPreferencesIcon = notificationPreferencesMenu
+    ? resolveMenuIcon({
+      icon: notificationPreferencesMenu.icon,
+      path: notificationPreferencesMenu.path,
+      slug: notificationPreferencesMenu.slug,
+      title: notificationPreferencesMenu.title,
+    })
+    : Bell;
 
   const profileForm = useForm<UserProfileFormData>({
     resolver: zodResolver(userProfileSchema),
@@ -206,7 +243,7 @@ export function ProfilePage() {
   });
 
   usePageToolbar({
-    title: profile?.name ?? 'Meu Perfil',
+    title: profileMenu?.title ?? 'Meu perfil',
     alert,
     actions: (
       <FormToolbar
@@ -321,6 +358,95 @@ export function ProfilePage() {
           </FormPanel>
         </form>
       </Form>
+
+      <FormPanel title="Empresas">
+        {isLoadingTenants ? (
+          <div className="flex justify-center py-6">
+            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : tenants.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma empresa vinculada à sua conta.</p>
+        ) : (
+          <div className="space-y-2">
+            {tenants.map((tenant) => {
+              const isCurrent = tenant.id === tenantId;
+
+              return (
+                <button
+                  key={tenant.id}
+                  type="button"
+                  disabled={isCurrent || switchingId !== null}
+                  onClick={() => {
+                    if (!isCurrent) {
+                      void switchToTenant(tenant.id);
+                    }
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
+                    isCurrent
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border hover:border-primary hover:bg-muted/50',
+                    !isCurrent && switchingId !== null && 'cursor-not-allowed opacity-60',
+                  )}
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Building2 className="size-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{tenant.name ?? tenant.slug}</p>
+                    <p className="truncate text-xs text-muted-foreground">{tenant.slug}</p>
+                  </div>
+                  {isCurrent ? (
+                    <Badge variant="primary" appearance="light" size="sm" className="shrink-0">
+                      Atual
+                    </Badge>
+                  ) : switchingId === tenant.id ? (
+                    <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </FormPanel>
+
+      <FormPanel title="Notificações">
+        <div className="space-y-2">
+          <Link
+            to="/notifications"
+            className="flex items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:border-primary hover:bg-muted/50"
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <NotificationsIcon className="size-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">
+                {notificationsMenu?.title ?? 'Minhas notificações'}
+              </p>
+              <p className="text-xs text-muted-foreground">Ver e gerenciar notificações recebidas.</p>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+          <button
+            type="button"
+            onClick={openPreferences}
+            className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:border-primary hover:bg-muted/50"
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <NotificationPreferencesIcon className="size-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">
+                {notificationPreferencesMenu?.title ?? 'Preferências de Notificação'}
+              </p>
+              <p className="text-xs text-muted-foreground">Configurar canais e tipos de alerta.</p>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        </div>
+      </FormPanel>
 
       <AppearanceSettingsPanel state={appearance} />
 

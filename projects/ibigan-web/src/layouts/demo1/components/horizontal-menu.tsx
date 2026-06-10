@@ -4,7 +4,9 @@ import { type MenuItem } from '@/config/types';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useMenu } from '@/hooks/use-menu';
 import { MenuBadge } from '@/lib/menu-badge';
+import { isNotificationPreferencesPath } from '@/lib/notification-preferences-path';
 import { cn } from '@/lib/utils';
+import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,10 +35,12 @@ function DropdownChildItems({
   items,
   isActive,
   hasActiveChild,
+  onOpenPreferences,
 }: {
   items: MenuItem[];
   isActive: (path: string | undefined) => boolean;
   hasActiveChild: (children: MenuItem[] | undefined) => boolean;
+  onOpenPreferences: () => void;
 }) {
   return items.map((child, childIndex) => {
     if (child.heading || child.disabled) return null;
@@ -58,6 +62,7 @@ function DropdownChildItems({
               items={child.children}
               isActive={isActive}
               hasActiveChild={hasActiveChild}
+              onOpenPreferences={onOpenPreferences}
             />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -67,6 +72,23 @@ function DropdownChildItems({
     if (!child.path) return null;
 
     const active = isActive(child.path);
+
+    if (isNotificationPreferencesPath(child.path)) {
+      return (
+        <DropdownMenuItem
+          key={childIndex}
+          className={cn(
+            'flex items-center gap-2 px-2 py-2 cursor-pointer',
+            active && 'bg-accent text-primary font-medium',
+          )}
+          onClick={onOpenPreferences}
+        >
+          <MenuIcon icon={child.icon} />
+          <span className="grow">{child.title}</span>
+          <MenuBadge badge={child.badge} />
+        </DropdownMenuItem>
+      );
+    }
 
     return (
       <DropdownMenuItem key={childIndex} asChild>
@@ -95,6 +117,9 @@ function HorizontalMenuItem({
 }) {
   const { pathname } = useLocation();
   const { isActive, hasActiveChild, isItemActive } = useMenu(pathname);
+  const { open: openPreferences, isOpen: preferencesOpen } = useNotificationPreferencesSheet();
+  const isActiveWithPreferences = (path: string | undefined) =>
+    isActive(path) || (preferencesOpen && isNotificationPreferencesPath(path));
 
   if (item.heading || item.disabled) {
     return null;
@@ -117,8 +142,9 @@ function HorizontalMenuItem({
         <DropdownMenuContent align="start" sideOffset={8} className="min-w-52 p-2">
           <DropdownChildItems
             items={children}
-            isActive={isActive}
+            isActive={isActiveWithPreferences}
             hasActiveChild={hasActiveChild}
+            onOpenPreferences={openPreferences}
           />
         </DropdownMenuContent>
       </DropdownMenu>

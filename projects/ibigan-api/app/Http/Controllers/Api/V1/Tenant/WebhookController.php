@@ -21,11 +21,11 @@ final class WebhookController extends Controller
     /**
      * Listar webhooks configurados.
      *
-     * Requer role admin ou super-admin.
+     * Requer permissão `webhook-visualizar`.
      */
     public function index(Request $request): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-visualizar'), Response::HTTP_FORBIDDEN);
 
         $webhooks = Webhook::query()
             ->latest()
@@ -51,7 +51,7 @@ final class WebhookController extends Controller
      */
     public function show(Request $request, Webhook $webhook): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-visualizar'), Response::HTTP_FORBIDDEN);
 
         return response()->json([
             'status' => 1,
@@ -65,7 +65,7 @@ final class WebhookController extends Controller
      */
     public function store(StoreWebhookRequest $request): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $webhook = Webhook::query()->create($request->validated());
 
@@ -81,7 +81,7 @@ final class WebhookController extends Controller
      */
     public function update(UpdateWebhookRequest $request, Webhook $webhook): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $webhook->update($request->validated());
 
@@ -95,11 +95,11 @@ final class WebhookController extends Controller
     /**
      * Ativar ou inativar webhook.
      *
-     * Requer role admin ou super-admin.
+     * Requer permissão `webhook-gerenciar`.
      */
     public function toggleActive(ToggleActiveRequest $request, Webhook $webhook): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $updated = app(ToggleActiveAction::class)->execute(
             $webhook,
@@ -118,7 +118,7 @@ final class WebhookController extends Controller
      */
     public function destroy(Request $request, Webhook $webhook): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $webhook->delete();
 
@@ -134,7 +134,7 @@ final class WebhookController extends Controller
      */
     public function deliveries(Request $request, Webhook $webhook): JsonResponse
     {
-        $this->ensureAdmin($request);
+        abort_unless($request->user()->can('webhook-visualizar'), Response::HTTP_FORBIDDEN);
 
         $deliveries = $webhook->deliveries()
             ->latest()
@@ -155,11 +155,4 @@ final class WebhookController extends Controller
         ]);
     }
 
-    private function ensureAdmin(Request $request): void
-    {
-        abort_unless(
-            $request->user()->hasAnyRole(['admin', 'super-admin']),
-            Response::HTTP_FORBIDDEN
-        );
-    }
 }
