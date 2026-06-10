@@ -162,16 +162,3 @@ it('dispara notificação ao criar usuário', function (): void {
     });
 });
 
-it('dispara notificação ao criar organização', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
-
-    $this->postJson('/api/v1/organizations', [
-        'name' => 'Nova Org',
-        'slug' => 'nova-org',
-        'status' => 'active',
-    ], ['X-Tenant-ID' => $this->tenant->id])->assertCreated();
-
-    $this->tenant->run(function (): void {
-        expect($this->admin->notifications()->count())->toBeGreaterThan(0);
-    });
-});

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Organization;
+use App\Models\Menu;
 use App\Models\User;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -72,7 +72,7 @@ final class EloquentActivityLogRepository implements ActivityLogRepositoryInterf
     {
         return match ($type) {
             'users', 'user' => User::class,
-            'organizations', 'organization' => Organization::class,
+            'menus', 'menu' => Menu::class,
             default => class_exists($type) ? $type : throw new InvalidArgumentException("Tipo de subject inválido: {$type}"),
         };
     }

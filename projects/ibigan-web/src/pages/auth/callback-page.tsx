@@ -32,7 +32,7 @@ export function CallbackPage() {
 
         const { data } = await authService.me();
         setAuth(token!, tenantId!, data.result);
-        navigate('/dashboard');
+        navigate('/auth/select-tenant');
       } catch {
         logout();
         navigate('/auth/login?error=auth_failed');

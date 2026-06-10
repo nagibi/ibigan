@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Auth;
 
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Central\TenantUser;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -26,7 +27,7 @@ final class RegisterAction
             'name' => $request->validated('company_name'),
         ]);
 
-        return $tenant->run(function () use ($request, $tenant): array {
+        $result = $tenant->run(function () use ($request, $tenant): array {
             (new RolePermissionSeeder)->run();
 
             $user = User::create([
@@ -42,6 +43,7 @@ final class RegisterAction
             return [
                 'token' => $token,
                 'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -51,5 +53,17 @@ final class RegisterAction
                 ],
             ];
         });
+
+        TenantUser::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $result['user_id'],
+            'role' => 'admin',
+            'is_default' => true,
+            'joined_at' => now(),
+        ]);
+
+        unset($result['user_id']);
+
+        return $result;
     }
 }

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Camera, LoaderCircle, Trash2 } from 'lucide-react';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { tenantSettingsService } from '@/services/tenant-settings.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,11 @@ const LOCALES = [
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  usePageToolbar({
+    title: 'Configurações',
+    description: 'Gerencie as configurações da sua organização.',
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['tenant-settings'],
@@ -91,20 +97,15 @@ export function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="container py-6 flex justify-center">
+      <div className="container flex justify-center pb-6">
         <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="container py-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Configurações</h1>
-        <p className="text-sm text-muted-foreground">Gerencie as configurações da sua organização.</p>
-      </div>
-
-      <Card className="mb-6">
+    <div className="container space-y-6 pb-6">
+      <Card className="max-w-3xl">
         <CardHeader><CardTitle>Logo da organização</CardTitle></CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
@@ -156,7 +157,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="max-w-3xl">
         <CardHeader><CardTitle>Dados da organização</CardTitle></CardHeader>
         <CardContent>
           <Form {...form}>

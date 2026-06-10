@@ -12,10 +12,10 @@ use App\Http\Controllers\Api\V1\Tenant\MenuController;
 use App\Http\Controllers\Api\V1\Tenant\MessageTemplateController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationController;
 use App\Http\Controllers\Api\V1\Tenant\NotificationPreferenceController;
-use App\Http\Controllers\Api\V1\Tenant\OrganizationController;
 use App\Http\Controllers\Api\V1\Tenant\ProfileController;
 use App\Http\Controllers\Api\V1\Tenant\ReportController;
 use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
+use App\Http\Controllers\Api\V1\Tenant\UserApprovalController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
@@ -84,10 +84,12 @@ Route::prefix('v1')
         Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive']);
         Route::apiResource('users', UserController::class);
         Route::post('users/{user}/avatar', [UserController::class, 'uploadAvatar']);
-        Route::get('organizations/export', [OrganizationController::class, 'export']);
-        Route::patch('organizations/{organization}/toggle-active', [OrganizationController::class, 'toggleActive']);
-        Route::apiResource('organizations', OrganizationController::class);
-        Route::post('organizations/{organization}/logo', [OrganizationController::class, 'uploadLogo']);
+
+        Route::prefix('user-approvals')->group(function () {
+            Route::get('/', [UserApprovalController::class, 'index']);
+            Route::patch('{userApproval}/approve', [UserApprovalController::class, 'approve']);
+            Route::patch('{userApproval}/reject', [UserApprovalController::class, 'reject']);
+        });
 
         Route::get('activity-logs', [ActivityLogController::class, 'index']);
         Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);

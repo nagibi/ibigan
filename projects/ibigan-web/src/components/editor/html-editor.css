@@ -1,0 +1,37 @@
+.html-editor .ProseMirror {
+  min-height: 220px;
+  padding: 0.75rem 1rem;
+  outline: none;
+}
+
+.html-editor .ProseMirror > * + * {
+  margin-top: 0.75em;
+}
+
+.html-editor .ProseMirror ul,
+.html-editor .ProseMirror ol {
+  padding-left: 1.25rem;
+}
+
+.html-editor .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+}
+
+.html-editor .ProseMirror a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.html-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.html-editor-source {
+  field-sizing: content;
+}

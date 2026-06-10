@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\OrganizationStatus;
-use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
@@ -21,12 +19,6 @@ final class ToggleActiveAction
             if ($updatedBy !== null) {
                 $model->updated_by = $updatedBy;
             }
-        }
-
-        if ($model instanceof Organization) {
-            $model->status = $isActive
-                ? OrganizationStatus::Active
-                : OrganizationStatus::Inactive;
         }
 
         $model->save();

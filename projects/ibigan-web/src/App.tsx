@@ -1,3 +1,4 @@
+import { GlobalLoadingBar } from '@/components/global-loading-bar';
 import { AppRouting } from '@/routing/app-routing';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter } from 'react-router-dom';
@@ -22,6 +23,7 @@ export function App() {
               <TooltipsProvider>
                 <LoadingBarContainer>
                   <BrowserRouter basename={BASE_URL}>
+                    <GlobalLoadingBar />
                     <Toaster />
                     <ModulesProvider>
                       <AppRouting />

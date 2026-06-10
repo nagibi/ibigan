@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, MoreHorizontal, Pencil } from 'lucide-react';
+import { Activity, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
@@ -14,26 +15,25 @@ import {
   useGridFilters,
 } from '@/hooks/use-grid-filters';
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
-import { usersService, type User } from '@/services/users.service';
+import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
+import { formatCpf, formatPhone } from '@/lib/brazilian-masks';
+import { formatUserGender, USER_GENDER_OPTIONS } from '@/lib/user-gender';
+import { isUserActive, usersService, type User } from '@/services/users.service';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridTable } from '@/components/grid/grid-table';
+import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { getInitials } from '@/lib/helpers';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
@@ -55,6 +55,21 @@ function formatAuditDate(value?: string | null) {
   return format(new Date(value), 'dd/MM/yy HH:mm', { locale: ptBR });
 }
 
+function formatBirthDate(value?: string | null) {
+  if (!value) return '—';
+  return format(new Date(`${value}T00:00:00`), 'dd/MM/yyyy', { locale: ptBR });
+}
+
+function truncateText(value?: string | null, max = 60) {
+  if (!value) return '—';
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
+const GENDER_FILTER_OPTIONS = USER_GENDER_OPTIONS.map((option) => ({
+  label: option.label,
+  value: option.value,
+}));
+
 function getAuditUserName(
   user: User,
   field: 'created_by' | 'updated_by',
@@ -74,25 +89,26 @@ const STATUS_FILTER_OPTIONS = [
 export function UsersPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
+  const { showToggleActive, showError, showSuccess } = useApiToolbarAlert();
 
   const grid = useGrid({
     onActivate: async (ids) => {
       try {
         await Promise.all(ids.map((id) => usersService.toggleActive(id, true)));
-        toast.success(ids.length === 1 ? 'Usuário ativado.' : 'Usuários ativados.');
+        showToggleActive(true, TOGGLE_ACTIVE_LABELS.user, ids.length);
         await loadRef.current();
-      } catch {
-        toast.error('Erro ao ativar usuário(s).');
+      } catch (error) {
+        showError('Erro ao ativar usuário(s).', error);
         throw new Error('toggle-active-failed');
       }
     },
     onDeactivate: async (ids) => {
       try {
         await Promise.all(ids.map((id) => usersService.toggleActive(id, false)));
-        toast.success(ids.length === 1 ? 'Usuário inativado.' : 'Usuários inativados.');
+        showToggleActive(false, TOGGLE_ACTIVE_LABELS.user, ids.length);
         await loadRef.current();
-      } catch {
-        toast.error('Erro ao inativar usuário(s).');
+      } catch (error) {
+        showError('Erro ao inativar usuário(s).', error);
         throw new Error('toggle-active-failed');
       }
     },
@@ -125,8 +141,8 @@ export function UsersPage() {
       );
       setUsers(res.data.result.data);
       setMeta(res.data.result.meta);
-    } catch {
-      toast.error('Erro ao carregar usuários.');
+    } catch (error) {
+      showError('Erro ao carregar usuários.', error);
     } finally {
       setLoading(false);
     }
@@ -137,6 +153,7 @@ export function UsersPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    showError,
   ]);
 
   loadRef.current = load;
@@ -147,7 +164,7 @@ export function UsersPage() {
 
   const handleEditSelected = useCallback(() => {
     if (!grid.singleSelection) return;
-    navigate(`/users/${grid.selected[0]}/editar`);
+    navigate(`/users/${grid.selected[0]}`);
   }, [grid.singleSelection, grid.selected, navigate]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -187,7 +204,7 @@ export function UsersPage() {
     try {
       setIsDeleting(true);
       await Promise.all(grid.deleteIds.map((id) => usersService.destroy(id)));
-      toast.success(
+      showSuccess(
         grid.deleteIds.length === 1
           ? 'Usuário removido.'
           : `${grid.deleteIds.length} usuários removidos.`,
@@ -195,15 +212,15 @@ export function UsersPage() {
       grid.clearDeleteRequest();
       grid.clearSelection();
       void load();
-    } catch {
-      toast.error('Erro ao remover usuário(s).');
+    } catch (error) {
+      showError('Erro ao remover usuário(s).', error);
     } finally {
       setIsDeleting(false);
     }
   }
 
   const handleEditUser = useCallback(
-    (userId: number) => navigate(`/users/${userId}/editar`),
+    (userId: number) => navigate(`/users/${userId}`),
     [navigate],
   );
 
@@ -212,16 +229,16 @@ export function UsersPage() {
   }
 
   async function handleRowStatusChange(user: User, active: boolean) {
-    const isActive = user.status === 'active';
-    if (isActive === active) return;
+    const currentlyActive = isUserActive(user);
+    if (currentlyActive === active) return;
 
     try {
       setRowStatusId(user.id);
       await usersService.toggleActive(user.id, active);
-      toast.success(active ? 'Usuário ativado.' : 'Usuário inativado.');
+      showToggleActive(active, TOGGLE_ACTIVE_LABELS.user);
       void load();
-    } catch {
-      toast.error('Erro ao atualizar status do usuário.');
+    } catch (error) {
+      showError('Erro ao atualizar status do usuário.', error);
     } finally {
       setRowStatusId(null);
     }
@@ -230,8 +247,7 @@ export function UsersPage() {
   const toolbarActions = useMemo(
     () => (
       <StandardGridToolbar
-        onNew={() => navigate('/users/novo')}
-        newLabel="Novo Usuário"
+        onNew={() => navigate('/users/new')}
         onEdit={handleEditSelected}
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
@@ -257,7 +273,7 @@ export function UsersPage() {
     () => [
       {
         id: 'select',
-        label: '',
+        label: '#',
         pinned: 'start',
         hideable: false,
         className: 'w-[40px]',
@@ -271,7 +287,7 @@ export function UsersPage() {
       },
       {
         id: 'id',
-        label: 'ID',
+        label: 'Id',
         sortable: true,
         sortKey: 'id',
         filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
@@ -282,60 +298,22 @@ export function UsersPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[60px]',
+        className: 'w-[72px]',
         render: (user) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" mode="icon" size="sm">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem onClick={() => navigate(`/users/${user.id}/editar`)}>
-                <Pencil className="size-4" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActivityLogUser(user)}>
-                <Activity className="size-4" />
-                Activity Logs
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-      },
-      {
-        id: 'user',
-        label: 'Usuário',
-        sortable: true,
-        sortKey: 'name',
-        filter: { type: 'multi', filterKey: 'user', placeholder: 'Nome ou e-mail' },
-        render: (user) => (
-          <div className="flex items-center gap-3">
-            <Avatar className="size-8">
-              <AvatarImage src={user.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                {getInitials(user.name, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
-            </div>
-          </div>
-        ),
-      },
-      {
-        id: 'roles',
-        label: 'Papel',
-        filter: { type: 'text', filterKey: 'role', placeholder: 'Papel' },
-        render: (user) => (
-          <div className="flex gap-1">
-            {user.roles.map((role) => (
-              <Badge key={role} variant="outline" className="text-xs">
-                {role}
-              </Badge>
-            ))}
-          </div>
+          <GridRowActions
+            actions={[
+              {
+                label: 'Editar',
+                icon: Pencil,
+                onClick: () => navigate(`/users/${user.id}`),
+              },
+              {
+                label: 'Activity Logs',
+                icon: Activity,
+                onClick: () => setActivityLogUser(user),
+              },
+            ]}
+          />
         ),
       },
       {
@@ -353,11 +331,119 @@ export function UsersPage() {
         render: (user) => (
           <Switch
             size="sm"
-            checked={user.status === 'active'}
+            checked={isUserActive(user)}
             disabled={rowStatusId === user.id}
             onCheckedChange={(checked) => void handleRowStatusChange(user, checked)}
           />
         ),
+      },
+      {
+        id: 'user',
+        label: 'Usuário',
+        sortable: true,
+        sortKey: 'name',
+        filter: { type: 'multi', filterKey: 'user', placeholder: 'Nome ou e-mail' },
+        className: 'min-w-[220px]',
+        render: (user) => (
+          <div className="flex items-center gap-3">
+            <Avatar className="size-8">
+              <AvatarImage src={user.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                {getInitials(user.name, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-max">
+              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'roles',
+        label: 'Papel',
+        filter: { type: 'text', filterKey: 'role', placeholder: 'Papel' },
+        className: 'min-w-[120px]',
+        render: (user) => (
+          <div className="flex gap-1">
+            {user.roles.map((role) => (
+              <Badge key={role} variant="outline" className="text-xs">
+                {role}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+      {
+        id: 'cpf',
+        label: 'CPF',
+        sortable: true,
+        sortKey: 'cpf',
+        filter: { type: 'text', filterKey: 'cpf', placeholder: 'CPF' },
+        className: 'min-w-[130px] text-sm whitespace-nowrap',
+        render: (user) => formatCpf(user.cpf) || '—',
+      },
+      {
+        id: 'phone',
+        label: 'Telefone',
+        sortable: true,
+        sortKey: 'phone',
+        filter: { type: 'text', filterKey: 'phone', placeholder: 'Telefone' },
+        className: 'min-w-[130px] text-sm whitespace-nowrap',
+        render: (user) => formatPhone(user.phone) || '—',
+      },
+      {
+        id: 'birth_date',
+        label: 'Nascimento',
+        sortable: true,
+        sortKey: 'birth_date',
+        filter: { type: 'dateRange', filterKey: 'birth_date' },
+        className: 'min-w-[120px] text-sm text-muted-foreground whitespace-nowrap',
+        render: (user) => formatBirthDate(user.birth_date),
+      },
+      {
+        id: 'gender',
+        label: 'Gênero',
+        sortable: true,
+        sortKey: 'gender',
+        filter: {
+          type: 'select',
+          filterKey: 'gender',
+          placeholder: 'Todos',
+          options: GENDER_FILTER_OPTIONS,
+        },
+        className: 'min-w-[150px] text-sm',
+        render: (user) => formatUserGender(user.gender),
+      },
+      {
+        id: 'bio',
+        label: 'Bio',
+        filter: { type: 'text', filterKey: 'bio', placeholder: 'Bio' },
+        className: 'min-w-[180px] text-sm text-muted-foreground',
+        render: (user) => truncateText(user.bio),
+      },
+      {
+        id: 'last_login_at',
+        label: 'Último login',
+        sortable: true,
+        sortKey: 'last_login_at',
+        filter: { type: 'dateRange', filterKey: 'last_login_at' },
+        className: 'min-w-[150px] text-sm text-muted-foreground whitespace-nowrap',
+        render: (user) => formatAuditDate(user.last_login_at),
+      },
+      {
+        id: 'last_login_ip',
+        label: 'IP último login',
+        filter: { type: 'text', filterKey: 'last_login_ip', placeholder: 'IP' },
+        className: 'min-w-[130px] text-sm text-muted-foreground font-mono text-xs',
+        render: (user) => user.last_login_ip ?? '—',
+      },
+      {
+        id: 'last_login_device',
+        label: 'Dispositivo',
+        filter: { type: 'text', filterKey: 'last_login_device', placeholder: 'Dispositivo' },
+        className: 'min-w-[180px] text-sm text-muted-foreground',
+        render: (user) => truncateText(user.last_login_device, 40),
       },
       {
         id: 'created_at',
@@ -365,14 +451,14 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'created_at',
         filter: { type: 'dateRange', filterKey: 'created_at' },
-        className: 'text-sm text-muted-foreground whitespace-nowrap',
+        className: 'min-w-[150px] text-sm text-muted-foreground whitespace-nowrap',
         render: (user) => formatAuditDate(user.created_at),
       },
       {
         id: 'created_by',
         label: 'Usuário criação',
         filter: { type: 'text', filterKey: 'created_by', placeholder: 'Usuário' },
-        className: 'text-sm text-muted-foreground',
+        className: 'min-w-[160px] text-sm text-muted-foreground',
         render: (user) => getAuditUserName(user, 'created_by'),
       },
       {
@@ -381,14 +467,14 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'updated_at',
         filter: { type: 'dateRange', filterKey: 'updated_at' },
-        className: 'text-sm text-muted-foreground whitespace-nowrap',
+        className: 'min-w-[160px] text-sm text-muted-foreground whitespace-nowrap',
         render: (user) => formatAuditDate(user.updated_at),
       },
       {
         id: 'updated_by',
         label: 'Usuário atualização',
         filter: { type: 'text', filterKey: 'updated_by', placeholder: 'Usuário' },
-        className: 'text-sm text-muted-foreground',
+        className: 'min-w-[170px] text-sm text-muted-foreground',
         render: (user) => getAuditUserName(user, 'updated_by'),
       },
     ],
@@ -496,7 +582,7 @@ export function UsersPage() {
   );
 
   return (
-    <div className="container pb-6">
+    <PageBody>
       <GridPanel
         toolbar={
           <GridPanelToolbar
@@ -520,9 +606,14 @@ export function UsersPage() {
                 columns={columnDefinitions}
                 order={gridColumns.order}
                 hidden={gridColumns.hidden}
+                visibleCount={gridColumns.visibleCount}
+                totalCount={gridColumns.totalCount}
                 isCustomized={gridColumns.isCustomized}
                 onOrderChange={gridColumns.setColumnOrder}
-                onToggleVisibility={gridColumns.toggleColumnVisibility}
+                onSetVisibility={gridColumns.setColumnVisibility}
+                canHideColumn={gridColumns.canHideColumn}
+                onShowAll={gridColumns.showAllColumns}
+                onHideAll={gridColumns.hideAllColumns}
                 onResetDefault={handleResetColumns}
               />
             }
@@ -549,9 +640,8 @@ export function UsersPage() {
           columnFilters={columnFilters.filters}
           onColumnFilterChange={columnFilters.setFilter}
           onDateRangeFilterChange={columnFilters.setDateRangeFilter}
-          getRowClassName={(user) =>
-            grid.selected.includes(user.id) ? 'bg-muted/50' : ''
-          }
+          onColumnFilterClear={columnFilters.clearColumnFilter}
+          isRowSelected={(user) => grid.selected.includes(user.id)}
           onRowClick={(user, event) =>
             grid.selectRow(user.id, {
               shift: event.shiftKey,
@@ -595,6 +685,6 @@ export function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageBody>
   );
 }

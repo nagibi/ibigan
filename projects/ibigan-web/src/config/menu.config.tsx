@@ -1,7 +1,6 @@
 import {
   Activity,
   Bell,
-  Building2,
   LayoutDashboard,
   Mail,
   Megaphone,
@@ -25,11 +24,6 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Usuários',
     icon: Users,
     path: '/users',
-  },
-  {
-    title: 'Organizações',
-    icon: Building2,
-    path: '/organizations',
   },
   {
     title: 'Convites',

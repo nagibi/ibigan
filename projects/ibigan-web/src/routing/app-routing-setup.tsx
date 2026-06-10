@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from '@/pages/auth/forgot-password-page';
 import { InvitePage } from '@/pages/auth/invite-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
+import { TenantSelectPage } from '@/pages/auth/tenant-select-page';
 import { TwoFactorPage } from '@/pages/auth/two-factor-page';
 import { DashboardPage } from '@/pages/dashboard/dashboard-page';
 import { InvitesPage } from '@/pages/invites/invites-page';
@@ -18,6 +19,7 @@ import { MyExecutionsPage } from '@/pages/reports/my-executions-page';
 import { ReportExecutePage } from '@/pages/reports/report-execute-page';
 import { ReportFormPage } from '@/pages/reports/report-form-page';
 import { ReportsPage } from '@/pages/reports/reports-page';
+import { NotificationsPage } from '@/pages/notifications/notifications-page';
 import { NotificationPreferencesPage } from '@/pages/profile/notification-preferences-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
@@ -25,6 +27,7 @@ import { SettingsPage } from '@/pages/settings/settings-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
 import { WebhookFormPage } from '@/pages/webhooks/webhook-form-page';
 import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
+import { UserApprovalsPage } from '@/pages/user-approvals/user-approvals-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
 import { Navigate, Route, Routes } from 'react-router';
@@ -87,6 +90,14 @@ export function AppRoutingSetup() {
           </GuestOnly>
         }
       />
+      <Route
+        path="/auth/select-tenant"
+        element={
+          <RequireAuth>
+            <TenantSelectPage />
+          </RequireAuth>
+        }
+      />
 
       <Route
         element={
@@ -97,41 +108,40 @@ export function AppRoutingSetup() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/users" element={<UsersPage />} />
-        <Route path="/users/novo" element={<UserFormPage />} />
-        <Route path="/users/:id/editar" element={<UserFormPage />} />
+        <Route path="/users/new" element={<UserFormPage key="user-new" />} />
+        <Route path="/users/:id" element={<UserFormPage key="user-edit" />} />
+        <Route path="/user-approvals" element={<UserApprovalsPage />} />
         <Route path="/menus" element={<MenusPage />} />
-        <Route path="/menus/novo" element={<MenuFormPage />} />
-        <Route path="/menus/:id/editar" element={<MenuFormPage />} />
+        <Route path="/menus/new" element={<MenuFormPage key="menu-new" />} />
+        <Route path="/menus/:id" element={<MenuFormPage key="menu-edit" />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/reports/novo" element={<ReportFormPage />} />
+        <Route path="/reports/new" element={<ReportFormPage key="report-new" />} />
         <Route path="/reports/executions" element={<MyExecutionsPage />} />
         <Route path="/reports/:id/executar" element={<ReportExecutePage />} />
-        <Route path="/reports/:id/editar" element={<ReportFormPage />} />
+        <Route path="/reports/:id" element={<ReportFormPage key="report-edit" />} />
         <Route path="/invites" element={<InvitesPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
-        <Route path="/campaigns/nova" element={<CampaignFormPage />} />
-        <Route path="/campaigns/:id/editar" element={<CampaignFormPage />} />
+        <Route path="/campaigns/new" element={<CampaignFormPage key="campaign-new" />} />
+        <Route path="/campaigns/:id/edit" element={<CampaignFormPage key="campaign-edit" />} />
         <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
         <Route path="/message-templates" element={<MessageTemplatesPage />} />
         <Route
-          path="/message-templates/novo"
-          element={<MessageTemplateFormPage />}
+          path="/message-templates/new"
+          element={<MessageTemplateFormPage key="template-new" />}
         />
         <Route
-          path="/message-templates/:id/editar"
-          element={<MessageTemplateFormPage />}
+          path="/message-templates/:id"
+          element={<MessageTemplateFormPage key="template-edit" />}
         />
         <Route path="/webhooks" element={<WebhooksPage />} />
-        <Route path="/webhooks/novo" element={<WebhookFormPage />} />
-        <Route path="/webhooks/:id/editar" element={<WebhookFormPage />} />
-        {/* <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/notifications/novo" element={<NotificationFormPage />} />
-        <Route path="/notifications/:id/editar" element={<NotificationFormPage />} /> */}
+        <Route path="/webhooks/new" element={<WebhookFormPage key="webhook-new" />} />
+        <Route path="/webhooks/:id" element={<WebhookFormPage key="webhook-edit" />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

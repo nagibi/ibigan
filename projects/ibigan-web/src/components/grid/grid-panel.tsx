@@ -13,9 +13,9 @@ export function GridPanel({
   className?: string;
 }) {
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-border bg-card', className)}>
+    <div className={cn('flex w-full min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card', className)}>
       {toolbar}
-      <div className="min-w-0">{children}</div>
+      <div className="min-h-0 min-w-0 flex-1">{children}</div>
       {footer ? <div className="border-t border-border">{footer}</div> : null}
     </div>
   );

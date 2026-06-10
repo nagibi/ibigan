@@ -85,21 +85,54 @@ export function useGridColumns<T>(storageKey: string, definitions: GridColumnDef
     [hidden, persist],
   );
 
-  const toggleColumnVisibility = useCallback(
+  const canHideColumn = useCallback(
     (columnId: string) => {
       const column = definitions.find((item) => item.id === columnId);
-      if (!column || column.hideable === false || column.pinned) return;
+      return Boolean(column && column.hideable !== false && !column.pinned);
+    },
+    [definitions],
+  );
+
+  const setColumnVisibility = useCallback(
+    (columnId: string, visible: boolean) => {
+      if (!canHideColumn(columnId)) return;
 
       setHidden((prev) => {
-        const next = prev.includes(columnId)
+        const next = visible
           ? prev.filter((id) => id !== columnId)
-          : [...prev, columnId];
+          : [...new Set([...prev, columnId])];
         persist(order, next);
         return next;
       });
     },
-    [definitions, order, persist],
+    [canHideColumn, order, persist],
   );
+
+  const toggleColumnVisibility = useCallback(
+    (columnId: string) => {
+      setColumnVisibility(columnId, hidden.includes(columnId));
+    },
+    [hidden, setColumnVisibility],
+  );
+
+  const showAllColumns = useCallback(() => {
+    setHidden([]);
+    persist(order, []);
+  }, [order, persist]);
+
+  const hideAllColumns = useCallback(() => {
+    const hideableIds = definitions
+      .filter((column) => column.hideable !== false && !column.pinned)
+      .map((column) => column.id);
+
+    if (hideableIds.length <= 1) return;
+
+    const keepVisibleId = order.find((id) => hideableIds.includes(id)) ?? hideableIds[0];
+    const nextHidden = hideableIds.filter((id) => id !== keepVisibleId);
+
+    setHidden(nextHidden);
+    persist(order, nextHidden);
+  }, [definitions, order, persist]);
 
   const resetColumns = useCallback(() => {
     setOrder(defaultOrder);
@@ -145,14 +178,31 @@ export function useGridColumns<T>(storageKey: string, definitions: GridColumnDef
     [definitions],
   );
 
+  const columnList = useMemo(
+    () => definitions.filter((column) => column.pinned !== 'start'),
+    [definitions],
+  );
+
+  const visibleCount = useMemo(
+    () => columnList.filter((column) => !hidden.includes(column.id)).length,
+    [columnList, hidden],
+  );
+
   return {
     order,
     hidden,
     visibleColumns,
     manageableColumns,
+    columnList,
+    visibleCount,
+    totalCount: columnList.length,
     setColumnOrder,
     reorderDraggableColumns,
     toggleColumnVisibility,
+    setColumnVisibility,
+    showAllColumns,
+    hideAllColumns,
+    canHideColumn,
     resetColumns,
     isCustomized,
     isColumnVisible: (columnId: string) => !hidden.includes(columnId),

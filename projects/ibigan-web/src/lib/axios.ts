@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { trackApiRequestEnd, trackApiRequestStart } from '@/lib/api-loading-bar';
 import { useAuthStore } from '@/stores/auth.store';
 
 const api = axios.create({
@@ -10,6 +11,8 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  trackApiRequestStart();
+
   const token    = localStorage.getItem('ibigan_token');
   const tenantId = localStorage.getItem('ibigan_tenant_id');
 
@@ -20,8 +23,13 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    trackApiRequestEnd();
+    return response;
+  },
   async (error) => {
+    trackApiRequestEnd();
+
     const status = error.response?.status;
 
     if (status === 401) {

@@ -18,4 +18,64 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return ['id', 'slug', 'name', 'timezone', 'locale'];
     }
+
+    // Configurações de segurança (armazenadas em data JSON via VirtualColumn)
+
+    public function getRegistrationModeAttribute(): string
+    {
+        return $this->attributes['registration_mode'] ?? 'invite_only';
+    }
+
+    public function setRegistrationModeAttribute(string $value): void
+    {
+        $this->attributes['registration_mode'] = $value;
+    }
+
+    public function getRequireEmailVerificationAttribute(): bool
+    {
+        return (bool) ($this->attributes['require_email_verification'] ?? false);
+    }
+
+    public function setRequireEmailVerificationAttribute(bool $value): void
+    {
+        $this->attributes['require_email_verification'] = $value;
+    }
+
+    public function getRequireAdminApprovalAttribute(): bool
+    {
+        return (bool) ($this->attributes['require_admin_approval'] ?? false);
+    }
+
+    public function setRequireAdminApprovalAttribute(bool $value): void
+    {
+        $this->attributes['require_admin_approval'] = $value;
+    }
+
+    public function getRequire2faAttribute(): bool
+    {
+        return (bool) ($this->attributes['require_2fa'] ?? false);
+    }
+
+    public function setRequire2faAttribute(bool $value): void
+    {
+        $this->attributes['require_2fa'] = $value;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getAllowedEmailDomainsAttribute(): array
+    {
+        $domains = $this->attributes['allowed_email_domains'] ?? [];
+
+        return is_array($domains) ? $domains : [];
+    }
+
+    /**
+     * @param  array<int, string>  $value
+     */
+    public function setAllowedEmailDomainsAttribute(array $value): void
+    {
+        $this->attributes['allowed_email_domains'] = $value;
+    }
 }

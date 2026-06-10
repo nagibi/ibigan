@@ -29,7 +29,7 @@ final class UpdateCampaignRequest extends FormRequest
             'channels.*' => ['required', 'string', 'in:email,notification,sms,whatsapp'],
             'scheduled_at' => ['nullable', 'date', 'after:now'],
             'recipients' => ['required', 'array', 'min:1'],
-            'recipients.*.type' => ['required', 'string', 'in:all,role,permission,organization,user'],
+            'recipients.*.type' => ['required', 'string', 'in:all,role,permission,user'],
             'recipients.*.value' => ['nullable', 'string'],
         ];
     }

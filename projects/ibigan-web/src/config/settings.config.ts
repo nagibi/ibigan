@@ -7,6 +7,7 @@ export const APP_SETTINGS: Settings = {
     demo1: {
       sidebarCollapse: false,
       sidebarTheme: 'light',
+      sidebarTransparent: false,
       menuMode: 'sidebar',
     },
     demo2: {

@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LoaderCircle, Mail, Smartphone } from 'lucide-react';
+import { Mail, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { notificationPreferencesService } from '@/services/notification-preferences.service';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { PageBody } from '@/components/common/page-body';
+import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { FormPanel } from '@/components/grid/form-panel';
 import { Switch } from '@/components/ui/switch';
 
 const EVENT_LABELS: Record<string, { label: string; description: string }> = {
@@ -27,6 +30,11 @@ const EVENT_LABELS: Record<string, { label: string; description: string }> = {
 export function NotificationPreferencesPage() {
   const queryClient = useQueryClient();
 
+  usePageToolbar({
+    title: 'Preferências de Notificação',
+    description: 'Configure como deseja ser notificado para cada tipo de evento.',
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ['notification-preferences'],
     queryFn: () => notificationPreferencesService.get(),
@@ -45,67 +53,58 @@ export function NotificationPreferencesPage() {
 
   if (isLoading) {
     return (
-      <div className="container py-6 flex justify-center">
-        <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
-      </div>
+      <FormPageSkeleton panels={[{ titleWidth: 'w-48', fields: 4 }]} />
     );
   }
 
   return (
-    <div className="container py-6 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Preferências de Notificação</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure como deseja ser notificado para cada tipo de evento.
-        </p>
-      </div>
+    <PageBody>
+      <FormPanel title="Canais por evento">
+        <div className="divide-y rounded-md border">
+          <div className="flex items-center gap-4 px-4 py-3">
+            <div className="min-w-0 flex-1 text-sm font-medium text-muted-foreground">Evento</div>
+            <div className="flex w-40 shrink-0 items-center justify-around text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Mail className="size-3.5" />
+                E-mail
+              </span>
+              <span className="flex items-center gap-1">
+                <Smartphone className="size-3.5" />
+                App
+              </span>
+            </div>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <div className="grid grid-cols-[1fr_80px_80px] gap-4 items-center">
-            <div />
-            <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-              <Mail className="size-3" /> E-mail
-            </div>
-            <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-              <Smartphone className="size-3" /> App
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {Object.entries(EVENT_LABELS).map(([event, info]) => {
-              const prefs = preferences[event] ?? { email: false, app: false };
-              return (
-                <div key={event} className="grid grid-cols-[1fr_80px_80px] gap-4 items-center px-6 py-4">
-                  <div>
-                    <p className="font-medium text-sm">{info.label}</p>
-                    <p className="text-xs text-muted-foreground">{info.description}</p>
-                  </div>
-                  <div className="flex justify-center">
-                    <Switch
-                      checked={prefs.email}
-                      onCheckedChange={(enabled) =>
-                        updateMutation.mutate({ event, channel: 'email', enabled })
-                      }
-                      disabled={updateMutation.isPending}
-                    />
-                  </div>
-                  <div className="flex justify-center">
-                    <Switch
-                      checked={prefs.app}
-                      onCheckedChange={(enabled) =>
-                        updateMutation.mutate({ event, channel: 'app', enabled })
-                      }
-                      disabled={updateMutation.isPending}
-                    />
-                  </div>
+          {Object.entries(EVENT_LABELS).map(([event, info]) => {
+            const prefs = preferences[event] ?? { email: false, app: false };
+
+            return (
+              <div key={event} className="flex items-center gap-4 px-4 py-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{info.label}</p>
+                  <p className="text-xs text-muted-foreground">{info.description}</p>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                <div className="flex w-40 shrink-0 items-center justify-around">
+                  <Switch
+                    checked={prefs.email}
+                    onCheckedChange={(enabled) =>
+                      updateMutation.mutate({ event, channel: 'email', enabled })
+                    }
+                    disabled={updateMutation.isPending}
+                  />
+                  <Switch
+                    checked={prefs.app}
+                    onCheckedChange={(enabled) =>
+                      updateMutation.mutate({ event, channel: 'app', enabled })
+                    }
+                    disabled={updateMutation.isPending}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </FormPanel>
+    </PageBody>
   );
 }

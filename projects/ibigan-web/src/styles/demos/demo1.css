@@ -7,7 +7,7 @@
     --sidebar-width-collapse: 80px;
     --sidebar-default-width: 280px;
     --header-height: 70px;
-    --toolbar-height: 44px;
+    --toolbar-height: 48px;
   }
 
   @media (max-width: theme(--breakpoint-lg)) {
@@ -35,7 +35,8 @@
   }
 
   .demo1 .page-toolbar {
-    height: var(--toolbar-height);
+    min-height: var(--toolbar-height);
+    overflow: visible;
   }
 
   /* Desktop mode */

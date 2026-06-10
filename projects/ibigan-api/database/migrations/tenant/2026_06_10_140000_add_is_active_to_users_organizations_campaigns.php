@@ -21,16 +21,6 @@ return new class extends Migration
                 ->update(['is_active' => false]);
         }
 
-        if (! Schema::hasColumn('organizations', 'is_active')) {
-            Schema::table('organizations', function (Blueprint $table): void {
-                $table->boolean('is_active')->default(true)->after('status');
-            });
-
-            DB::table('organizations')
-                ->whereIn('status', ['inactive', 'suspended'])
-                ->update(['is_active' => false]);
-        }
-
         if (! Schema::hasColumn('campaigns', 'is_active')) {
             Schema::table('campaigns', function (Blueprint $table): void {
                 $table->boolean('is_active')->default(true)->after('status');
@@ -42,12 +32,6 @@ return new class extends Migration
     {
         if (Schema::hasColumn('users', 'is_active')) {
             Schema::table('users', function (Blueprint $table): void {
-                $table->dropColumn('is_active');
-            });
-        }
-
-        if (Schema::hasColumn('organizations', 'is_active')) {
-            Schema::table('organizations', function (Blueprint $table): void {
                 $table->dropColumn('is_active');
             });
         }

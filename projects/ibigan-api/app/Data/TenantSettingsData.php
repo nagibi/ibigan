@@ -16,6 +16,12 @@ final class TenantSettingsData extends Data
         public string $timezone,
         public string $locale,
         public ?string $logo_url,
+        public string $registration_mode,
+        public bool $require_email_verification,
+        public bool $require_admin_approval,
+        public bool $require_2fa,
+        /** @var array<int, string> */
+        public array $allowed_email_domains,
         public string $created_at,
     ) {}
 
@@ -28,6 +34,11 @@ final class TenantSettingsData extends Data
             timezone: $tenant->timezone ?? 'UTC',
             locale: $tenant->locale ?? 'pt_BR',
             logo_url: $tenant->logo_url ?: null,
+            registration_mode: $tenant->registration_mode,
+            require_email_verification: $tenant->require_email_verification,
+            require_admin_approval: $tenant->require_admin_approval,
+            require_2fa: $tenant->require_2fa,
+            allowed_email_domains: $tenant->allowed_email_domains,
             created_at: $tenant->created_at->toIso8601String(),
         );
     }

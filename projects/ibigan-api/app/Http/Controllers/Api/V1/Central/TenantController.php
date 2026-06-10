@@ -51,7 +51,7 @@ final class TenantController extends Controller
     public function switch(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'tenant_id' => ['required', 'string', 'exists:tenants,id'],
+            'tenant_id' => ['required', 'string'],
         ]);
 
         $tenantUser = TenantUser::query()

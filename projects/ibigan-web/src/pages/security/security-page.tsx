@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, LoaderCircle, RefreshCw, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { twoFactorService } from '@/services/two-factor.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,12 @@ type Step = 'idle' | 'setup' | 'confirm' | 'enabled';
 
 export function SecurityPage() {
   const queryClient = useQueryClient();
+
+  usePageToolbar({
+    title: 'Segurança',
+    description: 'Gerencie a segurança da sua conta.',
+  });
+
   const [step, setStep] = useState<Step>('idle');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [secret, setSecret] = useState('');
@@ -123,13 +130,8 @@ export function SecurityPage() {
     : twoFactorStatus?.recovery_codes ?? [];
 
   return (
-    <div className="container py-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Segurança</h1>
-        <p className="text-sm text-muted-foreground">Gerencie a segurança da sua conta.</p>
-      </div>
-
-      <Card className="mb-6">
+    <div className="container space-y-6 pb-6">
+      <Card className="max-w-3xl">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -219,7 +221,7 @@ export function SecurityPage() {
       </Card>
 
       {(step === 'setup' || step === 'enabled' || is2FAEnabled) && (
-        <Card>
+        <Card className="max-w-3xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>

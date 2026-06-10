@@ -1,7 +1,7 @@
 import api from '@/lib/axios';
 
 export interface CampaignRecipient {
-  type: 'all' | 'role' | 'permission' | 'organization' | 'user';
+  type: 'all' | 'role' | 'permission' | 'user';
   value?: string;
 }
 
@@ -54,11 +54,49 @@ export interface StoreCampaignPayload {
   recipients: CampaignRecipient[];
 }
 
+export interface CampaignsPaginatedResponse {
+  status: number;
+  result: {
+    data: Campaign[];
+    meta: {
+      total: number;
+      current_page: number;
+      last_page: number;
+      per_page: number;
+    };
+  };
+}
+
 export const campaignsService = {
-  list: (page = 1, status?: string) =>
-    api.get<{ status: number; result: { data: Campaign[]; meta: { total: number; current_page: number; last_page: number; per_page: number } } }>(
-      '/v1/campaigns', { params: { page, status } },
-    ),
+  list: (
+    page = 1,
+    perPage = 15,
+    search?: string,
+    sort?: string | null,
+    direction?: 'asc' | 'desc',
+    columnFilters?: Record<string, string>,
+  ) => {
+    const params: Record<string, string | number> = { page, per_page: perPage };
+
+    if (search?.trim()) params.search = search.trim();
+    if (sort) {
+      params.sort = sort;
+      params.direction = direction ?? 'asc';
+    }
+
+    for (const [key, value] of Object.entries(columnFilters ?? {})) {
+      if (!value.trim()) continue;
+
+      if (key === 'status') {
+        params.status = value;
+        continue;
+      }
+
+      params[`filter_${key}`] = value;
+    }
+
+    return api.get<CampaignsPaginatedResponse>('/v1/campaigns', { params });
+  },
 
   show: (id: number) =>
     api.get<{ status: number; result: Campaign }>(`/v1/campaigns/${id}`),

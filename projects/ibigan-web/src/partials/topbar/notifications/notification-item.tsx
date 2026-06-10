@@ -12,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { type AppNotification } from '@/services/notifications.service';
+import { getReportDownloadMeta } from '@/lib/notification-utils';
 import { downloadReportResultCsv } from '@/services/reports.service';
 import { getInitials } from '@/lib/helpers';
 import { Button } from '@/components/ui/button';
@@ -170,9 +171,7 @@ export function NotificationItem({ notification, onMarkRead, onDelete }: Notific
   });
 
   async function handleDownloadReport() {
-    const templateId = Number(data.template_id);
-    const executionId = Number(data.execution_id);
-    const templateName = String(data.template_name ?? 'relatorio');
+    const { templateId, executionId, templateName } = getReportDownloadMeta(notification);
 
     if (!templateId || !executionId) {
       toast.error('Dados do relatório indisponíveis.');
@@ -219,12 +218,7 @@ export function NotificationItem({ notification, onMarkRead, onDelete }: Notific
   );
 
   if (type === 'ReportCompletedNotification') {
-    const templateName = String(data.template_name ?? 'Relatório');
-    const rowsCount = data.rows_count ?? 0;
-    const durationMs = data.duration_ms ?? 0;
-    const templateId = data.template_id;
-    const fileName = `${templateName}.csv`;
-    const fileMeta = `${rowsCount} registros · ${durationMs}ms`;
+    const { templateId, templateName, fileName, fileMeta } = getReportDownloadMeta(notification);
 
     return (
       <div className={cn('flex grow items-start gap-2.5 px-5', isUnread && 'bg-primary/5')}>
@@ -262,6 +256,25 @@ export function NotificationItem({ notification, onMarkRead, onDelete }: Notific
               href={templateId ? `/reports/${templateId}/executar` : undefined}
               onNavigate={() => isUnread && onMarkRead(notification.id)}
             />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => void handleDownloadReport()}
+                disabled={downloading}
+              >
+                {downloading ? 'Baixando...' : 'Baixar CSV'}
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+                <Link
+                  to="/reports/executions"
+                  onClick={() => isUnread && onMarkRead(notification.id)}
+                >
+                  Ver execuções
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -299,7 +312,7 @@ export function NotificationItem({ notification, onMarkRead, onDelete }: Notific
             </div>
             {userId && (
               <Link
-                to={`/users/${userId}/editar`}
+                to={`/users/${userId}`}
                 className="shrink-0 text-xs font-medium text-primary hover:text-primary/80"
                 onClick={() => isUnread && onMarkRead(notification.id)}
               >

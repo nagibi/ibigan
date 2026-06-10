@@ -88,8 +88,13 @@ export function LoginPage() {
         return;
       }
 
-      setAuth(data.result.token, data.result.tenant_id, data.result.user);
-      navigate('/dashboard');
+      const { token, tenant_id, user } = data.result;
+
+      localStorage.setItem('ibigan_token', token);
+      localStorage.setItem('ibigan_tenant_id', tenant_id);
+
+      setAuth(token, tenant_id, user);
+      navigate('/auth/select-tenant');
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data

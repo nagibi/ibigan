@@ -13,7 +13,6 @@ class RolePermissionSeeder extends Seeder
 {
     private array $resources = [
         'usuario',
-        'empresa',
         'menu',
         'relatorio',
         'permissao',
@@ -41,7 +40,6 @@ class RolePermissionSeeder extends Seeder
         $manager->syncPermissions(
             Permission::whereIn('name', [
                 'usuario-visualizar',
-                'empresa-visualizar',
                 'relatorio-visualizar',
                 'relatorio-gerenciar',
                 'notificacao-visualizar',

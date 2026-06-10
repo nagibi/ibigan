@@ -1,19 +1,25 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  BarChart3,
-  LoaderCircle,
-  Megaphone,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { BarChart3, Pencil, Trash2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import { useGrid } from '@/hooks/use-grid';
+import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
+import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridFilters } from '@/hooks/use-grid-filters';
 import { campaignsService, type Campaign } from '@/services/campaigns.service';
+import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { GridFiltersControl } from '@/components/grid/grid-filters-control';
+import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { PageBody } from '@/components/common/page-body';
+import { GridPanel } from '@/components/grid/grid-panel';
+import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
+import { GridTable } from '@/components/grid/grid-table';
+import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,17 +31,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
-const statusVariant: Record<string, 'primary' | 'secondary' | 'outline' | 'destructive'> = {
+const GRID_COLUMNS_KEY = 'grid-columns:campaigns';
+
+const DELETABLE_STATUSES: Campaign['status'][] = ['draft', 'cancelled'];
+const CANCELLABLE_STATUSES: Campaign['status'][] = ['draft', 'scheduled'];
+
+const statusVariant: Record<Campaign['status'], 'primary' | 'secondary' | 'outline' | 'destructive'> = {
   draft: 'secondary',
   scheduled: 'outline',
   sending: 'primary',
@@ -43,7 +46,7 @@ const statusVariant: Record<string, 'primary' | 'secondary' | 'outline' | 'destr
   cancelled: 'destructive',
 };
 
-const statusLabel: Record<string, string> = {
+const statusLabel: Record<Campaign['status'], string> = {
   draft: 'Rascunho',
   scheduled: 'Agendado',
   sending: 'Enviando',
@@ -51,183 +54,540 @@ const statusLabel: Record<string, string> = {
   cancelled: 'Cancelado',
 };
 
+const STATUS_FILTER_OPTIONS = [
+  { label: 'Rascunho', value: 'draft' },
+  { label: 'Agendado', value: 'scheduled' },
+  { label: 'Enviando', value: 'sending' },
+  { label: 'Enviado', value: 'sent' },
+  { label: 'Cancelado', value: 'cancelled' },
+];
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—';
+  return format(new Date(value), "dd/MM/yy 'às' HH:mm", { locale: ptBR });
+}
+
+function isDeletable(campaign: Campaign) {
+  return DELETABLE_STATUSES.includes(campaign.status);
+}
+
+function isEditable(campaign: Campaign) {
+  return campaign.status === 'draft';
+}
+
 export function CampaignsPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
+  const { showSuccess, showError } = useApiToolbarAlert();
+
+  const grid = useGrid();
+  const columnFilters = useGridFilters(() => grid.setPage(1));
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [meta, setMeta] = useState<GridPaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 15,
+    total: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [cancelId, setCancelId] = useState<number | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['campaigns', page],
-    queryFn: () => campaignsService.list(page),
-  });
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await campaignsService.list(
+        grid.page,
+        grid.perPage,
+        grid.debouncedSearch,
+        grid.sort,
+        grid.sortDir,
+        columnFilters.activeFilterParams,
+      );
+      setCampaigns(res.data.result.data);
+      setMeta(res.data.result.meta);
+    } catch (error) {
+      showError('Erro ao carregar campanhas.', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    grid.page,
+    grid.perPage,
+    grid.debouncedSearch,
+    grid.sort,
+    grid.sortDir,
+    columnFilters.activeFilterParams,
+    showError,
+  ]);
 
-  const cancelMutation = useMutation({
-    mutationFn: (id: number) => campaignsService.cancel(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-      toast.success('Campanha cancelada.');
+  loadRef.current = load;
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const deletableSelectedIds = useMemo(
+    () =>
+      grid.selected.filter((id) => {
+        const campaign = campaigns.find((item) => item.id === id);
+        return campaign ? isDeletable(campaign) : false;
+      }),
+    [grid.selected, campaigns],
+  );
+
+  const hasDeletableSelection = deletableSelectedIds.length > 0;
+
+  const selectedDraftId = useMemo(() => {
+    if (!grid.singleSelection) return null;
+    const campaign = campaigns.find((item) => item.id === grid.selected[0]);
+    return campaign && isEditable(campaign) ? campaign.id : null;
+  }, [grid.singleSelection, grid.selected, campaigns]);
+
+  const handleEditSelected = useCallback(() => {
+    if (selectedDraftId === null) return;
+    navigate(`/campaigns/${selectedDraftId}/edit`);
+  }, [navigate, selectedDraftId]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!hasDeletableSelection) return;
+    grid.requestDelete(deletableSelectedIds);
+  }, [grid.requestDelete, deletableSelectedIds, hasDeletableSelection]);
+
+  const handleViewCampaign = useCallback(
+    (campaignId: number) => navigate(`/campaigns/${campaignId}`),
+    [navigate],
+  );
+
+  const handleEditCampaign = useCallback(
+    (campaignId: number) => navigate(`/campaigns/${campaignId}/edit`),
+    [navigate],
+  );
+
+  const handleEscape = useCallback(() => {
+    if (cancelId !== null) {
       setCancelId(null);
-    },
-    onError: () => toast.error('Erro ao cancelar campanha.'),
+      return;
+    }
+    if (grid.deleteIds.length > 0) {
+      grid.clearDeleteRequest();
+    }
+    if (grid.hasSelection) {
+      grid.clearSelection();
+    }
+  }, [
+    cancelId,
+    grid.clearDeleteRequest,
+    grid.clearSelection,
+    grid.deleteIds.length,
+    grid.hasSelection,
+  ]);
+
+  useGridKeyboard({
+    canEdit: selectedDraftId !== null,
+    canDelete: hasDeletableSelection,
+    onEdit: handleEditSelected,
+    onDelete: handleDeleteSelected,
+    onEscape: handleEscape,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => campaignsService.destroy(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-      toast.success('Campanha removida.');
-      setDeleteId(null);
-    },
-    onError: () => toast.error('Erro ao remover campanha.'),
-  });
+  async function handleDelete() {
+    if (grid.deleteIds.length === 0) return;
 
-  const campaigns = data?.data.result.data ?? [];
-  const meta = data?.data.result.meta;
+    try {
+      setIsDeleting(true);
+      await Promise.all(grid.deleteIds.map((id) => campaignsService.destroy(id)));
+      showSuccess(
+        grid.deleteIds.length === 1
+          ? 'Campanha removida.'
+          : `${grid.deleteIds.length} campanhas removidas.`,
+      );
+      grid.clearDeleteRequest();
+      grid.clearSelection();
+      void load();
+    } catch (error) {
+      showError('Erro ao remover campanha(s).', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (cancelId === null) return;
+
+    try {
+      setIsCancelling(true);
+      await campaignsService.cancel(cancelId);
+      showSuccess('Campanha cancelada.');
+      setCancelId(null);
+      void load();
+    } catch (error) {
+      showError('Erro ao cancelar campanha.', error);
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
+  function handleExport() {
+    toast.info('Exportação em breve.');
+  }
+
+  const columnDefinitions = useMemo<GridColumnDef<Campaign>[]>(
+    () => [
+      {
+        id: 'select',
+        label: '#',
+        pinned: 'start',
+        hideable: false,
+        className: 'w-[40px]',
+        render: (campaign) => (
+          <Checkbox
+            checked={grid.selected.includes(campaign.id)}
+            onCheckedChange={() => grid.toggleSelect(campaign.id)}
+            onClick={(event) => event.stopPropagation()}
+          />
+        ),
+      },
+      {
+        id: 'id',
+        label: 'Id',
+        sortable: true,
+        sortKey: 'id',
+        className: 'w-[70px] text-sm text-muted-foreground',
+        render: (campaign) => campaign.id,
+      },
+      {
+        id: 'actions',
+        label: 'Ações',
+        hideable: false,
+        className: 'w-[72px]',
+        render: (campaign) => (
+          <GridRowActions
+            actions={[
+              {
+                label: 'Ver detalhes',
+                icon: BarChart3,
+                onClick: () => handleViewCampaign(campaign.id),
+              },
+              {
+                label: 'Editar',
+                icon: Pencil,
+                hidden: !isEditable(campaign),
+                onClick: () => handleEditCampaign(campaign.id),
+              },
+              {
+                label: 'Cancelar',
+                icon: X,
+                hidden: !CANCELLABLE_STATUSES.includes(campaign.status),
+                onClick: () => setCancelId(campaign.id),
+              },
+              {
+                label: 'Excluir',
+                icon: Trash2,
+                tone: 'destructive',
+                hidden: !isDeletable(campaign),
+                onClick: () => grid.requestDelete([campaign.id]),
+              },
+            ]}
+          />
+        ),
+      },
+      {
+        id: 'name',
+        label: 'Nome',
+        sortable: true,
+        sortKey: 'name',
+        filter: { type: 'text', filterKey: 'name', placeholder: 'Nome' },
+        className: 'min-w-[200px]',
+        render: (campaign) => (
+          <div>
+            <span className="font-medium">{campaign.name}</span>
+            {campaign.description && (
+              <p className="text-xs text-muted-foreground truncate max-w-[240px]">
+                {campaign.description}
+              </p>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'channels',
+        label: 'Canais',
+        className: 'min-w-[140px]',
+        render: (campaign) => (
+          <div className="flex flex-wrap gap-1">
+            {campaign.channels.map((channel) => (
+              <Badge key={channel} variant="outline" className="text-xs">
+                {channel}
+              </Badge>
+            ))}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        label: 'Status',
+        sortable: true,
+        sortKey: 'status',
+        filter: {
+          type: 'select',
+          filterKey: 'status',
+          placeholder: 'Todos',
+          options: STATUS_FILTER_OPTIONS,
+        },
+        className: 'w-[120px]',
+        render: (campaign) => (
+          <Badge variant={statusVariant[campaign.status]}>
+            {statusLabel[campaign.status]}
+          </Badge>
+        ),
+      },
+      {
+        id: 'stats',
+        label: 'Entregas',
+        className: 'min-w-[120px]',
+        render: (campaign) =>
+          campaign.stats ? (
+            <div className="text-sm">
+              <span className="text-green-600">{campaign.stats.sent}</span>
+              <span className="text-muted-foreground">/{campaign.stats.total}</span>
+              {campaign.stats.failed > 0 && (
+                <span className="text-destructive ml-1">({campaign.stats.failed} falhas)</span>
+              )}
+            </div>
+          ) : (
+            '—'
+          ),
+      },
+      {
+        id: 'created_at',
+        label: 'Criado em',
+        sortable: true,
+        sortKey: 'created_at',
+        className: 'min-w-[140px] text-sm text-muted-foreground',
+        render: (campaign) => formatDateTime(campaign.created_at),
+      },
+    ],
+    [
+      grid.requestDelete,
+      grid.selected,
+      grid.toggleSelect,
+      handleEditCampaign,
+      handleViewCampaign,
+    ],
+  );
+
+  const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+
+  const activeFilters = useMemo(() => {
+    const items = [];
+
+    if (grid.search.trim()) {
+      items.push({
+        id: 'search',
+        label: 'Busca',
+        value: grid.search.trim(),
+        onRemove: grid.clearSearch,
+      });
+    }
+
+    for (const column of columnDefinitions) {
+      if (!column.filter) continue;
+
+      const value = columnFilters.filters[column.filter.filterKey]?.trim();
+      if (!value) continue;
+
+      const displayValue =
+        column.filter.type === 'select'
+          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
+          : value;
+
+      items.push({
+        id: column.filter.filterKey,
+        label: column.label,
+        value: displayValue,
+        onRemove: () => columnFilters.clearFilter(column.filter!.filterKey),
+      });
+    }
+
+    return items;
+  }, [
+    columnDefinitions,
+    columnFilters.filters,
+    columnFilters.clearFilter,
+    grid.search,
+    grid.clearSearch,
+  ]);
+
+  function handleResetColumns() {
+    gridColumns.resetColumns();
+    toast.success('Colunas restauradas ao padrão.');
+  }
+
+  function handleClearFilters() {
+    grid.clearSearch();
+    columnFilters.clearAllFilters();
+    toast.success('Filtros removidos.');
+  }
+
+  function handleResetGrid() {
+    gridColumns.resetColumns();
+    grid.clearSearch();
+    columnFilters.clearAllFilters();
+    grid.resetSettings();
+    toast.success('Grid restaurado ao padrão.');
+  }
+
+  const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
+  const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
+
+  const toolbarActions = useMemo(
+    () => (
+      <StandardGridToolbar
+        onNew={() => navigate('/campaigns/new')}
+        onEdit={handleEditSelected}
+        onDelete={handleDeleteSelected}
+        hasSelection={hasDeletableSelection}
+        singleSelection={selectedDraftId !== null}
+      />
+    ),
+    [
+      navigate,
+      handleEditSelected,
+      handleDeleteSelected,
+      hasDeletableSelection,
+      selectedDraftId,
+    ],
+  );
+
+  usePageToolbar({
+    title: 'Campanhas',
+    description: 'Gerencie comunicações e envios em massa.',
+    actions: toolbarActions,
+  });
 
   return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Campanhas</h1>
-          <p className="text-sm text-muted-foreground">Gerencie comunicações e envios em massa.</p>
-        </div>
-        <Button onClick={() => navigate('/campaigns/nova')}>
-          <Plus className="size-4 mr-2" /> Nova Campanha
-        </Button>
-      </div>
+    <PageBody>
+      <GridPanel
+        toolbar={
+          <GridPanelToolbar
+            onSelectAll={() => grid.toggleSelectAll(campaigns.map((campaign) => campaign.id))}
+            isAllSelected={grid.isAllSelected(campaigns.length)}
+            selectedCount={grid.selected.length}
+            onClearSelection={grid.clearSelection}
+            onRefresh={load}
+            isRefreshing={loading}
+            onExport={handleExport}
+            search={grid.search}
+            onSearch={grid.setSearch}
+            filtersControl={
+              <GridFiltersControl
+                filters={activeFilters}
+                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
+              />
+            }
+            columnsControl={
+              <GridColumnsControl
+                columns={columnDefinitions}
+                order={gridColumns.order}
+                hidden={gridColumns.hidden}
+                visibleCount={gridColumns.visibleCount}
+                totalCount={gridColumns.totalCount}
+                isCustomized={gridColumns.isCustomized}
+                onOrderChange={gridColumns.setColumnOrder}
+                onSetVisibility={gridColumns.setColumnVisibility}
+                canHideColumn={gridColumns.canHideColumn}
+                onShowAll={gridColumns.showAllColumns}
+                onHideAll={gridColumns.hideAllColumns}
+                onResetDefault={handleResetColumns}
+              />
+            }
+            resetControl={
+              <GridResetControl
+                disabled={!isGridCustomized}
+                onReset={handleResetGrid}
+              />
+            }
+          />
+        }
+        footer={
+          <GridPagination
+            meta={meta}
+            onPageChange={grid.setPage}
+            onPerPageChange={grid.setPerPage}
+          />
+        }
+      >
+        <GridTable
+          columns={gridColumns.visibleColumns}
+          data={campaigns}
+          getRowKey={(campaign) => campaign.id}
+          loading={loading}
+          emptyMessage="Nenhuma campanha criada ainda."
+          sort={grid.sort}
+          sortDir={grid.sortDir}
+          onSort={grid.toggleSort}
+          onColumnOrderChange={gridColumns.reorderDraggableColumns}
+          columnFilters={columnFilters.filters}
+          onColumnFilterChange={columnFilters.setFilter}
+          onColumnFilterClear={columnFilters.clearColumnFilter}
+          isRowSelected={(campaign) => grid.selected.includes(campaign.id)}
+          onRowClick={(campaign, event) =>
+            grid.selectRow(campaign.id, {
+              shift: event.shiftKey,
+              rangeOrder: campaigns.map((item) => item.id),
+            })
+          }
+          onRowDoubleClick={(campaign) => handleViewCampaign(campaign.id)}
+        />
+      </GridPanel>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Canais</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Entregas</TableHead>
-              <TableHead>Criado em</TableHead>
-              <TableHead className="w-[130px]">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <LoaderCircle className="size-5 animate-spin mx-auto text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : campaigns.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  <Megaphone className="size-8 mx-auto mb-2 opacity-30" />
-                  Nenhuma campanha criada ainda.
-                </TableCell>
-              </TableRow>
-            ) : (
-              campaigns.map((c: Campaign) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{c.name}</p>
-                      {c.description && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">{c.description}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 flex-wrap">
-                      {c.channels.map((ch) => (
-                        <Badge key={ch} variant="outline" className="text-xs">{ch}</Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant[c.status]}>{statusLabel[c.status]}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {c.stats ? (
-                      <div className="text-sm">
-                        <span className="text-green-600">{c.stats.sent}</span>
-                        <span className="text-muted-foreground">/{c.stats.total}</span>
-                        {c.stats.failed > 0 && (
-                          <span className="text-destructive ml-1">({c.stats.failed} falhas)</span>
-                        )}
-                      </div>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(c.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" mode="icon" size="sm" onClick={() => navigate(`/campaigns/${c.id}`)}>
-                        <BarChart3 className="size-4 text-blue-500" />
-                      </Button>
-                      {c.status === 'draft' && (
-                        <Button variant="ghost" mode="icon" size="sm" onClick={() => navigate(`/campaigns/${c.id}/editar`)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                      )}
-                      {['draft', 'scheduled'].includes(c.status) && (
-                        <Button variant="ghost" mode="icon" size="sm" onClick={() => setCancelId(c.id)}>
-                          <X className="size-4 text-orange-500" />
-                        </Button>
-                      )}
-                      {['draft', 'cancelled'].includes(c.status) && (
-                        <Button variant="ghost" mode="icon" size="sm" onClick={() => setDeleteId(c.id)}>
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {meta && meta.last_page > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
-          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
-          <span className="flex items-center text-sm text-muted-foreground">Página {meta.current_page} de {meta.last_page}</span>
-          <Button variant="outline" size="sm" disabled={page === meta.last_page} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
-        </div>
-      )}
-
-      <AlertDialog open={cancelId !== null} onOpenChange={() => setCancelId(null)}>
+      <AlertDialog open={cancelId !== null} onOpenChange={(open) => !open && setCancelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar campanha</AlertDialogTitle>
-            <AlertDialogDescription>Tem certeza que deseja cancelar esta campanha?</AlertDialogDescription>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar esta campanha?
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => cancelId && cancelMutation.mutate(cancelId)}>
+            <AlertDialogAction onClick={() => void handleCancel()} disabled={isCancelling}>
               Cancelar campanha
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog
+        open={grid.deleteIds.length > 0}
+        onOpenChange={(open) => !open && grid.clearDeleteRequest()}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover campanha</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogTitle>
+              {grid.deleteIds.length === 1
+                ? 'Remover campanha'
+                : `Remover ${grid.deleteIds.length} campanhas`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              onClick={() => void handleDelete()}
+              disabled={isDeleting}
             >
               Remover
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageBody>
   );
 }

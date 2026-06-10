@@ -2,9 +2,10 @@ import { Fragment, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck, LoaderCircle, Settings } from 'lucide-react';
+import { BarChart2, Bell, CheckCheck, ExternalLink, LoaderCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { notificationsService } from '@/services/notifications.service';
+import { isReportNotification } from '@/lib/notification-utils';
 import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,8 +56,16 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
     () => notifications.filter((notification) => !notification.read_at),
     [notifications],
   );
+  const reportNotifications = useMemo(
+    () => notifications.filter(isReportNotification),
+    [notifications],
+  );
+  const unreadReportNotifications = useMemo(
+    () => reportNotifications.filter((notification) => !notification.read_at),
+    [reportNotifications],
+  );
 
-  function renderNotifications(items: typeof notifications) {
+  function renderNotifications(items: typeof notifications, emptyLabel = 'Nenhuma notificação') {
     if (isLoading) {
       return (
         <div className="flex justify-center py-12">
@@ -69,7 +78,7 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
       return (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Bell className="mb-2 size-10 opacity-30" />
-          <p className="text-sm">Nenhuma notificação</p>
+          <p className="text-sm">{emptyLabel}</p>
         </div>
       );
     }
@@ -104,7 +113,7 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
       </SheetTrigger>
       <SheetContent className="inset-5 start-auto h-auto w-full gap-0 rounded-lg p-0 sm:max-w-none sm:w-[500px] [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
         <SheetHeader className="mb-0 border-b px-5 py-4">
-          <SheetTitle className="p-0">Notifications</SheetTitle>
+          <SheetTitle className="p-0">Notificações</SheetTitle>
         </SheetHeader>
 
         <SheetBody className="grow p-0">
@@ -115,6 +124,13 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
                 <TabsTrigger value="unread" className="relative">
                   Não lidas
                   {unread > 0 && (
+                    <span className="absolute -end-1 top-1 size-1.5 rounded-full bg-green-500" />
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="relative gap-1.5">
+                  <BarChart2 className="size-3.5" />
+                  Relatórios
+                  {unreadReportNotifications.length > 0 && (
                     <span className="absolute -end-1 top-1 size-1.5 rounded-full bg-green-500" />
                   )}
                 </TabsTrigger>
@@ -132,7 +148,22 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
               </TabsContent>
 
               <TabsContent value="unread" className="mt-0">
-                {renderNotifications(unreadNotifications)}
+                {renderNotifications(unreadNotifications, 'Nenhuma notificação não lida')}
+              </TabsContent>
+
+              <TabsContent value="reports" className="mt-0">
+                <div className="mb-4 flex items-center justify-between gap-2 px-5">
+                  <p className="text-xs text-muted-foreground">
+                    Relatórios concluídos com download direto.
+                  </p>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                    <Link to="/reports/executions" onClick={() => setOpen(false)}>
+                      <ExternalLink className="mr-1 size-3" />
+                      Ver execuções
+                    </Link>
+                  </Button>
+                </div>
+                {renderNotifications(reportNotifications, 'Nenhuma notificação de relatório')}
               </TabsContent>
             </Tabs>
           </ScrollArea>

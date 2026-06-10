@@ -6,8 +6,11 @@ namespace App\Actions\Invite;
 
 use App\Enums\InviteStatus;
 use App\Http\Requests\Invite\AcceptInviteRequest;
+use App\Models\Central\TenantUser;
 use App\Models\Invite;
 use App\Models\User;
+use App\Models\UserApproval;
+use App\Notifications\UserPendingApprovalNotification;
 use App\Repositories\Contracts\InviteRepositoryInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -53,6 +56,19 @@ final class AcceptInviteAction
 
         $user->assignRole($invite->role);
 
+        if (tenant()->require_admin_approval) {
+            $user->update(['is_active' => false]);
+
+            UserApproval::create([
+                'user_id' => $user->id,
+                'status' => 'pending',
+            ]);
+
+            User::role('admin')->each(
+                fn (User $admin) => $admin->notify(new UserPendingApprovalNotification($user))
+            );
+        }
+
         $this->inviteRepository->update($invite, [
             'status' => InviteStatus::Accepted,
             'accepted_at' => now(),
@@ -60,9 +76,10 @@ final class AcceptInviteAction
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        return [
+        $result = [
             'token' => $token,
             'tenant_id' => $tenantId,
+            'user_id' => $user->id,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -71,5 +88,17 @@ final class AcceptInviteAction
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ],
         ];
+
+        TenantUser::create([
+            'tenant_id' => $tenantId,
+            'user_id' => $result['user_id'],
+            'role' => $invite->role,
+            'is_default' => false,
+            'joined_at' => now(),
+        ]);
+
+        unset($result['user_id']);
+
+        return $result;
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -7,18 +7,26 @@ import {
   CheckCircle,
   Clock,
   Download,
-  LoaderCircle,
   Play,
   XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { reportsService, type ReportParameter } from '@/services/reports.service';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PageBody } from '@/components/common/page-body';
+import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
+import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { FormPanel } from '@/components/grid/form-panel';
+import {
+  GridToolbarButton,
+  GridToolbarGroup,
+  GridToolbarPrimary,
+  GridToolbarRoot,
+} from '@/components/grid/grid-toolbar';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -61,6 +69,7 @@ function formatCell(value: unknown, fmt: string): string {
 export function ReportExecutePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useApiToolbarAlert();
   const [results, setResults] = useState<{
     rows: Record<string, unknown>[];
     count: number;
@@ -104,12 +113,16 @@ export function ReportExecutePage() {
     onSuccess: (res) => {
       setResults(res.data.result);
       refetchExecutions();
-      toast.success(`${res.data.result.count} registros em ${res.data.result.duration}ms`);
+      showSuccess(`${res.data.result.count} registros em ${res.data.result.duration}ms`);
     },
-    onError: () => toast.error('Erro ao executar relatório.'),
+    onError: () => showError('Erro ao executar relatório.'),
   });
 
-  function exportCSV() {
+  const handleExecute = useCallback(() => {
+    void form.handleSubmit((data) => executeMutation.mutate(data))();
+  }, [executeMutation, form]);
+
+  const exportCSV = useCallback(() => {
     if (!results || !report) return;
     const cols = report.columns ?? Object.keys(results.rows[0] ?? {}).map((k) => ({ key: k, label: k, format: 'text' as const }));
     const header = cols.map((c) => c.label).join(',');
@@ -124,185 +137,191 @@ export function ReportExecutePage() {
     a.download = `${report.name}-${format(new Date(), 'yyyyMMdd-HHmm')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }
+  }, [report, results]);
+
+  const toolbarActions = useMemo(
+    () => (
+      <GridToolbarRoot>
+        <GridToolbarGroup>
+          <GridToolbarButton
+            label="Voltar"
+            icon={ArrowLeft}
+            onClick={() => navigate('/reports')}
+          />
+          <GridToolbarPrimary
+            label="Executar"
+            icon={Play}
+            onClick={handleExecute}
+            loading={executeMutation.isPending}
+          />
+          {results && (
+            <GridToolbarButton
+              label="Exportar CSV"
+              icon={Download}
+              onClick={exportCSV}
+            />
+          )}
+        </GridToolbarGroup>
+      </GridToolbarRoot>
+    ),
+    [executeMutation.isPending, exportCSV, handleExecute, navigate, results],
+  );
+
+  usePageToolbar({
+    title: report?.name ?? 'Executar relatório',
+    description: report?.description ?? 'Configure os parâmetros e execute o relatório.',
+    actions: toolbarActions,
+  });
 
   if (isLoading) {
     return (
-      <div className="container py-6 flex justify-center">
-        <LoaderCircle className="size-6 animate-spin" />
-      </div>
+      <FormPageSkeleton
+        panels={[
+          { titleWidth: 'w-28', fields: 2 },
+          { titleWidth: 'w-24', fields: 1 },
+        ]}
+      />
     );
   }
 
-  const cols = report?.columns ?? (results ? Object.keys(results.rows[0] ?? {}).map((k) => ({ key: k, label: k, format: 'text' as const })) : []);
+  const cols = report?.columns ?? (results
+    ? Object.keys(results.rows[0] ?? {}).map((k) => ({ key: k, label: k, format: 'text' as const }))
+    : []);
 
   return (
-    <div className="container py-6 max-w-6xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" mode="icon" size="sm" onClick={() => navigate('/reports')}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold">{report?.name}</h1>
-          {report?.description && (
-            <p className="text-sm text-muted-foreground">{report.description}</p>
-          )}
-        </div>
+    <PageBody>
+      <div className="mb-4 flex items-center gap-2">
         <Badge variant={report?.is_active ? 'primary' : 'secondary'}>
           {report?.is_active ? 'Ativo' : 'Inativo'}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-[320px_1fr] gap-6">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Parâmetros</CardTitle></CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((d) => executeMutation.mutate(d))} className="space-y-4">
-                  {(report?.parameters ?? []).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Sem parâmetros necessários.</p>
-                  ) : (
-                    report?.parameters?.map((p: ReportParameter) => (
-                      <FormField
-                        key={p.name}
-                        control={form.control}
-                        name={p.name}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              {p.label}
-                              {p.required && <span className="text-destructive ml-1">*</span>}
-                            </FormLabel>
-                            <FormControl>
-                              {p.type === 'select' ? (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                                  <SelectContent>
-                                    {p.options?.map((o) => (
-                                      <SelectItem key={o} value={o}>{o}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Input
-                                  type={p.type === 'date' ? 'date' : p.type === 'number' ? 'number' : 'text'}
-                                  {...field}
-                                />
-                              )}
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))
+      <Form {...form}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleExecute();
+          }}
+        >
+          <FormPanel title="Parâmetros">
+            <FormFieldGrid>
+              {(report?.parameters ?? []).length === 0 ? (
+                <FormFieldGridItem span={2}>
+                  <p className="text-sm text-muted-foreground">Sem parâmetros necessários.</p>
+                </FormFieldGridItem>
+              ) : (
+                report?.parameters?.map((p: ReportParameter) => (
+                  <FormFieldGridItem key={p.name}>
+                    <FormField
+                      control={form.control}
+                      name={p.name}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required={p.required}>{p.label}</FormLabel>
+                          <FormControl>
+                            {p.type === 'select' ? (
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                  {p.options?.map((o) => (
+                                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                type={p.type === 'date' ? 'date' : p.type === 'number' ? 'number' : 'text'}
+                                {...field}
+                              />
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </FormFieldGridItem>
+                ))
+              )}
+            </FormFieldGrid>
+          </FormPanel>
+        </form>
+      </Form>
+
+      {executions.length > 0 && (
+        <FormPanel title="Histórico recente">
+          <div className="divide-y rounded-md border">
+            {executions.slice(0, 5).map((execution) => (
+              <div key={execution.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(execution.executed_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                    {' · '}
+                    {execution.executed_by}
+                  </p>
+                  {execution.error_message && (
+                    <p className="truncate text-xs text-destructive">{execution.error_message}</p>
                   )}
-
-                  <Button type="submit" className="w-full" disabled={executeMutation.isPending}>
-                    {executeMutation.isPending
-                      ? <><LoaderCircle className="size-4 mr-2 animate-spin" /> Executando...</>
-                      : <><Play className="size-4 mr-2" /> Executar</>}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-
-          {executions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="size-4" /> Histórico
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y max-h-[300px] overflow-y-auto">
-                  {executions.map((e) => (
-                    <div key={e.id} className="px-4 py-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs">
-                          {format(new Date(e.executed_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                        </span>
-                        {e.status === 'success'
-                          ? <CheckCircle className="size-3.5 text-green-600" />
-                          : <XCircle className="size-3.5 text-destructive" />}
-                      </div>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <span className="text-xs text-muted-foreground">{e.executed_by}</span>
-                        {e.status === 'success' && (
-                          <span className="text-xs text-muted-foreground">{e.rows_count} linhas · {e.duration_ms}ms</span>
-                        )}
-                      </div>
-                      {e.error_message && (
-                        <p className="text-xs text-destructive mt-1 truncate">{e.error_message}</p>
-                      )}
-                    </div>
-                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <div>
-          {!results ? (
-            <div className="border rounded-lg flex items-center justify-center h-64 text-muted-foreground">
-              <div className="text-center">
-                <Play className="size-10 mx-auto mb-2 opacity-20" />
-                <p className="text-sm">Execute o relatório para ver os resultados.</p>
-              </div>
-            </div>
-          ) : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    Resultados
-                    <span className="text-muted-foreground font-normal text-sm ml-2">
-                      {results.count} registros · {results.duration}ms
+                <div className="flex shrink-0 items-center gap-2">
+                  {execution.status === 'success'
+                    ? <CheckCircle className="size-4 text-green-600" />
+                    : <XCircle className="size-4 text-destructive" />}
+                  {execution.status === 'success' && (
+                    <span className="text-xs text-muted-foreground">
+                      {execution.rows_count} linhas · {execution.duration_ms}ms
                     </span>
-                  </CardTitle>
-                  <Button variant="outline" size="sm" onClick={exportCSV}>
-                    <Download className="size-4 mr-2" /> Exportar CSV
-                  </Button>
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-auto max-h-[600px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {cols.map((col) => (
-                          <TableHead key={col.key} className="whitespace-nowrap">{col.label}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {results.rows.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={cols.length} className="text-center py-8 text-muted-foreground">
-                            Nenhum resultado encontrado para os filtros informados.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        results.rows.map((row, i) => (
-                          <TableRow key={i}>
-                            {cols.map((col) => (
-                              <TableCell key={col.key} className="text-sm whitespace-nowrap">
-                                {formatCell(row[col.key], col.format)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-    </div>
+              </div>
+            ))}
+          </div>
+        </FormPanel>
+      )}
+
+      <FormPanel
+        title="Resultados"
+        description={results ? `${results.count} registros · ${results.duration}ms` : undefined}
+      >
+        {!results ? (
+          <div className="flex h-48 items-center justify-center rounded-md border text-muted-foreground">
+            <div className="text-center">
+              <Clock className="mx-auto mb-2 size-8 opacity-20" />
+              <p className="text-sm">Execute o relatório para ver os resultados.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-auto max-h-[600px] rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {cols.map((col) => (
+                    <TableHead key={col.key} className="whitespace-nowrap">{col.label}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {results.rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={cols.length} className="py-8 text-center text-muted-foreground">
+                      Nenhum resultado encontrado para os filtros informados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  results.rows.map((row, index) => (
+                    <TableRow key={index}>
+                      {cols.map((col) => (
+                        <TableCell key={col.key} className="whitespace-nowrap text-sm">
+                          {formatCell(row[col.key], col.format)}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </FormPanel>
+    </PageBody>
   );
 }

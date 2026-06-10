@@ -2,14 +2,20 @@ import {
   createContext,
   useCallback,
   useContext,
+  useLayoutEffect,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { useLocation } from 'react-router-dom';
+import type { PageBreadcrumbItem } from '@/lib/build-page-breadcrumbs';
+import type { ToolbarAlertConfig } from '@/components/grid/toolbar-alert';
 
 export type PageToolbarConfig = {
   title?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  alert?: ToolbarAlertConfig | null;
+  breadcrumbs?: PageBreadcrumbItem[];
 };
 
 type Listener = () => void;
@@ -27,6 +33,12 @@ class PageToolbarStore {
 
   setConfig = (next: PageToolbarConfig | null) => {
     this.config = next;
+    this.listeners.forEach((listener) => listener());
+  };
+
+  clearPageAlert = () => {
+    if (!this.config?.alert) return;
+    this.config = { ...this.config, alert: null };
     this.listeners.forEach((listener) => listener());
   };
 }
@@ -69,4 +81,19 @@ export function usePageToolbarConfig() {
 export function usePageToolbarActionsVisible() {
   const config = usePageToolbarConfig();
   return Boolean(config?.actions);
+}
+
+export function useClearPageToolbarAlert() {
+  return useCallback(() => {
+    pageToolbarStore.clearPageAlert();
+  }, []);
+}
+
+export function useClearPageToolbarAlertOnNavigate() {
+  const { pathname, key } = useLocation();
+  const clearPageAlert = useClearPageToolbarAlert();
+
+  useLayoutEffect(() => {
+    clearPageAlert();
+  }, [pathname, key, clearPageAlert]);
 }

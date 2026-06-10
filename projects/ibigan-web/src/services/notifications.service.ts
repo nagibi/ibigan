@@ -9,9 +9,9 @@ export interface AppNotification {
 }
 
 export const notificationsService = {
-  list: (page = 1) =>
-    api.get<{ status: number; result: { data: AppNotification[]; meta: { total: number; unread: number } } }>(
-      '/v1/notifications', { params: { page } },
+  list: (page = 1, perPage = 15) =>
+    api.get<{ status: number; result: { data: AppNotification[]; meta: { total: number; unread: number; current_page: number; last_page: number; per_page: number } } }>(
+      '/v1/notifications', { params: { page, per_page: perPage } },
     ),
 
   markAsRead: (id: string) =>

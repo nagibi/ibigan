@@ -14,10 +14,15 @@ export function Sidebar() {
     resolvedTheme === 'dark' ||
     pathname.includes('dark-sidebar');
 
+  const isTransparent = settings.layouts.demo1.sidebarTransparent;
+
   return (
     <div
       className={cn(
-        'sidebar bg-background lg:border-e lg:border-border lg:fixed lg:top-0 lg:bottom-0 lg:z-20 lg:flex flex-col items-stretch shrink-0',
+        'sidebar lg:border-e lg:border-border lg:fixed lg:top-0 lg:bottom-0 lg:z-20 lg:flex flex-col items-stretch shrink-0',
+        isTransparent
+          ? 'bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60'
+          : 'bg-background',
         isDarkSidebar && 'dark',
       )}
     >

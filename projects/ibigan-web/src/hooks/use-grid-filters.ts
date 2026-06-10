@@ -95,6 +95,31 @@ export function useGridFilters(onFilterChange?: () => void) {
     [onFilterChange],
   );
 
+  const clearColumnFilter = useCallback(
+    (filter: GridColumnFilterDef) => {
+      if (filter.type === 'dateRange') {
+        clearDateRangeFilter(filter.filterKey);
+        return;
+      }
+
+      clearFilter(filter.filterKey);
+    },
+    [clearDateRangeFilter, clearFilter],
+  );
+
+  const isColumnFilterActive = useCallback(
+    (filter: GridColumnFilterDef) => {
+      if (filter.type === 'dateRange') {
+        const from = filters[dateRangeFilterFromKey(filter.filterKey)]?.trim() ?? '';
+        const to = filters[dateRangeFilterToKey(filter.filterKey)]?.trim() ?? '';
+        return Boolean(from || to);
+      }
+
+      return Boolean(filters[filter.filterKey]?.trim());
+    },
+    [filters],
+  );
+
   const hasFilters = useMemo(
     () => Object.values(filters).some((value) => value.trim().length > 0),
     [filters],
@@ -117,6 +142,8 @@ export function useGridFilters(onFilterChange?: () => void) {
     clearAllFilters,
     setDateRangeFilter,
     clearDateRangeFilter,
+    clearColumnFilter,
+    isColumnFilterActive,
     hasFilters,
   };
 }

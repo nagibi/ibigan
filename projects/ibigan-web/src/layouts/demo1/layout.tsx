@@ -8,12 +8,33 @@ import { useMenu } from '@/hooks/use-menu';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
-import { PageToolbarProvider } from '@/providers/page-toolbar-provider';
+import {
+  PageToolbarProvider,
+  useClearPageToolbarAlertOnNavigate,
+} from '@/providers/page-toolbar-provider';
 import { Footer } from './components/footer';
 import { Header } from './components/header';
 import { PageContentHeader } from './components/page-content-header';
 import { PageToolbarBar } from './components/page-toolbar-bar';
 import { Sidebar } from './components/sidebar';
+
+function Demo1LayoutContent() {
+  useClearPageToolbarAlertOnNavigate();
+
+  return (
+    <div className="wrapper flex grow flex-col">
+      <Header />
+      <PageToolbarBar />
+
+      <main className="grow" role="content">
+        <PageContentHeader />
+        <Outlet />
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
 
 export function Demo1Layout() {
   useNotifications();
@@ -37,6 +58,16 @@ export function Demo1Layout() {
       bodyClass.remove('sidebar-collapse');
     }
   }, [settings.layouts.demo1.sidebarCollapse, isSidebarMode]);
+
+  useEffect(() => {
+    const bodyClass = document.body.classList;
+
+    if (isSidebarMode && settings.layouts.demo1.sidebarTransparent) {
+      bodyClass.add('sidebar-transparent');
+    } else {
+      bodyClass.remove('sidebar-transparent');
+    }
+  }, [settings.layouts.demo1.sidebarTransparent, isSidebarMode]);
 
   useEffect(() => {
     if (!resolvedTheme) return;
@@ -73,6 +104,7 @@ export function Demo1Layout() {
       bodyClass.remove('demo1');
       bodyClass.remove('sidebar-fixed');
       bodyClass.remove('sidebar-collapse');
+      bodyClass.remove('sidebar-transparent');
       bodyClass.remove('menu-horizontal');
       bodyClass.remove('header-fixed');
       bodyClass.remove('layout-initialized');
@@ -89,17 +121,7 @@ export function Demo1Layout() {
       {!isMobile && isSidebarMode && <Sidebar />}
 
       <PageToolbarProvider>
-        <div className="wrapper flex grow flex-col">
-          <Header />
-          <PageToolbarBar />
-
-          <main className="grow" role="content">
-            <PageContentHeader />
-            <Outlet />
-          </main>
-
-          <Footer />
-        </div>
+        <Demo1LayoutContent />
       </PageToolbarProvider>
     </>
   );

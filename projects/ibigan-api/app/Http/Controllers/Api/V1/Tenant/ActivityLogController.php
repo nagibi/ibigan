@@ -49,7 +49,7 @@ final class ActivityLogController extends Controller
     /**
      * Listar logs de atividade de um recurso específico.
      *
-     * @param  string  $type  Tipo do model (ex: user, organization)
+     * @param  string  $type  Tipo do model (ex: user, menu)
      * @param  int  $id  ID do recurso
      */
     public function forSubject(Request $request, string $type, int $id): JsonResponse

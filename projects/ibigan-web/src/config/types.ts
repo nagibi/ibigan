@@ -27,6 +27,7 @@ export interface Settings {
     demo1: {
       sidebarCollapse: boolean;
       sidebarTheme: 'light' | 'dark';
+      sidebarTransparent: boolean;
       menuMode: MenuMode;
     };
     demo2: {
