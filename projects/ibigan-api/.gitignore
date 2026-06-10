@@ -23,3 +23,9 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 .composer/
+
+# Tenant databases (SQLite de testes)
+database/ibigan_tenant_*
+
+# Tenant storage files
+storage/tenant*
