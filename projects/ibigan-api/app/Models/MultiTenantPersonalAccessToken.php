@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Central\CentralUser;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
 
@@ -11,23 +12,19 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
 {
     protected $table = 'personal_access_tokens';
 
-    /**
-     * Busca o token no banco do tenant atual ou no banco central.
-     */
     public static function findToken($token)
     {
-        // Tentar no banco atual (tenant)
+        // Banco atual (tenant inicializado pelo middleware)
         $instance = parent::findToken($token);
         if ($instance) {
             return $instance;
         }
 
-        // Tentar no banco central
+        // Banco central (CentralUser tokens)
         try {
             $parts = explode('|', $token, 2);
             $id    = $parts[0] ?? null;
             $plain = $parts[1] ?? null;
-
             if (! $id || ! $plain) {
                 return null;
             }
@@ -40,18 +37,14 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
             if (! $record) {
                 return null;
             }
-
             if (! hash_equals(hash('sha256', $plain), $record->token)) {
                 return null;
             }
+            if ($record->tokenable_type !== 'App\\Models\\Central\\CentralUser') {
+                return null;
+            }
 
-            // Resolver tokenable
-            $model = match ($record->tokenable_type) {
-                'App\\Models\\Central\\CentralUser' =>
-                \App\Models\Central\CentralUser::find($record->tokenable_id),
-                default => null,
-            };
-
+            $model = CentralUser::find($record->tokenable_id);
             if (! $model) {
                 return null;
             }
@@ -62,39 +55,6 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
             $instance->setRelation('tokenable', $model);
 
             return $instance;
-        } catch (\Exception) {
-            return null;
-        }
-    }
-
-    private static function findTokenOnConnection(string $connection, string $token): ?self
-    {
-        try {
-            $id    = explode('|', $token, 2)[0] ?? null;
-            $plain = explode('|', $token, 2)[1] ?? null;
-
-            if (! $id || ! $plain) {
-                return null;
-            }
-
-            $record = DB::connection($connection)
-                ->table('personal_access_tokens')
-                ->where('id', $id)
-                ->first();
-
-            if (! $record) {
-                return null;
-            }
-
-            if (! hash_equals(hash('sha256', $plain), $record->token)) {
-                return null;
-            }
-
-            $model = new self();
-            $model->setRawAttributes((array) $record);
-            $model->setConnection($connection);
-
-            return $model;
         } catch (\Exception) {
             return null;
         }

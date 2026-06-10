@@ -325,7 +325,7 @@ export function GridTable<T>({
   return (
     <GridTableScroll maxHeight={maxBodyHeight}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <table className="w-full table-auto caption-bottom text-sm text-foreground">
+        <table className="min-w-full w-max caption-bottom text-sm text-foreground">
           <colgroup>
             {columns.map((column) => (
               <col key={column.id} className={column.className} />

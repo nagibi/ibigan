@@ -36,7 +36,7 @@ import { GridPagination } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 
 const GRID_COLUMNS_KEY = 'grid-columns:report-executions';
@@ -220,7 +220,7 @@ export function MyExecutionsPage() {
         },
         render: (execution) => {
           const cfg = STATUS_CONFIG[execution.status] ?? STATUS_CONFIG.queued;
-          return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
+          return <GridBadge variant={cfg.variant}>{cfg.label}</GridBadge>;
         },
       },
       {

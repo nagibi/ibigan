@@ -34,7 +34,7 @@ import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { getInitials } from '@/lib/helpers';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -402,9 +402,9 @@ export function UsersPage() {
         render: (user) => (
           <div className="flex gap-1">
             {user.roles.map((role) => (
-              <Badge key={role} variant="outline" className="text-xs">
+              <GridBadge key={role} variant="outline">
                 {role}
-              </Badge>
+              </GridBadge>
             ))}
           </div>
         ),

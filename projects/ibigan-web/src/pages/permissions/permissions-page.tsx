@@ -20,7 +20,7 @@ import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -128,7 +128,7 @@ export function PermissionsPage() {
         label: 'Recurso',
         className: 'w-[140px]',
         render: (permission) => (
-          <Badge variant="outline">{formatPermissionResource(permission.resource)}</Badge>
+          <GridBadge variant="outline">{formatPermissionResource(permission.resource)}</GridBadge>
         ),
       },
       {
@@ -136,7 +136,7 @@ export function PermissionsPage() {
         label: 'Ação',
         className: 'w-[120px]',
         render: (permission) => (
-          <Badge variant="secondary">{formatPermissionAction(permission.action)}</Badge>
+          <GridBadge variant="secondary">{formatPermissionAction(permission.action)}</GridBadge>
         ),
       },
     ],

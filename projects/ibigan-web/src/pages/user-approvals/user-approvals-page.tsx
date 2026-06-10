@@ -22,7 +22,7 @@ import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-
 import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -224,9 +224,9 @@ export function UserApprovalsPage() {
         },
         className: 'min-w-[120px]',
         render: (approval) => (
-          <Badge variant={statusVariant[approval.status]}>
+          <GridBadge variant={statusVariant[approval.status]}>
             {statusLabel[approval.status]}
-          </Badge>
+          </GridBadge>
         ),
       },
       {

@@ -1,5 +1,5 @@
 import type { ElementType } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge, GridFilterBadge } from '@/components/grid/grid-badge';
 import { cn } from '@/lib/utils';
 
 export interface GridQuickFilterOption<T extends string> {
@@ -13,6 +13,7 @@ interface GridQuickFiltersProps<T extends string> {
   value: T;
   options: GridQuickFilterOption<T>[];
   onChange: (value: T) => void;
+  defaultValue?: T;
   className?: string;
 }
 
@@ -20,33 +21,55 @@ export function GridQuickFilters<T extends string>({
   value,
   options,
   onChange,
+  defaultValue,
   className,
 }: GridQuickFiltersProps<T>) {
+  const resetValue = defaultValue ?? options[0]?.value;
+
   return (
-    <div className={cn('flex shrink-0 items-center gap-1.5', className)}>
+    <div className={cn('flex shrink-0 flex-wrap items-center gap-1.5', className)}>
       {options.map((option) => {
         const Icon = option.icon;
         const isActive = value === option.value;
+        const isDefault = option.value === resetValue;
+        const label = option.count !== undefined
+          ? `${option.label} (${option.count})`
+          : option.label;
+
+        if (isActive) {
+          if (!isDefault) {
+            return (
+              <GridFilterBadge
+                key={option.value}
+                variant="primary"
+                removeLabel={`Remover filtro ${option.label}`}
+                onRemove={() => onChange(resetValue)}
+              >
+                {Icon ? <Icon className="size-3" /> : null}
+                {label}
+              </GridFilterBadge>
+            );
+          }
+
+          return (
+            <GridBadge key={option.value} variant="primary">
+              {Icon ? <Icon className="size-3" /> : null}
+              {label}
+            </GridBadge>
+          );
+        }
 
         return (
-          <Badge
-            key={option.value}
-            asChild
-            variant={isActive ? 'primary' : 'outline'}
-            appearance={isActive ? 'default' : 'light'}
-            size="sm"
-            className="cursor-pointer"
-          >
+          <GridBadge key={option.value} variant="outline" className="cursor-pointer" asChild>
             <button
               type="button"
               onClick={() => onChange(option.value)}
               className="inline-flex items-center gap-1"
             >
               {Icon ? <Icon className="size-3" /> : null}
-              {option.label}
-              {option.count !== undefined ? ` (${option.count})` : null}
+              {label}
             </button>
-          </Badge>
+          </GridBadge>
         );
       })}
     </div>

@@ -32,7 +32,7 @@ import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-
 import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -360,14 +360,14 @@ export function WebhooksPage() {
         render: (webhook) => (
           <div className="flex flex-wrap gap-1">
             {webhook.events.slice(0, 2).map((event) => (
-              <Badge key={event} variant="outline" className="text-xs">
+              <GridBadge key={event} variant="outline" className="text-xs">
                 {getEventLabel(event)}
-              </Badge>
+              </GridBadge>
             ))}
             {webhook.events.length > 2 && (
-              <Badge variant="outline" className="text-xs">
+              <GridBadge variant="outline" className="text-xs">
                 +{webhook.events.length - 2}
-              </Badge>
+              </GridBadge>
             )}
           </div>
         ),
@@ -614,7 +614,7 @@ export function WebhooksPage() {
                           : <XCircle className="size-4 text-destructive" />}
                       </TableCell>
                       <TableCell>
-                        <Badge
+                        <GridBadge
                           variant={
                             delivery.response_status && delivery.response_status < 300
                               ? 'primary'
@@ -622,7 +622,7 @@ export function WebhooksPage() {
                           }
                         >
                           {delivery.response_status ?? '—'}
-                        </Badge>
+                        </GridBadge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {format(new Date(delivery.created_at), "dd/MM 'às' HH:mm:ss", { locale: ptBR })}

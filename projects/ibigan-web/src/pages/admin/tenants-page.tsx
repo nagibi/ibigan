@@ -30,7 +30,7 @@ import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { TenantActivityLogsSheet } from '@/components/activity-logs/tenant-activity-logs-sheet';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -321,9 +321,9 @@ export function AdminTenantsPage() {
         label: 'Slug',
         className: 'min-w-[180px]',
         render: (tenant) => (
-          <Badge variant="outline" className="font-mono text-xs">
+          <GridBadge variant="outline" className="font-mono">
             {tenant.slug}
-          </Badge>
+          </GridBadge>
         ),
       },
       {

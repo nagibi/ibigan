@@ -30,7 +30,7 @@ import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 
 const GRID_COLUMNS_KEY = 'grid-columns:activity-logs';
 
@@ -164,9 +164,9 @@ export function ActivityLogsPage() {
           options: STATUS_FILTER_OPTIONS,
         },
         render: (log) => (
-          <Badge variant={descriptionVariant[log.description] ?? 'outline'}>
+          <GridBadge variant={descriptionVariant[log.description] ?? 'outline'}>
             {descriptionLabel[log.description] ?? log.description}
-          </Badge>
+          </GridBadge>
         ),
       },
       {

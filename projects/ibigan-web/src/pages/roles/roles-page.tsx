@@ -25,7 +25,7 @@ import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -233,9 +233,9 @@ export function RolesPage() {
         label: 'Tipo',
         className: 'w-[120px]',
         render: (role) => (
-          <Badge variant={role.is_system ? 'outline' : 'secondary'}>
+          <GridBadge variant={role.is_system ? 'outline' : 'secondary'}>
             {role.is_system ? 'Sistema' : 'Personalizado'}
-          </Badge>
+          </GridBadge>
         ),
       },
       {

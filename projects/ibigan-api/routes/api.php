@@ -54,23 +54,28 @@ Route::prefix('central/v1/auth')
         Route::post('login', [CentralAuthController::class, 'login']);
     });
 
-// ─── Rotas centrais protegidas ────────────────────────────────────────────
+// ─── Rotas centrais para usuários de TENANT (auth:sanctum) ───────────────
+Route::prefix('central/v1')
+    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'throttle:api'])
+    ->group(function () {
+        Route::get('tenants', [TenantController::class, 'index']);
+        Route::post('tenants/switch', [TenantController::class, 'switch']);
+    });
+
+// ─── Rotas centrais para SUPER-ADMIN (auth:central) ──────────────────────
 Route::prefix('central/v1')
     ->middleware(['auth:central', 'throttle:api'])
     ->group(function () {
-        Route::get('auth/me',      [CentralAuthController::class, 'me']);
+        Route::get('auth/me', [CentralAuthController::class, 'me']);
         Route::post('auth/logout', [CentralAuthController::class, 'logout']);
 
-        Route::get('tenants',          [TenantController::class, 'index']);
-        Route::post('tenants/switch',  [TenantController::class, 'switch']);
-
         Route::prefix('admin')->group(function () {
-            Route::get('tenants',               [TenantAdminController::class, 'index']);
-            Route::post('tenants',              [TenantAdminController::class, 'store']);
-            Route::get('tenants/{tenant}',      [TenantAdminController::class, 'show']);
-            Route::put('tenants/{tenant}',      [TenantAdminController::class, 'update']);
+            Route::get('tenants', [TenantAdminController::class, 'index']);
+            Route::post('tenants', [TenantAdminController::class, 'store']);
+            Route::get('tenants/{tenant}', [TenantAdminController::class, 'show']);
+            Route::put('tenants/{tenant}', [TenantAdminController::class, 'update']);
             Route::patch('tenants/{tenant}/toggle-active', [TenantAdminController::class, 'toggleActive']);
-            Route::delete('tenants/{tenant}',   [TenantAdminController::class, 'destroy']);
+            Route::delete('tenants/{tenant}', [TenantAdminController::class, 'destroy']);
         });
     });
 

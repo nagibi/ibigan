@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -391,14 +391,14 @@ export function MessageTemplatesPage() {
         render: (template) => (
           <div className="flex flex-wrap gap-1">
             {template.merge_tags?.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs font-mono">
+              <GridBadge key={tag} variant="outline" className="text-xs font-mono">
                 {tag}
-              </Badge>
+              </GridBadge>
             ))}
             {(template.merge_tags?.length ?? 0) > 3 && (
-              <Badge variant="outline" className="text-xs">
+              <GridBadge variant="outline" className="text-xs">
                 +{(template.merge_tags?.length ?? 0) - 3}
-              </Badge>
+              </GridBadge>
             )}
           </div>
         ),
@@ -615,12 +615,12 @@ export function MessageTemplatesPage() {
               </div>
               <div className="flex min-h-[32px] flex-wrap gap-1">
                 {sendRecipients.map((recipient) => (
-                  <Badge key={recipient} variant="secondary" className="gap-1">
+                  <GridBadge key={recipient} variant="secondary" className="gap-1">
                     {recipient}
                     <button type="button" onClick={() => removeRecipient(recipient)}>
                       <X className="size-3" />
                     </button>
-                  </Badge>
+                  </GridBadge>
                 ))}
                 {sendRecipients.length === 0 && (
                   <span className="text-xs text-muted-foreground">

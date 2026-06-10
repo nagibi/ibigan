@@ -38,7 +38,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { getGridRowClassName } from '@/components/grid/grid-table';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -210,11 +210,11 @@ function SortableMenuRow({
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">{menu.path ?? '—'}</TableCell>
       <TableCell>
-        <Badge variant="outline" className="text-xs">{menu.icon ?? '—'}</Badge>
+        <GridBadge variant="outline">{menu.icon ?? '—'}</GridBadge>
       </TableCell>
       <TableCell>
         {menu.badge ? (
-          <Badge variant="primary" appearance="light" size="sm">{menu.badge}</Badge>
+          <GridBadge variant="primary">{menu.badge}</GridBadge>
         ) : (
           <span className="text-sm text-muted-foreground">—</span>
         )}

@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -314,9 +314,9 @@ export function InvitesPage() {
         filter: { type: 'text', filterKey: 'role', placeholder: 'Papel' },
         className: 'min-w-[120px]',
         render: (invite) => (
-          <Badge variant="outline" className="text-xs">
+          <GridBadge variant="outline" className="text-xs">
             {invite.role}
-          </Badge>
+          </GridBadge>
         ),
       },
       {
@@ -332,9 +332,9 @@ export function InvitesPage() {
         },
         className: 'min-w-[120px]',
         render: (invite) => (
-          <Badge variant={statusVariant[invite.status]}>
+          <GridBadge variant={statusVariant[invite.status]}>
             {statusLabel[invite.status]}
-          </Badge>
+          </GridBadge>
         ),
       },
       {

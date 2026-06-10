@@ -15,7 +15,7 @@ export function GridTableScroll({
   return (
     <div
       className={cn(
-        'grid-table-scroll w-full max-w-full min-h-0 min-w-0 overflow-x-auto overflow-y-auto',
+        'grid-table-scroll w-full max-w-full min-h-0 min-w-0 overflow-x-scroll overflow-y-auto',
         className,
       )}
       style={{ maxHeight }}

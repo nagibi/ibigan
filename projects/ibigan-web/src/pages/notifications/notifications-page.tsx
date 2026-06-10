@@ -608,6 +608,7 @@ export function NotificationsPage() {
               <GridQuickFilters
                 value={activeFilter}
                 onChange={handleFilterChange}
+                defaultValue="all"
                 options={[
                   { value: 'all', label: 'Todas', count: notifications.length },
                   { value: 'unread', label: 'Não lidas', count: unreadCount },

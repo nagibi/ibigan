@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const GRID_COLUMNS_KEY = 'grid-columns:campaigns';
@@ -319,9 +319,9 @@ export function CampaignsPage() {
         render: (campaign) => (
           <div className="flex flex-wrap gap-1">
             {campaign.channels.map((channel) => (
-              <Badge key={channel} variant="outline" className="text-xs">
+              <GridBadge key={channel} variant="outline" className="text-xs">
                 {channel}
-              </Badge>
+              </GridBadge>
             ))}
           </div>
         ),
@@ -339,9 +339,9 @@ export function CampaignsPage() {
         },
         className: 'w-[120px]',
         render: (campaign) => (
-          <Badge variant={statusVariant[campaign.status]}>
+          <GridBadge variant={statusVariant[campaign.status]}>
             {statusLabel[campaign.status]}
-          </Badge>
+          </GridBadge>
         ),
       },
       {
