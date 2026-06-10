@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { trackApiRequestEnd, trackApiRequestStart } from '@/lib/api-loading-bar';
+import { isCentralApiRoute } from '@/lib/central-api';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost/api',
@@ -13,14 +15,36 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   trackApiRequestStart();
 
-  const token    = localStorage.getItem('ibigan_token');
-  const tenantId = localStorage.getItem('ibigan_tenant_id');
+  const url = config.url ?? '';
 
-  if (token)    config.headers.Authorization  = `Bearer ${token}`;
-  if (tenantId) config.headers['X-Tenant-ID'] = tenantId;
+  if (isCentralApiRoute(url)) {
+    const centralToken = localStorage.getItem('ibigan_central_token');
+    if (centralToken) {
+      config.headers.Authorization = `Bearer ${centralToken}`;
+    }
+    delete config.headers['X-Tenant-ID'];
+  } else {
+    const token = localStorage.getItem('ibigan_token');
+    const tenantId = localStorage.getItem('ibigan_tenant_id');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (tenantId) config.headers['X-Tenant-ID'] = tenantId;
+  }
 
   return config;
 });
+
+function handleCentralUnauthorized() {
+  localStorage.removeItem('ibigan_central_token');
+  useCentralAuthStore.getState().centralLogout();
+  window.location.href = '/central/login';
+}
+
+function handleTenantUnauthorized() {
+  localStorage.removeItem('ibigan_token');
+  localStorage.removeItem('ibigan_tenant_id');
+  useAuthStore.getState().logout();
+  window.location.href = '/auth/login';
+}
 
 api.interceptors.response.use(
   (response) => {
@@ -31,32 +55,40 @@ api.interceptors.response.use(
     trackApiRequestEnd();
 
     const status = error.response?.status;
+    const url = error.config?.url ?? '';
+    const isCentral = isCentralApiRoute(url);
 
     if (status === 401) {
-      // Token inválido — logout imediato
-      localStorage.removeItem('ibigan_token');
-      localStorage.removeItem('ibigan_tenant_id');
-      useAuthStore.getState().logout();
-      window.location.href = '/auth/login';
+      if (isCentral) {
+        handleCentralUnauthorized();
+        return Promise.reject(error);
+      }
+
+      const isCentralSession =
+        useCentralAuthStore.getState().isCentralAuthenticated &&
+        !useAuthStore.getState().isAuthenticated;
+
+      if (isCentralSession) {
+        return Promise.reject(error);
+      }
+
+      handleTenantUnauthorized();
       return Promise.reject(error);
     }
 
     if (status === 403) {
-      // Permissão negada — pode ser token expirado/inválido
-      // Tentar verificar se o token ainda é válido
+      if (isCentral) {
+        return Promise.reject(error);
+      }
+
       const token = localStorage.getItem('ibigan_token');
       if (token) {
         try {
           await api.get('/v1/auth/me');
-          // Token ainda válido — é realmente 403 de permissão
           return Promise.reject(error);
         } catch (meError: unknown) {
           if ((meError as { response?: { status?: number } })?.response?.status === 401) {
-            // Token inválido — logout
-            localStorage.removeItem('ibigan_token');
-            localStorage.removeItem('ibigan_tenant_id');
-            useAuthStore.getState().logout();
-            window.location.href = '/auth/login';
+            handleTenantUnauthorized();
           }
         }
       }

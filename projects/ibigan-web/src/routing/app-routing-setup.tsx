@@ -1,3 +1,4 @@
+import { CentralUsersPage } from '@/pages/admin/central-users-page';
 import { AdminTenantFormPage } from '@/pages/admin/tenant-form-page';
 import { AdminTenantsPage } from '@/pages/admin/tenants-page';
 import { ActivityLogsPage } from '@/pages/activity-logs/activity-logs-page';
@@ -7,6 +8,7 @@ import { CampaignsPage } from '@/pages/campaigns/campaigns-page';
 import { CallbackPage } from '@/pages/auth/callback-page';
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password-page';
 import { InvitePage } from '@/pages/auth/invite-page';
+import { CentralLoginPage } from '@/pages/auth/central-login-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { TenantSelectPage } from '@/pages/auth/tenant-select-page';
@@ -36,8 +38,10 @@ import { UserApprovalsPage } from '@/pages/user-approvals/user-approvals-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
 import { Navigate, Route, Routes } from 'react-router';
+import { CentralLayout } from '@/components/layouts/central-layout';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
 import { RequireSuperAdmin } from '@/routing/require-super-admin';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 /**
  * Convenção de rotas (Opção C) — ver docs/ROUTING.md
@@ -56,6 +60,16 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function CentralGuestOnly({ children }: { children: React.ReactNode }) {
+  const { isCentralAuthenticated } = useCentralAuthStore();
+
+  if (isCentralAuthenticated) {
+    return <Navigate to="/admin/tenants" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
 
@@ -69,6 +83,14 @@ function GuestOnly({ children }: { children: React.ReactNode }) {
 export function AppRoutingSetup() {
   return (
     <Routes>
+      <Route
+        path="/central/login"
+        element={
+          <CentralGuestOnly>
+            <CentralLoginPage />
+          </CentralGuestOnly>
+        }
+      />
       <Route
         path="/auth/login"
         element={
@@ -112,6 +134,17 @@ export function AppRoutingSetup() {
         }
       />
 
+      {/* Painel central — layout próprio, sem fetch de tenant */}
+      <Route element={<RequireSuperAdmin />}>
+        <Route element={<CentralLayout />}>
+          <Route path="/admin/tenants" element={<AdminTenantsPage />} />
+          <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
+          <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
+          <Route path="/admin/super-admins" element={<CentralUsersPage />} />
+        </Route>
+      </Route>
+
+      {/* Tenant — layout de tenant */}
       <Route
         element={
           <RequireAuth>
@@ -120,15 +153,6 @@ export function AppRoutingSetup() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
-
-        {/* SaaS — somente super-admin */}
-        <Route element={<RequireSuperAdmin />}>
-          <Route path="/admin/tenants" element={<AdminTenantsPage />} />
-          <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
-          <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
-        </Route>
-
-        {/* Tenant — admin do tenant atual */}
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/new" element={<UserFormPage key="user-new" />} />
         <Route path="/users/:id" element={<UserFormPage key="user-edit" />} />

@@ -8,10 +8,13 @@ import { MENU_SIDEBAR } from '@/config/menu.config';
 import { SUPER_ADMIN_ROLE } from '@/config/routing';
 import { type MenuConfig } from '@/config/types';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 export function useDynamicMenu(): MenuConfig {
   const tenantId = useAuthStore((state) => state.tenantId);
-  const isSuperAdmin = useAuthStore((state) => state.hasRole(SUPER_ADMIN_ROLE));
+  const isTenantSuperAdmin = useAuthStore((state) => state.hasRole(SUPER_ADMIN_ROLE));
+  const isCentralSuperAdmin = useCentralAuthStore((state) => state.centralUser?.is_super_admin);
+  const isSuperAdmin = Boolean(isCentralSuperAdmin || isTenantSuperAdmin);
 
   const { data } = useQuery({
     queryKey: ['menus', tenantId],

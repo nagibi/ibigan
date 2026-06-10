@@ -1,16 +1,15 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { SUPER_ADMIN_ROLE } from '@/config/routing';
-import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 /**
  * Guarda rotas com prefixo `/admin/*` (escopo SaaS).
  * Ver docs/ROUTING.md.
  */
 export function RequireSuperAdmin() {
-  const hasRole = useAuthStore((state) => state.hasRole);
+  const centralUser = useCentralAuthStore((state) => state.centralUser);
 
-  if (!hasRole(SUPER_ADMIN_ROLE)) {
-    return <Navigate to="/dashboard" replace />;
+  if (!centralUser?.is_super_admin) {
+    return <Navigate to="/central/login" replace />;
   }
 
   return <Outlet />;

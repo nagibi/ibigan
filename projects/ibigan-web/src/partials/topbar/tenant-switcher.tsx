@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Building2, ChevronsUpDown, LoaderCircle } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useTenantSwitch } from '@/hooks/use-tenant-switch';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ function tenantLabel(name: string | null | undefined, slug: string, id: string) 
 
 export function TenantSwitcher() {
   const { tenantId } = useAuthStore();
+  const isCentralOnly = useCentralOnlySession();
   const { switchToTenant, switchingId } = useTenantSwitch();
   const [open, setOpen] = useState(false);
 
@@ -33,7 +35,12 @@ export function TenantSwitcher() {
       return res.data.result;
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isCentralOnly,
   });
+
+  if (isCentralOnly) {
+    return null;
+  }
 
   const currentTenant = tenants.find((tenant) => tenant.id === tenantId);
   const currentLabel = tenantLabel(currentTenant?.name, currentTenant?.slug ?? '', tenantId ?? '');

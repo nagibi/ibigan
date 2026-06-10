@@ -15,8 +15,11 @@ import { resolveMenuIcon } from '@/lib/menu-icons';
 import { I18N_LANGUAGES } from '@/i18n/config';
 import { getInitials } from '@/lib/helpers';
 import { resetEcho } from '@/lib/echo';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { authService } from '@/services/auth.service';
+import { centralAuthService } from '@/services/central-auth.service';
 import { profileService } from '@/services/profile.service';
 import { useLanguage } from '@/providers/i18n-provider';
 import { useSettings } from '@/providers/settings-provider';
@@ -48,7 +51,9 @@ function formatRole(role: string): string {
 export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const navigate = useNavigate();
   const intl = useIntl();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
+  const { centralUser, centralLogout } = useCentralAuthStore();
+  const isCentralOnly = useCentralOnlySession();
   const { currenLanguage, changeLanguage } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
   const { storeOption } = useSettings();
@@ -64,6 +69,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     queryKey: ['profile'],
     queryFn: () => profileService.show(),
     staleTime: 5 * 60 * 1000,
+    enabled: isAuthenticated,
   });
 
   const profileMenu = useApiMenuByPath('/profile');
@@ -91,11 +97,27 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     : Bell;
 
   const avatarUrl = profileData?.data.result.avatar_url ?? null;
-  const displayName = profileData?.data.result.name ?? user?.name ?? 'Usuário';
-  const displayEmail = profileData?.data.result.email ?? user?.email ?? '';
-  const primaryRole = user?.roles?.[0];
+  const displayName = isCentralOnly
+    ? (centralUser?.name ?? 'Super Admin')
+    : (profileData?.data.result.name ?? user?.name ?? 'Usuário');
+  const displayEmail = isCentralOnly
+    ? (centralUser?.email ?? '')
+    : (profileData?.data.result.email ?? user?.email ?? '');
+  const primaryRole = isCentralOnly ? 'super-admin' : user?.roles?.[0];
 
   async function handleLogout() {
+    if (isCentralOnly) {
+      try {
+        await centralAuthService.logout();
+      } catch {
+        // ignora erro de rede
+      } finally {
+        centralLogout();
+        navigate('/central/login');
+      }
+      return;
+    }
+
     try {
       await authService.logout();
     } catch {
@@ -167,21 +189,25 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={() => navigate('/profile')}>
-          <ProfileIcon className="size-4" />
-          {profileLabel}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/notifications')}>
-          <MyNotificationsIcon className="size-4" />
-          {myNotificationsLabel}
-        </DropdownMenuItem>
+        {!isCentralOnly ? (
+          <>
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <ProfileIcon className="size-4" />
+              {profileLabel}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/notifications')}>
+              <MyNotificationsIcon className="size-4" />
+              {myNotificationsLabel}
+            </DropdownMenuItem>
 
-        <DropdownMenuItem
-          onClick={() => navigate('/auth/select-tenant', { state: { manual: true } })}
-        >
-          <Building2 className="size-4" />
-          Trocar organização
-        </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => navigate('/auth/select-tenant', { state: { manual: true } })}
+            >
+              <Building2 className="size-4" />
+              Trocar organização
+            </DropdownMenuItem>
+          </>
+        ) : null}
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="[&_[data-slot=dropdown-menu-sub-trigger-indicator]]:hidden">

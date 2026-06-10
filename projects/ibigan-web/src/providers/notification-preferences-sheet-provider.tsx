@@ -42,12 +42,9 @@ export function NotificationPreferencesSheetProvider({ children }: { children: R
 
 export function useNotificationPreferencesSheet() {
   const context = useContext(NotificationPreferencesSheetContext);
-
   if (!context) {
-    throw new Error(
-      'useNotificationPreferencesSheet must be used within NotificationPreferencesSheetProvider',
-    );
+    // fora do provider (ex: sidebar no contexto central) — sheet inerte
+    return { isOpen: false, open: () => {}, close: () => {} };
   }
-
   return context;
 }

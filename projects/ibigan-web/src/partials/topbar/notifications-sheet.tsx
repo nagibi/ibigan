@@ -11,6 +11,7 @@ import {
   removeNotificationFromCache,
   upsertNotificationInCache,
 } from '@/lib/notification-cache';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { notificationsService } from '@/services/notifications.service';
 import { isReportNotification } from '@/lib/notification-utils';
 import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
@@ -31,12 +32,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const isCentralOnly = useCentralOnlySession();
   const { open: openPreferences } = useNotificationPreferencesSheet();
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationsService.list(),
     refetchInterval: open ? 30000 : false,
+    enabled: !isCentralOnly,
   });
 
   const markAsReadMutation = useMutation({
@@ -84,6 +87,10 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
     () => reportNotifications.filter((notification) => !notification.read_at),
     [reportNotifications],
   );
+
+  if (isCentralOnly) {
+    return null;
+  }
 
   function renderNotifications(items: typeof notifications, emptyLabel = 'Nenhuma notificação') {
     if (isLoading) {

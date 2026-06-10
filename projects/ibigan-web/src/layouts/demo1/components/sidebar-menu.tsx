@@ -4,6 +4,7 @@ import { JSX, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { LayoutGrid, type LucideIcon } from 'lucide-react';
 import { MenuConfig, MenuItem } from '@/config/types';
+import { useCentralMenu } from '@/hooks/use-central-menu';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { cn } from '@/lib/utils';
 import {
@@ -27,8 +28,14 @@ function MenuIcon({ icon }: { icon?: LucideIcon }) {
   return <Icon data-slot="accordion-menu-icon" />;
 }
 
-export function SidebarMenu() {
-  const menu = useDynamicMenu();
+type SidebarMenuProps = {
+  menuSource?: 'tenant' | 'central';
+};
+
+export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
+  const dynamicMenu = useDynamicMenu();
+  const centralMenu = useCentralMenu();
+  const menu = menuSource === 'central' ? centralMenu : dynamicMenu;
   const { pathname } = useLocation();
   const { isOpen: preferencesOpen } = useNotificationPreferencesSheet();
   const selectedValue = preferencesOpen ? NOTIFICATION_PREFERENCES_PATH : pathname;

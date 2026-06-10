@@ -2,6 +2,8 @@ import { Fragment } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { MENU_SIDEBAR } from '@/config/menu.config';
+import { type MenuConfig } from '@/config/types';
+import { useCentralMenu } from '@/hooks/use-central-menu';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useMenu } from '@/hooks/use-menu';
 import { buildPageBreadcrumbs, type PageBreadcrumbItem } from '@/lib/build-page-breadcrumbs';
@@ -19,10 +21,9 @@ function BreadcrumbItemContent({ item }: { item: PageBreadcrumbItem }) {
   );
 }
 
-function PageBreadcrumbs() {
+function PageBreadcrumbs({ menu }: { menu: MenuConfig }) {
   const { pathname } = useLocation();
   const config = usePageToolbarConfig();
-  const menu = useDynamicMenu();
   const { getBreadcrumb } = useMenu(pathname);
   const items = buildPageBreadcrumbs({
     menuItems: getBreadcrumb(menu),
@@ -69,12 +70,22 @@ function PageBreadcrumbs() {
   );
 }
 
-export function PageContentHeader() {
+type PageContentHeaderProps = {
+  menuSource?: 'tenant' | 'central';
+  fallbackMenu?: MenuConfig;
+};
+
+export function PageContentHeader({
+  menuSource = 'tenant',
+  fallbackMenu = MENU_SIDEBAR,
+}: PageContentHeaderProps) {
   const config = usePageToolbarConfig();
   const { pathname } = useLocation();
-  const menu = useDynamicMenu();
+  const dynamicMenu = useDynamicMenu();
+  const centralMenu = useCentralMenu();
+  const menu = menuSource === 'central' ? centralMenu : dynamicMenu;
   const { getCurrentItem } = useMenu(pathname);
-  const menuItem = getCurrentItem(menu) ?? getCurrentItem(MENU_SIDEBAR);
+  const menuItem = getCurrentItem(menu) ?? getCurrentItem(fallbackMenu);
 
   const title = config?.title ?? menuItem?.title;
   const description = config?.description;
@@ -82,14 +93,14 @@ export function PageContentHeader() {
   if (!title && !description) {
     return (
       <Container className="pb-4 pt-3">
-        <PageBreadcrumbs />
+        <PageBreadcrumbs menu={menu} />
       </Container>
     );
   }
 
   return (
     <Container className="pb-4 pt-3">
-      <PageBreadcrumbs />
+      <PageBreadcrumbs menu={menu} />
       {title ? (
         <h1 className="font-medium text-lg text-mono">
           {title}
