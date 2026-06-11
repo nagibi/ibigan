@@ -21,16 +21,18 @@ function CentralLayoutContent() {
   useClearPageToolbarAlertOnNavigate();
 
   return (
-    <div className="wrapper flex grow flex-col">
+    <div className="wrapper flex h-dvh min-w-0 grow flex-col overflow-y-hidden">
       <CentralHeader />
       <PageToolbarBar />
 
-      <main className="grow" role="content">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
         <PageContentHeader
           menuSource="central"
           fallbackMenu={CENTRAL_MENU_SIDEBAR}
         />
-        <Outlet />
+        <div className="page-content-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <Outlet />
+        </div>
       </main>
 
       <Footer />

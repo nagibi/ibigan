@@ -25,13 +25,14 @@ export function GridFilterBadge({
   onRemove,
   removeLabel = 'Remover filtro',
   variant = 'primary',
+  size = 'sm',
   ...props
 }: GridFilterBadgeProps) {
   return (
     <Badge
       shape="circle"
       appearance="light"
-      size="sm"
+      size={size}
       variant={variant}
       className={cn('gap-1', className)}
       {...props}

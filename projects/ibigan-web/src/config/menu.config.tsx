@@ -8,7 +8,6 @@ import {
   Mail,
   Megaphone,
   Menu,
-  Settings2,
   Shield,
   ShieldCheck,
   User,
@@ -106,16 +105,6 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Notificações',
     icon: Bell,
     path: '/notifications',
-  },
-  {
-    title: 'Preferências',
-    icon: Settings2,
-    path: '/notification-preferences',
-  },
-  {
-    title: 'Segurança',
-    icon: Shield,
-    path: '/security',
   },
 ];
 

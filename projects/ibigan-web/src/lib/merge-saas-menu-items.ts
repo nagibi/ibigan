@@ -1,7 +1,7 @@
 import { isSaasAdminRoute } from '@/config/routing';
 import { type MenuConfig, type MenuItem } from '@/config/types';
 
-function collectMenuPaths(menu: MenuConfig): Set<string> {
+export function collectMenuPaths(menu: MenuConfig): Set<string> {
   const paths = new Set<string>();
 
   const walk = (items: MenuConfig): void => {

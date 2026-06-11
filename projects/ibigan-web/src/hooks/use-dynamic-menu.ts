@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { menusService } from '@/services/menus.service';
 import { mapApiMenusToConfig } from '@/lib/menu-mapper';
 import { filterMenuForUser } from '@/lib/filter-menu-for-user';
+import { flattenAccountMenuGroups, mergeAccountMenuItems } from '@/lib/merge-account-menu-items';
 import { mergeSaasMenuItems } from '@/lib/merge-saas-menu-items';
 import { MENU_SIDEBAR } from '@/config/menu.config';
 import { SUPER_ADMIN_ROLE } from '@/config/routing';
@@ -26,8 +27,11 @@ export function useDynamicMenu(): MenuConfig {
   return useMemo(() => {
     const baseMenu = !data?.data.result?.length
       ? MENU_SIDEBAR
-      : mergeSaasMenuItems(mapApiMenusToConfig(data.data.result), MENU_SIDEBAR);
+      : mergeAccountMenuItems(
+        mergeSaasMenuItems(mapApiMenusToConfig(data.data.result), MENU_SIDEBAR),
+        MENU_SIDEBAR,
+      );
 
-    return filterMenuForUser(baseMenu, isSuperAdmin);
+    return filterMenuForUser(flattenAccountMenuGroups(baseMenu), isSuperAdmin);
   }, [data, isSuperAdmin]);
 }

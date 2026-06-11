@@ -25,6 +25,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { getInitials } from '@/lib/helpers';
 import { resolveMenuIcon } from '@/lib/menu-icons';
 import { cn } from '@/lib/utils';
+import { SecurityContent } from '@/components/security/security-content';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
 import { PageBody } from '@/components/common/page-body';
 import { FormToolbar } from '@/components/grid/form-toolbar';
@@ -465,12 +466,7 @@ export function ProfilePage() {
                   <FormItem>
                     <FormLabel required>Senha atual</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Sua senha atual"
-                        autoComplete="current-password"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="Sua senha atual" autoComplete="current-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -484,12 +480,7 @@ export function ProfilePage() {
                   <FormItem>
                     <FormLabel required>Nova senha</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Mínimo 8 caracteres"
-                        autoComplete="new-password"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -500,12 +491,7 @@ export function ProfilePage() {
                   <FormItem>
                     <FormLabel required>Confirmar nova senha</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Repita a nova senha"
-                        autoComplete="new-password"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="Repita a nova senha" autoComplete="new-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -515,6 +501,8 @@ export function ProfilePage() {
           </FormPanel>
         </form>
       </Form>
+
+      <SecurityContent />
     </PageBody>
   );
 }

@@ -236,7 +236,16 @@ function AccordionMenuItem({
             if (onClick) {
               onClick(e);
             }
-            e.preventDefault();
+
+            const target = e.target as HTMLElement;
+            const isNavigable = Boolean(
+              target.closest('a[href]')
+              || target.closest('button[type="button"]'),
+            );
+
+            if (!isNavigable) {
+              e.preventDefault();
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {

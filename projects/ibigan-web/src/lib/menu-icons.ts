@@ -75,6 +75,8 @@ lookup.bySlug.set('notificacoes', Icons.Bell);
 lookup.bySlug.set('papeis', Icons.ShieldCheck);
 lookup.bySlug.set('permissoes', Icons.Shield);
 lookup.byPath.set('/profile', Icons.User);
+lookup.byPath.set('/security', Icons.Shield);
+lookup.bySlug.set('seguranca', Icons.Shield);
 lookup.byPath.set('/user-approvals', Icons.UserCheck);
 lookup.byPath.set('/reports', Icons.BarChart2);
 lookup.byPath.set('/reports/executions', Icons.FileBarChart);

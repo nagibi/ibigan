@@ -15,6 +15,7 @@ const { BASE_URL } = import.meta.env;
 
 export function App() {
   return (
+    <div className="flex h-full min-h-0 w-full flex-col">
     <QueryProvider>
       <SettingsProvider>
         <ThemeProvider>
@@ -36,5 +37,6 @@ export function App() {
         </ThemeProvider>
       </SettingsProvider>
     </QueryProvider>
+    </div>
   );
 }

@@ -27,7 +27,7 @@ export function GridQuickFilters<T extends string>({
   const resetValue = defaultValue ?? options[0]?.value;
 
   return (
-    <div className={cn('flex shrink-0 flex-wrap items-center gap-1.5', className)}>
+    <div className={cn('flex shrink-0 flex-wrap items-center gap-2', className)}>
       {options.map((option) => {
         const Icon = option.icon;
         const isActive = value === option.value;
@@ -41,32 +41,33 @@ export function GridQuickFilters<T extends string>({
             return (
               <GridFilterBadge
                 key={option.value}
+                size="md"
                 variant="primary"
                 removeLabel={`Remover filtro ${option.label}`}
                 onRemove={() => onChange(resetValue)}
               >
-                {Icon ? <Icon className="size-3" /> : null}
+                {Icon ? <Icon /> : null}
                 {label}
               </GridFilterBadge>
             );
           }
 
           return (
-            <GridBadge key={option.value} variant="primary">
-              {Icon ? <Icon className="size-3" /> : null}
+            <GridBadge key={option.value} size="md" variant="primary">
+              {Icon ? <Icon /> : null}
               {label}
             </GridBadge>
           );
         }
 
         return (
-          <GridBadge key={option.value} variant="outline" className="cursor-pointer" asChild>
+          <GridBadge key={option.value} size="md" variant="outline" className="cursor-pointer" asChild>
             <button
               type="button"
               onClick={() => onChange(option.value)}
-              className="inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1.5"
             >
-              {Icon ? <Icon className="size-3" /> : null}
+              {Icon ? <Icon /> : null}
               {label}
             </button>
           </GridBadge>

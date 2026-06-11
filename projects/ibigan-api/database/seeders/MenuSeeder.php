@@ -240,29 +240,5 @@ class MenuSeeder extends Seeder
             'requires_auth' => true,
             'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
-
-        Menu::create([
-            'title' => 'Preferências',
-            'slug' => 'notificacoes-preferencias',
-            'icon' => 'Settings2',
-            'path' => '/notification-preferences',
-            'parent_id' => $conta->id,
-            'order' => 2,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Segurança',
-            'slug' => 'seguranca',
-            'icon' => 'Shield',
-            'path' => '/security',
-            'parent_id' => $conta->id,
-            'order' => 3,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
-        ]);
     }
 }

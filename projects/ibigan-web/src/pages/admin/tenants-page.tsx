@@ -176,15 +176,18 @@ export function AdminTenantsPage() {
         startImpersonation({ id: tenant_id, name: tenant.name ?? tenant.slug });
         resetEcho();
 
-        showSuccess(`Acessando ${tenant.name ?? tenant.slug}…`);
-        navigate('/dashboard');
+        navigate('/dashboard', {
+          state: {
+            impersonationAlert: `Acessando ${tenant.name ?? tenant.slug}…`,
+          },
+        });
       } catch (error) {
         showError('Erro ao entrar na empresa.', error);
       } finally {
         setImpersonatingId(null);
       }
     },
-    [impersonatingId, navigate, setAuth, showError, showSuccess, startImpersonation],
+    [impersonatingId, navigate, setAuth, showError, startImpersonation],
   );
 
   const handleEscape = useCallback(() => {

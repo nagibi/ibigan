@@ -3,6 +3,7 @@ import { StoreClientTopbar } from '@/pages/store-client/components/common/topbar
 import { SearchDialog } from '@/partials/dialogs/search/search-dialog';
 import { AppsDropdownMenu } from '@/partials/topbar/apps-dropdown-menu';
 import { ChatSheet } from '@/partials/topbar/chat-sheet';
+import { ImpersonationChip } from '@/partials/topbar/impersonation-chip';
 import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { TenantSwitcher } from '@/partials/topbar/tenant-switcher';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
@@ -192,6 +193,7 @@ export function Header() {
                 }
               />
               <div className="flex items-center gap-2">
+                <ImpersonationChip />
                 <TenantSwitcher />
                 <UserDropdownMenu />
               </div>

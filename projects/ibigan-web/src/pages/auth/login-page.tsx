@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -34,6 +35,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setAuth, setRequires2FA } = useAuthStore();
+  const centralLogout = useCentralAuthStore((s) => s.centralLogout);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -93,6 +95,7 @@ export function LoginPage() {
       localStorage.setItem('ibigan_token', token);
       localStorage.setItem('ibigan_tenant_id', tenant_id);
 
+      centralLogout();
       setAuth(token, tenant_id, user);
       navigate('/auth/select-tenant');
     } catch (err: unknown) {

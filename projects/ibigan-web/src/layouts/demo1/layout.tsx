@@ -13,7 +13,7 @@ import {
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
 import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
-import { ImpersonationBanner } from '@/partials/topbar/impersonation-banner';
+import { SecuritySheetProvider } from '@/providers/security-sheet-provider';
 import { Footer } from './components/footer';
 import { Header } from './components/header';
 import { PageContentHeader } from './components/page-content-header';
@@ -24,14 +24,13 @@ function Demo1LayoutContent() {
   useClearPageToolbarAlertOnNavigate();
 
   return (
-    <div className="wrapper flex min-w-0 grow flex-col overflow-x-clip">
+    <div className="wrapper flex h-dvh min-w-0 grow flex-col overflow-x-clip overflow-y-hidden">
       <Header />
       <PageToolbarBar />
-      <ImpersonationBanner />
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
         <PageContentHeader />
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="page-content-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
           <Outlet />
         </div>
       </main>
@@ -119,15 +118,17 @@ export function Demo1Layout() {
 
   return (
     <NotificationPreferencesSheetProvider>
-      <Helmet>
-        <title>{item?.title}</title>
-      </Helmet>
+      <SecuritySheetProvider>
+        <Helmet>
+          <title>{item?.title}</title>
+        </Helmet>
 
-      {!isMobile && isSidebarMode && <Sidebar />}
+        {!isMobile && isSidebarMode && <Sidebar />}
 
-      <PageToolbarProvider>
-        <Demo1LayoutContent />
-      </PageToolbarProvider>
+        <PageToolbarProvider>
+          <Demo1LayoutContent />
+        </PageToolbarProvider>
+      </SecuritySheetProvider>
     </NotificationPreferencesSheetProvider>
   );
 }

@@ -19,10 +19,13 @@ export function PageToolbarBar() {
   const pageAlert = config?.alert;
   const mergedAlert = mergeToolbarAlerts(globalAlert, pageAlert);
   const hasActions = Boolean(config?.actions);
+  const hasGlobalAlert = Boolean(globalAlert);
+  const hasPageAlert = Boolean(pageAlert);
+  const showBar = hasActions || hasGlobalAlert || hasPageAlert;
   const { visible: pageAlertVisible, dismiss: dismissPageAlert } = useToolbarAlertVisible(
     globalAlert ? null : pageAlert,
   );
-  const alertVisible = Boolean(globalAlert) || pageAlertVisible;
+  const alertVisible = hasGlobalAlert || pageAlertVisible;
 
   const handleCloseAlert = () => {
     mergedAlert?.onClose?.();
@@ -35,11 +38,11 @@ export function PageToolbarBar() {
   };
 
   useEffect(() => {
-    document.body.classList.toggle('toolbar-visible', hasActions);
+    document.body.classList.toggle('toolbar-visible', showBar);
     return () => document.body.classList.remove('toolbar-visible');
-  }, [hasActions]);
+  }, [showBar]);
 
-  if (!hasActions) {
+  if (!showBar) {
     return null;
   }
 

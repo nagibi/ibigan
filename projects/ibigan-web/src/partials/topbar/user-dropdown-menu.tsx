@@ -52,7 +52,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const navigate = useNavigate();
   const intl = useIntl();
   const { user, logout, isAuthenticated } = useAuthStore();
-  const { centralUser, centralLogout } = useCentralAuthStore();
+  const { centralUser, centralLogout, impersonatedTenant } = useCentralAuthStore();
   const isCentralOnly = useCentralOnlySession();
   const { currenLanguage, changeLanguage } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
@@ -201,10 +201,14 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={() => navigate('/auth/select-tenant', { state: { manual: true } })}
+              onClick={() => {
+                navigate(impersonatedTenant ? '/admin/tenants' : '/auth/select-tenant', {
+                  state: impersonatedTenant ? undefined : { manual: true },
+                });
+              }}
             >
               <Building2 className="size-4" />
-              Trocar organização
+              Trocar empresa
             </DropdownMenuItem>
           </>
         ) : null}
