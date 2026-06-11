@@ -42,6 +42,7 @@ function handleCentralUnauthorized() {
 function handleTenantUnauthorized() {
   localStorage.removeItem('ibigan_token');
   localStorage.removeItem('ibigan_tenant_id');
+  localStorage.removeItem('ibigan-auth');
   useAuthStore.getState().logout();
   window.location.href = '/auth/login';
 }
@@ -64,11 +65,13 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      const isCentralSession =
-        useCentralAuthStore.getState().isCentralAuthenticated &&
-        !useAuthStore.getState().isAuthenticated;
+      // se há QUALQUER sessão central ativa, nunca expulsa pro login de tenant
+      // (cobre impersonação e transição de saída)
+      const hasCentralSession =
+        useCentralAuthStore.getState().isCentralAuthenticated ||
+        Boolean(localStorage.getItem('ibigan_central_token'));
 
-      if (isCentralSession) {
+      if (hasCentralSession) {
         return Promise.reject(error);
       }
 
@@ -88,7 +91,10 @@ api.interceptors.response.use(
           return Promise.reject(error);
         } catch (meError: unknown) {
           if ((meError as { response?: { status?: number } })?.response?.status === 401) {
-            handleTenantUnauthorized();
+            const isCentralAuthenticated = useCentralAuthStore.getState().isCentralAuthenticated;
+            if (!isCentralAuthenticated) {
+              handleTenantUnauthorized();
+            }
           }
         }
       }

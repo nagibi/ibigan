@@ -8,6 +8,7 @@ use App\Data\ActivityLogData;
 use App\Http\Controllers\Controller;
 use App\Models\Central\CentralUser;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Rules\Cnpj;
 use App\Support\BrazilianDocuments;
 use Database\Seeders\RolePermissionSeeder;
@@ -232,6 +233,58 @@ final class TenantAdminController extends Controller
             'status' => 1,
             'message' => 'MSG000426',
             'result' => null,
+        ]);
+    }
+
+    public function impersonate(Request $request, string $tenant): JsonResponse
+    {
+        $this->ensureSuperAdmin($request);
+
+        $tenantModel = Tenant::findOrFail($tenant);
+
+        /** @var CentralUser $centralUser */
+        $centralUser = $request->user();
+
+        $result = $tenantModel->run(function () use ($centralUser) {
+            $user = User::firstOrCreate(
+                ['email' => $centralUser->email, 'is_platform_user' => true],
+                [
+                    'name' => $centralUser->name,
+                    'password' => Str::random(40),
+                    'status' => 'active',
+                    'is_active' => true,
+                ]
+            );
+
+            if (! $user->hasRole('super-admin')) {
+                $user->assignRole('super-admin');
+            }
+
+            $token = $user->createToken('platform-impersonation')->plainTextToken;
+
+            return [
+                'token' => $token,
+                'user' => $user,
+                'roles' => $user->getRoleNames()->all(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->all(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000067',
+            'result' => [
+                'token' => $result['token'],
+                'tenant_id' => $tenant,
+                'user' => [
+                    'id' => $result['user']->id,
+                    'name' => $result['user']->name,
+                    'email' => $result['user']->email,
+                    'is_platform_user' => true,
+                    'roles' => $result['roles'],
+                    'permissions' => $result['permissions'],
+                ],
+            ],
         ]);
     }
 

@@ -269,6 +269,41 @@ it('lista activity logs do tenant para super-admin', function (): void {
         ]);
 });
 
+it('impersona tenant para super-admin e retorna token de tenant', function (): void {
+    actingAsSuperAdmin($this->superUser);
+
+    $response = $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.tenant_id', 'acme')
+        ->assertJsonPath('result.user.email', 'super@ibigan.com')
+        ->assertJsonPath('result.user.is_platform_user', true)
+        ->assertJsonStructure([
+            'result' => [
+                'token',
+                'tenant_id',
+                'user' => ['id', 'name', 'email', 'roles', 'permissions'],
+            ],
+        ]);
+
+    expect($response->json('result.token'))->not->toBeEmpty();
+    expect($response->json('result.user.roles'))->toContain('super-admin');
+    expect($response->json('result.user.permissions'))->not->toBeEmpty();
+
+    $this->tenant->run(function (): void {
+        $user = User::where('email', 'super@ibigan.com')->where('is_platform_user', true)->first();
+        expect($user)->not->toBeNull();
+        expect($user->hasRole('super-admin'))->toBeTrue();
+    });
+});
+
+it('nega impersonação de tenant para admin comum', function (): void {
+    actingAsAdmin($this->adminUser);
+
+    $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')
+        ->assertForbidden();
+});
+
 it('cria tenant com cnpj para super-admin', function (): void {
     actingAsSuperAdmin($this->superUser);
 

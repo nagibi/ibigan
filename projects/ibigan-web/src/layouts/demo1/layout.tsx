@@ -13,6 +13,7 @@ import {
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
 import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
+import { ImpersonationBanner } from '@/partials/topbar/impersonation-banner';
 import { Footer } from './components/footer';
 import { Header } from './components/header';
 import { PageContentHeader } from './components/page-content-header';
@@ -24,6 +25,7 @@ function Demo1LayoutContent() {
 
   return (
     <div className="wrapper flex grow flex-col">
+      <ImpersonationBanner />
       <Header />
       <PageToolbarBar />
 

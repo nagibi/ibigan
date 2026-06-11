@@ -104,4 +104,21 @@ export const adminTenantsService = {
     }>(`/central/v1/admin/tenants/${tenantId}/activity-logs`, {
       params: { page, per_page: perPage },
     }),
+
+  impersonate: (tenantId: string) =>
+    api.post<{
+      status: number;
+      result: {
+        token: string;
+        tenant_id: string;
+        user: {
+          id: number;
+          name: string;
+          email: string;
+          is_platform_user: boolean;
+          roles: string[];
+          permissions: string[];
+        };
+      };
+    }>(`/central/v1/admin/tenants/${tenantId}/impersonate`),
 };

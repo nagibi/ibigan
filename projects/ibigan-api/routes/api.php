@@ -77,6 +77,7 @@ Route::prefix('central/v1')
             Route::put('tenants/{tenant}', [TenantAdminController::class, 'update']);
             Route::patch('tenants/{tenant}/toggle-active', [TenantAdminController::class, 'toggleActive']);
             Route::get('tenants/{tenant}/activity-logs', [TenantAdminController::class, 'activityLogs']);
+            Route::post('tenants/{tenant}/impersonate', [TenantAdminController::class, 'impersonate']);
             Route::delete('tenants/{tenant}', [TenantAdminController::class, 'destroy']);
 
             Route::get('central-users', [CentralUserController::class, 'index']);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Pencil, Trash2 } from 'lucide-react';
+import { Activity, LogIn, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -18,7 +18,10 @@ import {
 } from '@/hooks/use-grid-filters';
 import { formatCnpj } from '@/lib/brazilian-masks';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
+import { resetEcho } from '@/lib/echo';
 import { adminTenantsService, type AdminTenant } from '@/services/admin-tenants.service';
+import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { GridFiltersControl } from '@/components/grid/grid-filters-control';
@@ -58,6 +61,8 @@ function formatCreatedAt(value?: string | null) {
 
 export function AdminTenantsPage() {
   const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const startImpersonation = useCentralAuthStore((state) => state.startImpersonation);
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
 
@@ -97,6 +102,7 @@ export function AdminTenantsPage() {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [rowStatusId, setRowStatusId] = useState<string | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
   const [activityLogTenant, setActivityLogTenant] = useState<AdminTenant | null>(null);
 
   const load = useCallback(async () => {
@@ -146,6 +152,38 @@ export function AdminTenantsPage() {
   const handleEditTenant = useCallback(
     (tenantId: string) => navigate(`/admin/tenants/${tenantId}/editar`),
     [navigate],
+  );
+
+  const handleImpersonate = useCallback(
+    async (tenant: AdminTenant) => {
+      if (impersonatingId) return;
+
+      try {
+        setImpersonatingId(tenant.id);
+        const res = await adminTenantsService.impersonate(tenant.id);
+        const { token, tenant_id, user } = res.data.result;
+
+        localStorage.setItem('ibigan_token', token);
+        localStorage.setItem('ibigan_tenant_id', tenant_id);
+        setAuth(token, tenant_id, {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          roles: user.roles,
+          permissions: user.permissions,
+        });
+        startImpersonation({ id: tenant_id, name: tenant.name ?? tenant.slug });
+        resetEcho();
+
+        toast.success(`Acessando ${tenant.name ?? tenant.slug}…`);
+        navigate('/dashboard');
+      } catch (error) {
+        showError('Erro ao entrar na empresa.', error);
+      } finally {
+        setImpersonatingId(null);
+      }
+    },
+    [impersonatingId, navigate, setAuth, showError, startImpersonation],
   );
 
   const handleEscape = useCallback(() => {
@@ -247,6 +285,12 @@ export function AdminTenantsPage() {
         render: (tenant) => (
           <GridRowActions
             actions={[
+              {
+                label: 'Entrar',
+                icon: LogIn,
+                disabled: impersonatingId === tenant.id,
+                onClick: () => void handleImpersonate(tenant),
+              },
               {
                 label: 'Editar',
                 icon: Pencil,
@@ -359,6 +403,8 @@ export function AdminTenantsPage() {
     ],
     [
       handleEditTenant,
+      handleImpersonate,
+      impersonatingId,
       rowStatusId,
       selection.requestDelete,
       selection.selected,
