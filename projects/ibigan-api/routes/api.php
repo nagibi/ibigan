@@ -58,7 +58,7 @@ Route::prefix('central/v1/auth')
 
 // ─── Rotas centrais para usuários de TENANT (auth:sanctum) ───────────────
 Route::prefix('central/v1')
-    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'throttle:api'])
+    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'tenant', 'throttle:api'])
     ->group(function () {
         Route::get('tenants', [TenantController::class, 'index']);
         Route::post('tenants/switch', [TenantController::class, 'switch']);
@@ -88,7 +88,7 @@ Route::prefix('central/v1')
 
 // Rotas protegidas — requer X-Tenant-ID + token Sanctum
 Route::prefix('v1')
-    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'throttle:api'])
+    ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'tenant', 'throttle:api'])
     ->group(function () {
         Route::get('search', GlobalSearchController::class)->name('search.global');
 

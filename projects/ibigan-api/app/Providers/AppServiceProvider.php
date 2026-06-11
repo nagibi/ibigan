@@ -15,8 +15,11 @@ use App\Repositories\Eloquent\EloquentInviteRepository;
 use App\Repositories\Eloquent\EloquentMessageTemplateRepository;
 use App\Models\MultiTenantPersonalAccessToken;
 use App\Repositories\Eloquent\EloquentUserRepository;
+use App\Support\SentryContext;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 
@@ -50,6 +53,10 @@ class AppServiceProvider extends ServiceProvider
             $openApi->info->title = config('scramble.ui.title', 'Ibigan API');
             $openApi->info->version = config('scramble.info.version', '1.0.0');
             $openApi->info->description = config('scramble.info.description', '');
+        });
+
+        Event::listen(JobProcessing::class, function (): void {
+            SentryContext::applyForQueue();
         });
     }
 }
