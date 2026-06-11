@@ -1,6 +1,19 @@
+import * as Sentry from '@sentry/react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
+
+function syncSentryAuth(tenantId: string | null, user: AuthUser | null): void {
+  if (tenantId) {
+    Sentry.setTag('tenant.id', tenantId);
+  }
+
+  if (user) {
+    Sentry.setUser({ id: String(user.id), email: user.email });
+  } else {
+    Sentry.setUser(null);
+  }
+}
 
 interface AuthUser {
   id: number;
@@ -38,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (token, tenantId, user) => {
         localStorage.setItem('ibigan_token', token);
         localStorage.setItem('ibigan_tenant_id', tenantId);
+        syncSentryAuth(tenantId, user);
         set({
           token,
           tenantId,
@@ -55,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('ibigan_token');
         localStorage.removeItem('ibigan_tenant_id');
+        syncSentryAuth(null, null);
         useCentralAuthStore.getState().stopImpersonation();
         set({
           token: null,
@@ -82,6 +97,11 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.isAuthenticated && state.tenantId && state.user) {
+          syncSentryAuth(state.tenantId, state.user);
+        }
+      },
     },
   ),
 );

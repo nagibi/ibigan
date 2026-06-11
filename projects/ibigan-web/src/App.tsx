@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react';
+import { AppErrorFallback } from '@/components/errors/app-error-fallback';
 import { GlobalLoadingBar } from '@/components/global-loading-bar';
 import { AppRouting } from '@/routing/app-routing';
 import { HelmetProvider } from 'react-helmet-async';
@@ -15,6 +17,7 @@ const { BASE_URL } = import.meta.env;
 
 export function App() {
   return (
+    <Sentry.ErrorBoundary fallback={<AppErrorFallback />}>
     <div className="flex h-full min-h-0 w-full flex-col">
     <QueryProvider>
       <SettingsProvider>
@@ -38,5 +41,6 @@ export function App() {
       </SettingsProvider>
     </QueryProvider>
     </div>
+    </Sentry.ErrorBoundary>
   );
 }
