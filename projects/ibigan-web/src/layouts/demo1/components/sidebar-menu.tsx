@@ -21,9 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { MenuNavLink } from '@/components/navigation/menu-nav-link';
 import { MenuBadge } from '@/lib/menu-badge';
 import { NOTIFICATION_PREFERENCES_PATH } from '@/lib/notification-preferences-path';
-import { SECURITY_PATH } from '@/lib/security-path';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-import { useSecuritySheet } from '@/providers/security-sheet-provider';
 
 function MenuIcon({ icon }: { icon?: LucideIcon }) {
   const Icon = icon ?? LayoutGrid;
@@ -40,12 +38,7 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
   const menu = menuSource === 'central' ? centralMenu : dynamicMenu;
   const { pathname } = useLocation();
   const { isOpen: preferencesOpen } = useNotificationPreferencesSheet();
-  const { isOpen: securityOpen } = useSecuritySheet();
-  const selectedValue = preferencesOpen
-    ? NOTIFICATION_PREFERENCES_PATH
-    : securityOpen
-      ? SECURITY_PATH
-      : pathname;
+  const selectedValue = preferencesOpen ? NOTIFICATION_PREFERENCES_PATH : pathname;
 
   // Memoize matchPath to prevent unnecessary re-renders
   const matchPath = useCallback(

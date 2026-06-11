@@ -5,10 +5,8 @@ import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useMenu } from '@/hooks/use-menu';
 import { MenuBadge } from '@/lib/menu-badge';
 import { isNotificationPreferencesPath } from '@/lib/notification-preferences-path';
-import { isSecurityPath } from '@/lib/security-path';
 import { cn } from '@/lib/utils';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-import { useSecuritySheet } from '@/providers/security-sheet-provider';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,10 +20,12 @@ import {
 
 const triggerClass = (active: boolean) =>
   cn(
-    'inline-flex items-center gap-1.5 text-sm font-medium px-2.5 h-9 shadow-none',
+    'inline-flex items-center gap-1.5 rounded-md px-2.5 h-9 text-sm font-medium shadow-none',
+    'border-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
     active
-      ? 'bg-muted text-foreground border border-border'
-      : 'text-secondary-foreground hover:text-primary border border-transparent',
+      ? 'bg-muted text-foreground'
+      : 'text-secondary-foreground hover:bg-muted/50 hover:text-primary',
+    'data-[state=open]:bg-muted data-[state=open]:text-foreground data-[state=open]:ring-0',
   );
 
 function MenuIcon({ icon: Icon }: { icon?: MenuItem['icon'] }) {
@@ -38,13 +38,11 @@ function DropdownChildItems({
   isActive,
   hasActiveChild,
   onOpenPreferences,
-  onOpenSecurity,
 }: {
   items: MenuItem[];
   isActive: (path: string | undefined) => boolean;
   hasActiveChild: (children: MenuItem[] | undefined) => boolean;
   onOpenPreferences: () => void;
-  onOpenSecurity: () => void;
 }) {
   return items.map((child, childIndex) => {
     if (child.heading || child.disabled) return null;
@@ -67,7 +65,6 @@ function DropdownChildItems({
               isActive={isActive}
               hasActiveChild={hasActiveChild}
               onOpenPreferences={onOpenPreferences}
-              onOpenSecurity={onOpenSecurity}
             />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -87,23 +84,6 @@ function DropdownChildItems({
             active && 'bg-accent text-primary font-medium',
           )}
           onClick={onOpenPreferences}
-        >
-          <MenuIcon icon={child.icon} />
-          <span className="grow">{child.title}</span>
-          <MenuBadge badge={child.badge} />
-        </DropdownMenuItem>
-      );
-    }
-
-    if (isSecurityPath(child.path)) {
-      return (
-        <DropdownMenuItem
-          key={childIndex}
-          className={cn(
-            'flex items-center gap-2 px-2 py-2 cursor-pointer',
-            active && 'bg-accent text-primary font-medium',
-          )}
-          onClick={onOpenSecurity}
         >
           <MenuIcon icon={child.icon} />
           <span className="grow">{child.title}</span>
@@ -140,11 +120,8 @@ function HorizontalMenuItem({
   const { pathname } = useLocation();
   const { isActive, hasActiveChild, isItemActive } = useMenu(pathname);
   const { open: openPreferences, isOpen: preferencesOpen } = useNotificationPreferencesSheet();
-  const { open: openSecurity, isOpen: securityOpen } = useSecuritySheet();
-  const isActiveWithSheets = (path: string | undefined) =>
-    isActive(path)
-    || (preferencesOpen && isNotificationPreferencesPath(path))
-    || (securityOpen && isSecurityPath(path));
+  const isActiveWithPreferences = (path: string | undefined) =>
+    isActive(path) || (preferencesOpen && isNotificationPreferencesPath(path));
 
   if (item.heading || item.disabled) {
     return null;
@@ -167,10 +144,9 @@ function HorizontalMenuItem({
         <DropdownMenuContent align="start" sideOffset={8} className="min-w-52 p-2">
           <DropdownChildItems
             items={children}
-            isActive={isActiveWithSheets}
+            isActive={isActiveWithPreferences}
             hasActiveChild={hasActiveChild}
             onOpenPreferences={openPreferences}
-            onOpenSecurity={openSecurity}
           />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -186,23 +162,8 @@ function HorizontalMenuItem({
       <Button
         key={index}
         variant="ghost"
-        className={triggerClass(isActiveWithSheets(item.path))}
+        className={triggerClass(isActiveWithPreferences(item.path))}
         onClick={openPreferences}
-      >
-        <MenuIcon icon={item.icon} />
-        {item.title}
-        <MenuBadge badge={item.badge} />
-      </Button>
-    );
-  }
-
-  if (isSecurityPath(item.path)) {
-    return (
-      <Button
-        key={index}
-        variant="ghost"
-        className={triggerClass(isActiveWithSheets(item.path))}
-        onClick={openSecurity}
       >
         <MenuIcon icon={item.icon} />
         {item.title}

@@ -13,7 +13,6 @@ import {
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
 import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
-import { SecuritySheetProvider } from '@/providers/security-sheet-provider';
 import { Footer } from './components/footer';
 import { Header } from './components/header';
 import { PageContentHeader } from './components/page-content-header';
@@ -50,7 +49,7 @@ export function Demo1Layout() {
   const { settings, setOption } = useSettings();
   const { resolvedTheme } = useTheme();
 
-  const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
   const isSidebarMode = menuMode !== 'horizontal';
 
   useEffect(() => {
@@ -118,17 +117,15 @@ export function Demo1Layout() {
 
   return (
     <NotificationPreferencesSheetProvider>
-      <SecuritySheetProvider>
-        <Helmet>
-          <title>{item?.title}</title>
-        </Helmet>
+      <Helmet>
+        <title>{item?.title}</title>
+      </Helmet>
 
-        {!isMobile && isSidebarMode && <Sidebar />}
+      {!isMobile && isSidebarMode && <Sidebar />}
 
-        <PageToolbarProvider>
-          <Demo1LayoutContent />
-        </PageToolbarProvider>
-      </SecuritySheetProvider>
+      <PageToolbarProvider>
+        <Demo1LayoutContent />
+      </PageToolbarProvider>
     </NotificationPreferencesSheetProvider>
   );
 }

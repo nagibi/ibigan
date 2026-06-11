@@ -209,21 +209,9 @@ class MenuSeeder extends Seeder
         $conta = Menu::create([
             'title' => 'Conta',
             'slug' => 'conta',
-            'icon' => null,
+            'icon' => 'User',
             'path' => null,
             'order' => 4,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Meu perfil',
-            'slug' => 'meu-perfil',
-            'icon' => 'User',
-            'path' => '/profile',
-            'parent_id' => $conta->id,
-            'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
@@ -234,6 +222,18 @@ class MenuSeeder extends Seeder
             'slug' => 'notificacoes',
             'icon' => 'Bell',
             'path' => '/notifications',
+            'parent_id' => $conta->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Meu Perfil',
+            'slug' => 'meu-perfil',
+            'icon' => 'User',
+            'path' => '/profile',
             'parent_id' => $conta->id,
             'order' => 1,
             'is_active' => true,

@@ -94,17 +94,20 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/activity-logs',
   },
   {
-    heading: 'CONTA',
-  },
-  {
-    title: 'Meu perfil',
+    title: 'Conta',
     icon: User,
-    path: '/profile',
-  },
-  {
-    title: 'Notificações',
-    icon: Bell,
-    path: '/notifications',
+    children: [
+      {
+        title: 'Notificações',
+        icon: Bell,
+        path: '/notifications',
+      },
+      {
+        title: 'Meu Perfil',
+        icon: User,
+        path: '/profile',
+      },
+    ],
   },
 ];
 

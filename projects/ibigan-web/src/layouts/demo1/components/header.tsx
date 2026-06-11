@@ -44,7 +44,7 @@ export function Header() {
   const { pathname } = useLocation();
   const { settings } = useSettings();
   const mobileMode = useIsMobile();
-  const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
   const isHorizontalMenu = menuMode === 'horizontal';
 
   useEffect(() => {

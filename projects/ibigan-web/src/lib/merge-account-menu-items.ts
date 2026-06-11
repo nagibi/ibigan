@@ -1,5 +1,8 @@
-import { type MenuConfig } from '@/config/types';
+import { User } from 'lucide-react';
+import { type MenuConfig, type MenuItem } from '@/config/types';
 import { collectMenuPaths } from '@/lib/merge-saas-menu-items';
+
+const ACCOUNT_PATHS = new Set(['/profile', '/notifications']);
 
 function extractSectionByHeading(menu: MenuConfig, heading: string): MenuConfig {
   const section: MenuConfig = [];
@@ -19,6 +22,18 @@ function extractSectionByHeading(menu: MenuConfig, heading: string): MenuConfig 
   return section;
 }
 
+function extractAccountItems(staticMenu: MenuConfig): MenuConfig {
+  const contaGroup = staticMenu.find(
+    (item) => item.title === 'Conta' && item.children?.length,
+  );
+
+  if (contaGroup?.children) {
+    return contaGroup.children;
+  }
+
+  return extractSectionByHeading(staticMenu, 'CONTA');
+}
+
 function findAccountMenuIndex(menu: MenuConfig): number {
   return menu.findIndex((item) => {
     if (!item.children?.length) {
@@ -26,8 +41,71 @@ function findAccountMenuIndex(menu: MenuConfig): number {
     }
 
     return item.title === 'Conta'
-      || item.children.some((child) => child.path === '/profile');
+      || item.children.some((child) => child.path && ACCOUNT_PATHS.has(child.path));
   });
+}
+
+function createContaGroup(children: MenuConfig): MenuItem {
+  return {
+    title: 'Conta',
+    icon: User,
+    children,
+  };
+}
+
+function mergeIntoAccountGroup(menu: MenuConfig, toAdd: MenuConfig): MenuConfig {
+  if (toAdd.length === 0) {
+    return menu;
+  }
+
+  const accountIndex = findAccountMenuIndex(menu);
+
+  if (accountIndex >= 0) {
+    const accountGroup = menu[accountIndex];
+    const existingChildren = accountGroup.children ?? [];
+    const existingPaths = new Set(
+      existingChildren.map((child) => child.path).filter((path): path is string => Boolean(path)),
+    );
+    const newChildren = toAdd.filter((item) => item.path && !existingPaths.has(item.path));
+
+    if (newChildren.length === 0) {
+      return menu;
+    }
+
+    const nextMenu = [...menu];
+    nextMenu[accountIndex] = {
+      ...accountGroup,
+      icon: accountGroup.icon ?? User,
+      children: [...existingChildren, ...newChildren],
+    };
+
+    return nextMenu;
+  }
+
+  return [...menu, createContaGroup(toAdd)];
+}
+
+/**
+ * Move itens de conta que estão na raiz do menu para dentro do grupo Conta.
+ */
+function relocateRootAccountItems(menu: MenuConfig): MenuConfig {
+  const orphans: MenuConfig = [];
+  const withoutOrphans: MenuConfig = [];
+
+  for (const item of menu) {
+    if (item.path && ACCOUNT_PATHS.has(item.path)) {
+      orphans.push(item);
+      continue;
+    }
+
+    withoutOrphans.push(item);
+  }
+
+  if (orphans.length === 0) {
+    return menu;
+  }
+
+  return mergeIntoAccountGroup(withoutOrphans, orphans);
 }
 
 /**
@@ -35,66 +113,12 @@ function findAccountMenuIndex(menu: MenuConfig): number {
  */
 export function mergeAccountMenuItems(apiMenu: MenuConfig, staticMenu: MenuConfig): MenuConfig {
   const apiPaths = collectMenuPaths(apiMenu);
-  const accountItems = extractSectionByHeading(staticMenu, 'CONTA');
+  const accountItems = extractAccountItems(staticMenu);
   const missingItems = accountItems.filter((item) => item.path && !apiPaths.has(item.path));
 
-  if (missingItems.length === 0) {
-    return apiMenu;
-  }
+  const withMissing = missingItems.length > 0
+    ? mergeIntoAccountGroup(apiMenu, missingItems)
+    : apiMenu;
 
-  const accountIndex = findAccountMenuIndex(apiMenu);
-
-  if (accountIndex >= 0) {
-    const accountGroup = apiMenu[accountIndex];
-    const existingChildren = accountGroup.children ?? [];
-    const existingPaths = new Set(
-      existingChildren.map((child) => child.path).filter((path): path is string => Boolean(path)),
-    );
-    const toAdd = missingItems.filter((item) => item.path && !existingPaths.has(item.path));
-
-    if (toAdd.length === 0) {
-      return apiMenu;
-    }
-
-    const nextMenu = [...apiMenu];
-    nextMenu[accountIndex] = {
-      ...accountGroup,
-      children: [...existingChildren, ...toAdd],
-    };
-
-    return nextMenu;
-  }
-
-  const contaHeading = staticMenu.find((item) => item.heading === 'CONTA');
-
-  return [...apiMenu, ...(contaHeading ? [contaHeading] : []), ...missingItems];
-}
-
-function isAccountMenuGroup(item: MenuConfig[number]): boolean {
-  return Boolean(
-    !item.path
-    && !item.heading
-    && item.children?.length
-    && (
-      item.title === 'Conta'
-      || item.children.some((child) => child.path === '/profile')
-    ),
-  );
-}
-
-/** Expõe itens de Conta como seção plana (heading + links), igual ao menu estático. */
-export function flattenAccountMenuGroups(menu: MenuConfig): MenuConfig {
-  const flat: MenuConfig = [];
-
-  for (const item of menu) {
-    if (isAccountMenuGroup(item)) {
-      flat.push({ heading: 'CONTA' });
-      flat.push(...(item.children ?? []));
-      continue;
-    }
-
-    flat.push(item);
-  }
-
-  return flat;
+  return relocateRootAccountItems(withMissing);
 }

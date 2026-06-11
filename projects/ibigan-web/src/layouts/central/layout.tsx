@@ -48,7 +48,7 @@ export function CentralLayout() {
   const { settings, setOption } = useSettings();
   const { resolvedTheme } = useTheme();
 
-  const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
   const isSidebarMode = menuMode !== 'horizontal';
 
   useEffect(() => {
