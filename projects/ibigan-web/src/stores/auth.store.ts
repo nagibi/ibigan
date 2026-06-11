@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 interface AuthUser {
   id: number;
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('ibigan_token');
         localStorage.removeItem('ibigan_tenant_id');
+        useCentralAuthStore.getState().stopImpersonation();
         set({
           token: null,
           tenantId: null,

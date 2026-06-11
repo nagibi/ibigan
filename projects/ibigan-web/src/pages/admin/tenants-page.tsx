@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, LogIn, Pencil, Trash2 } from 'lucide-react';
+import { Activity, LoaderCircle, LogIn, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -34,6 +34,7 @@ import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { TenantActivityLogsSheet } from '@/components/activity-logs/tenant-activity-logs-sheet';
 import { GridBadge } from '@/components/grid/grid-badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -47,7 +48,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v2';
+const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v4';
 
 const STATUS_FILTER_OPTIONS = [
   { label: 'Ativo', value: 'active' },
@@ -175,7 +176,7 @@ export function AdminTenantsPage() {
         startImpersonation({ id: tenant_id, name: tenant.name ?? tenant.slug });
         resetEcho();
 
-        toast.success(`Acessando ${tenant.name ?? tenant.slug}…`);
+        showSuccess(`Acessando ${tenant.name ?? tenant.slug}…`);
         navigate('/dashboard');
       } catch (error) {
         showError('Erro ao entrar na empresa.', error);
@@ -183,7 +184,7 @@ export function AdminTenantsPage() {
         setImpersonatingId(null);
       }
     },
-    [impersonatingId, navigate, setAuth, showError, startImpersonation],
+    [impersonatingId, navigate, setAuth, showError, showSuccess, startImpersonation],
   );
 
   const handleEscape = useCallback(() => {
@@ -286,12 +287,6 @@ export function AdminTenantsPage() {
           <GridRowActions
             actions={[
               {
-                label: 'Entrar',
-                icon: LogIn,
-                disabled: impersonatingId === tenant.id,
-                onClick: () => void handleImpersonate(tenant),
-              },
-              {
                 label: 'Editar',
                 icon: Pencil,
                 onClick: () => handleEditTenant(tenant.id),
@@ -331,6 +326,37 @@ export function AdminTenantsPage() {
             onCheckedChange={(checked) => void handleRowStatusChange(tenant, checked)}
           />
         ),
+      },
+      {
+        id: 'enter',
+        label: 'Entrar',
+        hideable: false,
+        className: 'w-[100px]',
+        render: (tenant) => {
+          const isEntering = impersonatingId === tenant.id;
+
+          return (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={Boolean(impersonatingId)}
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleImpersonate(tenant);
+              }}
+            >
+              {isEntering ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <>
+                  <LogIn className="size-4 shrink-0" />
+                  <span>Entrar</span>
+                </>
+              )}
+            </Button>
+          );
+        },
       },
       {
         id: 'name',

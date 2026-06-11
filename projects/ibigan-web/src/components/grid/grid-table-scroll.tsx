@@ -10,17 +10,14 @@ interface GridTableScrollProps {
 export function GridTableScroll({
   children,
   className,
-  maxHeight = 'calc(100vh - 18rem)',
+  maxHeight = 'calc(100vh - 18rem - var(--impersonation-banner-height, 0px))',
 }: GridTableScrollProps) {
   return (
     <div
-      className={cn(
-        'grid-table-scroll w-full max-w-full min-h-0 min-w-0 overflow-x-scroll overflow-y-auto',
-        className,
-      )}
+      className={cn('grid-table-scroll min-h-0 w-full min-w-0 flex-1', className)}
       style={{ maxHeight }}
     >
-      <div className="inline-block min-w-full w-max">{children}</div>
+      <div className="w-max min-w-full">{children}</div>
     </div>
   );
 }

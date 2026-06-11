@@ -24,14 +24,16 @@ function Demo1LayoutContent() {
   useClearPageToolbarAlertOnNavigate();
 
   return (
-    <div className="wrapper flex grow flex-col">
-      <ImpersonationBanner />
+    <div className="wrapper flex min-w-0 grow flex-col overflow-x-clip">
       <Header />
       <PageToolbarBar />
+      <ImpersonationBanner />
 
-      <main className="grow" role="content">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
         <PageContentHeader />
-        <Outlet />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Outlet />
+        </div>
       </main>
 
       <Footer />

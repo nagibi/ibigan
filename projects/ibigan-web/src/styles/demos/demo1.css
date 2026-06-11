@@ -1,5 +1,9 @@
 @layer components {
   /* Variables */
+  body.demo1 {
+    overflow-x: clip;
+  }
+
   .demo1 {
     --sidebar-transition-duration: 0.3s;
     --sidebar-transition-timing: ease;
@@ -8,6 +12,17 @@
     --sidebar-default-width: 280px;
     --header-height: 70px;
     --toolbar-height: 48px;
+    --impersonation-banner-height: 0px;
+  }
+
+  .demo1.impersonation-banner-visible {
+    --impersonation-banner-height: 2.5rem;
+  }
+
+  .demo1 .wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   @media (max-width: theme(--breakpoint-lg)) {
