@@ -1,9 +1,11 @@
+import { type ReactNode } from 'react';
 import { ChevronDown, LayoutGrid } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { type MenuItem } from '@/config/types';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useMenu } from '@/hooks/use-menu';
 import { MenuBadge } from '@/lib/menu-badge';
+import { isExternalMenuPath, resolveMenuLinkTarget } from '@/lib/menu-link';
 import { isNotificationPreferencesPath } from '@/lib/notification-preferences-path';
 import { cn } from '@/lib/utils';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
@@ -31,6 +33,41 @@ const triggerClass = (active: boolean) =>
 function MenuIcon({ icon: Icon }: { icon?: MenuItem['icon'] }) {
   const ResolvedIcon = Icon ?? LayoutGrid;
   return <ResolvedIcon className="size-4 shrink-0" />;
+}
+
+function HorizontalMenuLink({
+  item,
+  className,
+  children,
+}: {
+  item: Pick<MenuItem, 'path' | 'target'>;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (!item.path) {
+    return null;
+  }
+
+  const linkTarget = resolveMenuLinkTarget(item.path, item.target);
+
+  if (isExternalMenuPath(item.path)) {
+    return (
+      <a
+        href={item.path}
+        target={linkTarget}
+        rel={linkTarget === '_blank' ? 'noopener noreferrer' : undefined}
+        className={className}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link to={item.path} className={className}>
+      {children}
+    </Link>
+  );
 }
 
 function DropdownChildItems({
@@ -94,8 +131,8 @@ function DropdownChildItems({
 
     return (
       <DropdownMenuItem key={childIndex} asChild>
-        <Link
-          to={child.path}
+        <HorizontalMenuLink
+          item={child}
           className={cn(
             'flex items-center gap-2 px-2 py-2 cursor-pointer',
             active && 'bg-accent text-primary font-medium',
@@ -104,7 +141,7 @@ function DropdownChildItems({
           <MenuIcon icon={child.icon} />
           <span className="grow">{child.title}</span>
           <MenuBadge badge={child.badge} />
-        </Link>
+        </HorizontalMenuLink>
       </DropdownMenuItem>
     );
   });
@@ -179,11 +216,14 @@ function HorizontalMenuItem({
       className={triggerClass(isActive(item.path))}
       asChild
     >
-      <Link to={item.path}>
+      <HorizontalMenuLink
+        item={item}
+        className="inline-flex items-center gap-1.5"
+      >
         <MenuIcon icon={item.icon} />
         {item.title}
         <MenuBadge badge={item.badge} />
-      </Link>
+      </HorizontalMenuLink>
     </Button>
   );
 }

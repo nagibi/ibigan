@@ -40,6 +40,8 @@ class RolePermissionSeeder extends Seeder
             'permissao-visualizar', 'permissao-gerenciar',
             // Activity Log
             'log-visualizar',
+            // Documentação
+            'doc-visualizar',
             // Configurações
             'configuracao-gerenciar',
         ];

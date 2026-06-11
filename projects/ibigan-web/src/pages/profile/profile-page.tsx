@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-import { Bell, Building2, Camera, ChevronRight, KeyRound, LoaderCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { Bell, Building2, Camera, ChevronRight, LoaderCircle, Trash2 } from 'lucide-react';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import {
   mapUserProfileToFormValues,
@@ -17,7 +17,12 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
-import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import {
+  buildUnsavedChangesAlert,
+  hasNestedFlagFields,
+  useFormToolbarAlert,
+} from '@/hooks/use-form-toolbar-alert';
+import { focusFirstFormError, validateFormWithFocus } from '@/lib/focus-first-form-error';
 import { authService } from '@/services/auth.service';
 import { profileService } from '@/services/profile.service';
 import { useTenantSwitch } from '@/hooks/use-tenant-switch';
@@ -29,9 +34,8 @@ import { SecurityContent } from '@/components/security/security-content';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
 import { PageBody } from '@/components/common/page-body';
 import { FormToolbar } from '@/components/grid/form-toolbar';
-import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
+import { FormFieldGrid } from '@/components/grid/form-field-grid';
 import { FormPanel } from '@/components/grid/form-panel';
-import { GridToolbarButton, GridToolbarGroup } from '@/components/grid/grid-toolbar';
 import {
   AppearanceSettingsPanel,
   useAppearanceSettings,
@@ -43,8 +47,17 @@ import { Badge } from '@/components/ui/badge';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import { Separator } from '@/components/ui/separator';
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+
+const USER_PROFILE_FALLBACK = {
+  name: '',
+  email: '',
+  cpf: '',
+  phone: '',
+  birth_date: '',
+  gender: '' as const,
+  bio: '',
+};
 
 const passwordSchema = z.object({
   current_password: z.string().min(1, 'Senha atual é obrigatória.'),
@@ -135,9 +148,11 @@ export function ProfilePage() {
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(profileForm, error);
-      if (!handled) {
-        apiNotify.showError('Erro ao atualizar perfil.', error);
+      if (handled) {
+        focusFirstFormError(profileForm);
+        return;
       }
+      apiNotify.showError('Erro ao atualizar perfil.', error);
     },
   });
 
@@ -149,9 +164,11 @@ export function ProfilePage() {
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(passwordForm, error);
-      if (!handled) {
-        apiNotify.showError('Senha atual incorreta.', error);
+      if (handled) {
+        focusFirstFormError(passwordForm);
+        return;
       }
+      apiNotify.showError('Senha atual incorreta.', error);
     },
   });
 
@@ -179,63 +196,105 @@ export function ProfilePage() {
     },
   });
 
+  const { dirtyFields: profileDirtyFields, touchedFields: profileTouchedFields } = useFormState({
+    control: profileForm.control,
+  });
+  const { dirtyFields: passwordDirtyFields, touchedFields: passwordTouchedFields } = useFormState({
+    control: passwordForm.control,
+  });
+
+  const profileHasUnsavedChanges =
+    hasNestedFlagFields(profileDirtyFields) && hasNestedFlagFields(profileTouchedFields);
+  const passwordHasUnsavedChanges =
+    hasNestedFlagFields(passwordDirtyFields) && hasNestedFlagFields(passwordTouchedFields);
+
+  const resetProfilePhantomDirty = useCallback(() => {
+    if (!profile) return;
+
+    profileForm.reset(mapUserProfileToFormValues(profile), {
+      keepDirty: false,
+      keepErrors: false,
+      keepTouched: false,
+    });
+  }, [profile, profileForm]);
+
+  const resetPasswordPhantomDirty = useCallback(() => {
+    passwordForm.reset(
+      { current_password: '', password: '', password_confirmation: '' },
+      { keepDirty: false, keepErrors: false, keepTouched: false },
+    );
+  }, [passwordForm]);
+
   const handleDiscard = useCallback(() => {
-    if (profile) {
-      profileForm.reset(mapUserProfileToFormValues(profile), {
-        keepDirty: false,
-        keepErrors: false,
-        keepTouched: false,
-      });
-    }
+    resetProfilePhantomDirty();
+    resetPasswordPhantomDirty();
     appearance.discard();
-  }, [appearance, profile, profileForm]);
+  }, [appearance, resetPasswordPhantomDirty, resetProfilePhantomDirty]);
 
   const handleSave = useCallback(async () => {
-    if (profileForm.formState.isDirty) {
-      const isValid = await profileForm.trigger();
-      if (!isValid) return;
+    const appearanceDirty = appearance.hasChanges;
+
+    if (!profileHasUnsavedChanges && !passwordHasUnsavedChanges && !appearanceDirty) {
+      return;
+    }
+
+    if (profileHasUnsavedChanges) {
+      const profileValid = await validateFormWithFocus(profileForm);
+      if (!profileValid) return;
+    }
+
+    if (passwordHasUnsavedChanges) {
+      const passwordValid = await validateFormWithFocus(passwordForm);
+      if (!passwordValid) return;
+    }
+
+    if (profileHasUnsavedChanges) {
       await updateMutation.mutateAsync(profileForm.getValues());
     }
 
-    if (appearance.hasChanges) {
+    if (passwordHasUnsavedChanges) {
+      await passwordMutation.mutateAsync(passwordForm.getValues());
+    }
+
+    if (appearanceDirty) {
       await appearance.save();
     }
-  }, [appearance, profileForm, updateMutation]);
+  }, [
+    appearance,
+    passwordForm,
+    passwordHasUnsavedChanges,
+    passwordMutation,
+    profileForm,
+    profileHasUnsavedChanges,
+    updateMutation,
+  ]);
 
-  const handleChangePassword = useCallback(() => {
-    void passwordForm.handleSubmit((data) => passwordMutation.mutate(data))();
-  }, [passwordForm, passwordMutation]);
-
-  const profileAlert = useFormToolbarAlert(profileForm.control, handleDiscard);
+  const profileAlert = useFormToolbarAlert(profileForm.control, handleDiscard, {
+    resetPhantomDirty: resetProfilePhantomDirty,
+  });
+  const passwordAlert = useFormToolbarAlert(passwordForm.control, handleDiscard, {
+    resetPhantomDirty: resetPasswordPhantomDirty,
+  });
 
   const alert = useMemo(() => {
     if (profileAlert) return profileAlert;
+    if (passwordAlert) return passwordAlert;
 
     if (appearance.hasChanges) {
-      return {
-        variant: 'warning' as const,
-        title: 'Alterações não salvas',
-        autoDismissMs: false as const,
-        actions: (
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={handleDiscard}
-            className="h-8 gap-1.5"
-          >
-            <RotateCcw className="size-3.5 shrink-0" />
-            Descartar
-          </Button>
-        ),
-      };
+      return buildUnsavedChangesAlert(handleDiscard, 'appearance-unsaved');
     }
 
     return null;
-  }, [appearance.hasChanges, handleDiscard, profileAlert]);
+  }, [appearance.hasChanges, handleDiscard, passwordAlert, profileAlert]);
 
-  const isDirty = profileForm.formState.isDirty || appearance.hasChanges;
-  const isSubmitting = updateMutation.isPending || appearance.isSaving;
+  const isDirty =
+    profileHasUnsavedChanges
+    || passwordHasUnsavedChanges
+    || appearance.hasChanges;
+  const isSubmitting =
+    updateMutation.isPending
+    || passwordMutation.isPending
+    || appearance.isSaving;
 
   useFormKeyboard({
     enabled: !isLoading,
@@ -252,20 +311,8 @@ export function ProfilePage() {
         isDirty={isDirty}
         isSubmitting={isSubmitting}
         onSaveAndList={() => void handleSave()}
-        onClear={handleDiscard}
         entityLabel="perfil"
         recordLabel={profile?.name}
-        extra={
-          <GridToolbarGroup>
-            <GridToolbarButton
-              label="Alterar senha"
-              icon={KeyRound}
-              onClick={handleChangePassword}
-              disabled={!passwordForm.formState.isDirty}
-              loading={passwordMutation.isPending}
-            />
-          </GridToolbarGroup>
-        }
       />
     ),
   });
@@ -456,48 +503,39 @@ export function ProfilePage() {
           autoComplete="off"
           onSubmit={(event) => {
             event.preventDefault();
-            handleChangePassword();
+            void handleSave();
           }}
         >
           <FormPanel title="Alterar senha">
-            <FormFieldGrid>
-              <FormFieldGridItem span={2}>
-                <FormField control={passwordForm.control} name="current_password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Senha atual</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Sua senha atual" autoComplete="current-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </FormFieldGridItem>
-              <FormFieldGridItem span={2}>
-                <Separator />
-              </FormFieldGridItem>
-              <FormFieldGridItem>
-                <FormField control={passwordForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Nova senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </FormFieldGridItem>
-              <FormFieldGridItem>
-                <FormField control={passwordForm.control} name="password_confirmation" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Confirmar nova senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Repita a nova senha" autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </FormFieldGridItem>
-            </FormFieldGrid>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <FormField control={passwordForm.control} name="current_password" render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Senha atual</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Sua senha atual" autoComplete="current-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={passwordForm.control} name="password" render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Nova senha</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={passwordForm.control} name="password_confirmation" render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Confirmar nova senha</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Repita a nova senha" autoComplete="new-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
           </FormPanel>
         </form>
       </Form>
@@ -506,13 +544,3 @@ export function ProfilePage() {
     </PageBody>
   );
 }
-
-const USER_PROFILE_FALLBACK = {
-  name: '',
-  email: '',
-  cpf: '',
-  phone: '',
-  birth_date: '',
-  gender: '' as const,
-  bio: '',
-};

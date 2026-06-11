@@ -15,6 +15,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { focusFirstFormError } from '@/lib/focus-first-form-error';
 import { useAuthStore } from '@/stores/auth.store';
 import { RolePermissionsPanel } from '@/components/roles/role-permissions-panel';
 import { FormToolbar } from '@/components/grid/form-toolbar';
@@ -158,12 +159,14 @@ export function RoleFormPage() {
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
-      if (!handled) {
-        apiNotify.showError(
-          isEditing ? 'Erro ao atualizar papel.' : 'Erro ao criar papel.',
-          error,
-        );
+      if (handled) {
+        focusFirstFormError(form);
+        return;
       }
+      apiNotify.showError(
+        isEditing ? 'Erro ao atualizar papel.' : 'Erro ao criar papel.',
+        error,
+      );
     },
   });
 
@@ -190,11 +193,33 @@ export function RoleFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
+  const resetCreateForm = useCallback(
+    () => form.reset(DEFAULT_VALUES, {
+      keepDirty: false,
+      keepErrors: false,
+      keepTouched: false,
+    }),
     [form],
   );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+
+  const handleDiscard = useCallback(() => {
+    if (isEditing && role) {
+      form.reset(
+        { name: role.name, permissions: role.permissions },
+        { keepDirty: false, keepErrors: false, keepTouched: false },
+      );
+      return;
+    }
+    resetCreateForm();
+  }, [form, isEditing, resetCreateForm, role]);
+
+  const handleClear = useCallback(() => {
+    handleDiscard();
+  }, [handleDiscard]);
+
+  const formAlert = useFormToolbarAlert(form.control, handleDiscard, {
+    resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
+  });
 
   const pageTitle = formatFormPageTitle({
     isEditing,
@@ -208,9 +233,6 @@ export function RoleFormPage() {
 
   usePageToolbar({
     title: pageTitle,
-    description: isEditing
-      ? 'Edite o papel e suas permissões.'
-      : 'Crie um novo papel de acesso.',
     alert: formAlert,
     actions: canManage ? (
       <FormToolbar
@@ -222,10 +244,12 @@ export function RoleFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
-        onClear={() => form.reset()}
+        onClear={handleClear}
         onDelete={isEditing && role && !role.is_system ? formPage.handleDelete : undefined}
         entityLabel="papel"
         recordLabel={role ? formatRoleName(role.name) : undefined}
+        createdAt={role?.created_at}
+        updatedAt={role?.updated_at}
       />
     ) : undefined,
   });
@@ -257,6 +281,7 @@ export function RoleFormPage() {
     <PageBody>
       <Form {...form}>
         <form
+          autoComplete="off"
           onSubmit={(event) => {
             event.preventDefault();
             handlePrimarySave();

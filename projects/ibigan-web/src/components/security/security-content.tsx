@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, LoaderCircle, RefreshCw, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { twoFactorService } from '@/services/two-factor.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ type Step = 'idle' | 'setup' | 'confirm' | 'enabled';
 
 export function SecurityContent() {
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useApiToolbarAlert();
 
   const [step, setStep] = useState<Step>('idle');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -109,9 +111,9 @@ export function SecurityContent() {
     mutationFn: () => twoFactorService.regenerateRecoveryCodes(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['two-factor-status'] });
-      toast.success('Códigos de recuperação regenerados!');
+      showSuccess('Códigos de recuperação regenerados!');
     },
-    onError: () => toast.error('Erro ao regenerar códigos.'),
+    onError: () => showError('Erro ao regenerar códigos.'),
   });
 
   function copyToClipboard(text: string) {

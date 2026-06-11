@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
+import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import {
   formatPermissionAction,
@@ -15,13 +17,14 @@ import { permissionsService, type Permission } from '@/services/permissions.serv
 import { useAuthStore } from '@/stores/auth.store';
 import { PageBody } from '@/components/common/page-body';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
-import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +45,6 @@ export function PermissionsPage() {
   const { hasPermission } = useAuthStore();
   const canManage = hasPermission('permissao-gerenciar');
   const grid = useGrid();
-  const [deleteIds, setDeleteIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -63,24 +65,81 @@ export function PermissionsPage() {
     );
   }, [grid.debouncedSearch, permissions]);
 
+  const permissionIds = useMemo(
+    () => filteredPermissions.map((permission) => permission.id),
+    [filteredPermissions],
+  );
+
+  const handleEditSelected = useCallback(() => {
+    if (!grid.singleSelection) return;
+    navigate(`/permissions/${grid.selected[0]}`);
+  }, [grid.selected, grid.singleSelection, navigate]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!grid.hasSelection) return;
+    grid.requestDelete(grid.selected);
+  }, [grid.hasSelection, grid.requestDelete, grid.selected]);
+
+  const handleEscape = useCallback(() => {
+    if (grid.deleteIds.length > 0) {
+      grid.clearDeleteRequest();
+      return;
+    }
+    if (grid.hasSelection) {
+      grid.clearSelection();
+    }
+  }, [grid.clearDeleteRequest, grid.clearSelection, grid.deleteIds.length, grid.hasSelection]);
+
+  useGridKeyboard({
+    canEdit: grid.singleSelection,
+    canDelete: grid.hasSelection,
+    onEdit: handleEditSelected,
+    onDelete: handleDeleteSelected,
+    onEscape: handleEscape,
+  });
+
   const handleDelete = useCallback(async () => {
-    if (deleteIds.length === 0) return;
+    if (grid.deleteIds.length === 0) return;
 
     try {
       setIsDeleting(true);
-      await Promise.all(deleteIds.map((id) => permissionsService.destroy(id)));
+      await Promise.all(grid.deleteIds.map((id) => permissionsService.destroy(id)));
       await queryClient.invalidateQueries({ queryKey: ['permissions'] });
-      showSuccess(deleteIds.length === 1 ? 'Permissão removida.' : 'Permissões removidas.');
-      setDeleteIds([]);
+      showSuccess(
+        grid.deleteIds.length === 1 ? 'Permissão removida.' : 'Permissões removidas.',
+      );
+      grid.clearDeleteRequest();
+      grid.clearSelection();
     } catch (error) {
       showError('Erro ao remover permissões.', error);
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteIds, queryClient, showError, showSuccess]);
+  }, [grid, queryClient, showError, showSuccess]);
+
+  const handleEditPermission = useCallback(
+    (permissionId: number) => navigate(`/permissions/${permissionId}`),
+    [navigate],
+  );
 
   const columnDefinitions = useMemo<GridColumnDef<Permission>[]>(
     () => [
+      ...(canManage
+        ? [{
+            id: 'select',
+            label: '#',
+            pinned: 'start' as const,
+            hideable: false,
+            className: 'w-[40px]',
+            render: (permission: Permission) => (
+              <Checkbox
+                checked={grid.selected.includes(permission.id)}
+                onCheckedChange={() => grid.toggleSelect(permission.id)}
+                onClick={(event) => event.stopPropagation()}
+              />
+            ),
+          }]
+        : []),
       {
         id: 'id',
         label: 'Id',
@@ -98,14 +157,14 @@ export function PermissionsPage() {
               {
                 label: 'Editar',
                 icon: Pencil,
-                onClick: () => navigate(`/permissions/${permission.id}`),
+                onClick: () => handleEditPermission(permission.id),
               },
               ...(canManage
                 ? [{
                     label: 'Remover',
                     icon: Trash2,
                     tone: 'destructive' as const,
-                    onClick: () => setDeleteIds([permission.id]),
+                    onClick: () => grid.requestDelete([permission.id]),
                   }]
                 : []),
             ]}
@@ -140,31 +199,67 @@ export function PermissionsPage() {
         ),
       },
     ],
-    [canManage, navigate],
+    [canManage, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditPermission],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const handleResetGrid = useCallback(() => {
+  const activeFilters = useMemo(() => {
+    if (!grid.search.trim()) return [];
+
+    return [{
+      id: 'search',
+      label: 'Busca',
+      value: grid.search.trim(),
+      onRemove: grid.clearSearch,
+    }];
+  }, [grid.clearSearch, grid.search]);
+
+  const hasActiveFilters = activeFilters.length > 0;
+  const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
+
+  function handleClearFilters() {
+    grid.clearSearch();
+    toast.success('Filtros removidos.');
+  }
+
+  function handleResetGrid() {
     gridColumns.resetColumns();
     grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }, [grid, gridColumns, showSuccess]);
+    grid.clearSearch();
+    grid.clearSelection();
+    toast.success('Grid restaurado ao padrão.');
+  }
+
+  function handleExport() {
+    toast.info('Exportação em breve.');
+  }
+
+  const toolbarActions = useMemo(
+    () => (canManage ? (
+      <StandardGridToolbar
+        onNew={() => navigate('/permissions/new')}
+        newLabel="Nova permissão"
+        onEdit={handleEditSelected}
+        onDelete={handleDeleteSelected}
+        hasSelection={grid.hasSelection}
+        singleSelection={grid.singleSelection}
+      />
+    ) : undefined),
+    [
+      canManage,
+      grid.hasSelection,
+      grid.singleSelection,
+      handleDeleteSelected,
+      handleEditSelected,
+      navigate,
+    ],
+  );
 
   usePageToolbar({
     title: 'Permissões',
     description: 'Catálogo de permissões disponíveis para os papéis da organização.',
-    actions: canManage ? (
-      <StandardGridToolbar
-        hasSelection={false}
-        extra={(
-          <Button variant="primary" size="sm" className="h-8" onClick={() => navigate('/permissions/new')}>
-            <Plus className="mr-1.5 size-3.5" />
-            Nova permissão
-          </Button>
-        )}
-      />
-    ) : undefined,
+    actions: toolbarActions,
   });
 
   return (
@@ -172,11 +267,22 @@ export function PermissionsPage() {
       <GridPanel
         toolbar={(
           <GridPanelToolbar
+            onSelectAll={canManage ? () => grid.toggleSelectAll(permissionIds) : undefined}
+            isAllSelected={grid.isAllSelected(permissionIds.length)}
+            selectedCount={grid.selected.length}
+            onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
             isRefreshing={isLoading || isFetching}
+            onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder="Buscar permissões..."
+            filtersControl={(
+              <GridFiltersControl
+                filters={activeFilters}
+                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
+              />
+            )}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -190,12 +296,15 @@ export function PermissionsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={gridColumns.resetColumns}
+                onResetDefault={() => {
+                  gridColumns.resetColumns();
+                  toast.success('Colunas restauradas ao padrão.');
+                }}
               />
             )}
             resetControl={(
               <GridResetControl
-                disabled={!grid.isCustomized && !gridColumns.isCustomized}
+                disabled={!isGridCustomized}
                 onReset={handleResetGrid}
               />
             )}
@@ -209,16 +318,26 @@ export function PermissionsPage() {
           loading={isLoading}
           emptyMessage="Nenhuma permissão encontrada."
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
-          onRowClick={(permission) => navigate(`/permissions/${permission.id}`)}
-          onRowDoubleClick={(permission) => navigate(`/permissions/${permission.id}`)}
+          isRowSelected={(permission) => grid.selected.includes(permission.id)}
+          onRowClick={(permission, event) => {
+            if (!canManage) {
+              handleEditPermission(permission.id);
+              return;
+            }
+            grid.selectRow(permission.id, {
+              shift: event.shiftKey,
+              rangeOrder: permissionIds,
+            });
+          }}
+          onRowDoubleClick={(permission) => handleEditPermission(permission.id)}
         />
       </GridPanel>
 
-      <AlertDialog open={deleteIds.length > 0} onOpenChange={(open) => !open && setDeleteIds([])}>
+      <AlertDialog open={grid.deleteIds.length > 0} onOpenChange={grid.clearDeleteRequest}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remover {deleteIds.length === 1 ? 'permissão' : `${deleteIds.length} permissões`}
+              Remover {grid.deleteIds.length === 1 ? 'permissão' : `${grid.deleteIds.length} permissões`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               Permissões vinculadas a papéis não podem ser removidas.

@@ -103,7 +103,11 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
           className="text-sm font-medium"
           asChild
         >
-          <MenuNavLink path={item.path} className="flex w-full items-center gap-2">
+          <MenuNavLink
+            path={item.path}
+            target={item.target}
+            className="flex w-full items-center gap-2"
+          >
             <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
             <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
@@ -202,7 +206,11 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
           className="text-[13px]"
           asChild
         >
-          <MenuNavLink path={item.path} className="flex w-full items-center gap-2">
+          <MenuNavLink
+            path={item.path}
+            target={item.target}
+            className="flex w-full items-center gap-2"
+          >
             <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
             <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />

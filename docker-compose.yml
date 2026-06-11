@@ -150,6 +150,18 @@ services:
       - redis
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
 
+  # ── Meilisearch ───────────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    networks:
+      - ibigan_network
+    environment:
+      MEILI_MASTER_KEY: masterKey
+      MEILI_ENV: development
+    volumes:
+      - meili_data:/meili_data
+    ports:
+      - "7700:7700"
   # ── Vite (React SPA) ──────────────────────────────────────────
   vite:
     build: ./docker/vite
@@ -201,3 +213,4 @@ volumes:
   mysql_data:
   redis_data:
   vite_node_modules:
+  meili_data:

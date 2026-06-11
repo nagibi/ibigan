@@ -2,10 +2,14 @@ import {
   Activity,
   BarChart2,
   Bell,
+  BookOpen,
   Building2,
+  Database,
   FileBarChart,
+  Gauge,
   LayoutDashboard,
   Mail,
+  Mailbox,
   Megaphone,
   Menu,
   Shield,
@@ -14,7 +18,9 @@ import {
   UserCheck,
   Users,
   Webhook,
+  Wrench,
 } from 'lucide-react';
+import { DEV_TOOLS_URLS } from '@/lib/dev-tools-urls';
 import { type MenuConfig } from './types';
 
 export const MENU_SIDEBAR: MenuConfig = [
@@ -92,6 +98,36 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Activity Log',
     icon: Activity,
     path: '/activity-logs',
+  },
+  {
+    title: 'Ferramentas',
+    icon: Wrench,
+    children: [
+      {
+        title: 'Documentação API',
+        icon: BookOpen,
+        path: DEV_TOOLS_URLS.apiDocs,
+        target: '_blank',
+      },
+      {
+        title: 'Horizon',
+        icon: Gauge,
+        path: DEV_TOOLS_URLS.horizon,
+        target: '_blank',
+      },
+      {
+        title: 'phpMyAdmin',
+        icon: Database,
+        path: DEV_TOOLS_URLS.phpMyAdmin,
+        target: '_blank',
+      },
+      {
+        title: 'Mailpit',
+        icon: Mailbox,
+        path: DEV_TOOLS_URLS.mailpit,
+        target: '_blank',
+      },
+    ],
   },
   {
     title: 'Conta',

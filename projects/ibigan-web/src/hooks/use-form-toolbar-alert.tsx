@@ -2,10 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useFormState, type Control, type FieldValues } from 'react-hook-form';
 import { RotateCcw } from 'lucide-react';
+import {
+  FORM_TOOLBAR_UNSAVED_MESSAGE,
+  FORM_TOOLBAR_VALIDATION_MESSAGE,
+} from '@/lib/form-toolbar-messages';
 import { Button } from '@/components/ui/button';
 import type { ToolbarAlertConfig } from '@/components/grid/toolbar-alert';
 
-function hasNestedFlagFields(fields: object): boolean {
+export { FORM_TOOLBAR_UNSAVED_MESSAGE, FORM_TOOLBAR_VALIDATION_MESSAGE };
+
+export function hasNestedFlagFields(fields: object): boolean {
   return Object.values(fields).some(
     (value) =>
       value === true
@@ -31,6 +37,30 @@ export type UseFormToolbarAlertOptions = {
   /** Limpa dirty fantasma (autofill, Select na montagem) sem interação do usuário. */
   resetPhantomDirty?: () => void;
 };
+
+export function buildUnsavedChangesAlert(
+  onDiscard: () => void,
+  id?: string | number,
+): ToolbarAlertConfig {
+  return {
+    variant: 'warning',
+    title: FORM_TOOLBAR_UNSAVED_MESSAGE,
+    autoDismissMs: false,
+    id: id ?? 'unsaved',
+    actions: (
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        onClick={onDiscard}
+        className="h-8 gap-1.5"
+      >
+        <RotateCcw className="size-3.5 shrink-0" />
+        Descartar
+      </Button>
+    ),
+  };
+}
 
 export function useFormToolbarAlert<T extends FieldValues>(
   control: Control<T>,
@@ -76,30 +106,13 @@ export function useFormToolbarAlert<T extends FieldValues>(
     if ((submitCount > 0 || hasServerErrors) && hasErrors) {
       return {
         variant: 'destructive',
-        title: 'Verifique todos os campos',
+        title: FORM_TOOLBAR_VALIDATION_MESSAGE,
         id: hasServerErrors ? `server-${submitCount}` : submitCount,
       };
     }
 
     if (hasUnsavedChanges && onDiscard) {
-      return {
-        variant: 'warning',
-        title: 'Alterações não salvas',
-        autoDismissMs: false,
-        id: key,
-        actions: (
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={onDiscard}
-            className="h-8 gap-1.5"
-          >
-            <RotateCcw className="size-3.5 shrink-0" />
-            Descartar
-          </Button>
-        ),
-      };
+      return buildUnsavedChangesAlert(onDiscard, key);
     }
 
     return null;

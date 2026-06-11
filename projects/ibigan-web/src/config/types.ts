@@ -6,6 +6,7 @@ export interface MenuItem {
   /** Rotas `/admin/*` — visível apenas para super-admin do SaaS. Ver docs/ROUTING.md. */
   superAdminOnly?: boolean;
   path?: string;
+  target?: '_self' | '_blank';
   rootPath?: string;
   childrenIndex?: number;
   heading?: string;

@@ -14,6 +14,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { focusFirstFormError } from '@/lib/focus-first-form-error';
 import { useAuthStore } from '@/stores/auth.store';
 import { FormToolbar } from '@/components/grid/form-toolbar';
 import { PageBody } from '@/components/common/page-body';
@@ -113,12 +114,14 @@ export function PermissionFormPage() {
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
-      if (!handled) {
-        apiNotify.showError(
-          isEditing ? 'Erro ao atualizar permissão.' : 'Erro ao criar permissão.',
-          error,
-        );
+      if (handled) {
+        focusFirstFormError(form);
+        return;
       }
+      apiNotify.showError(
+        isEditing ? 'Erro ao atualizar permissão.' : 'Erro ao criar permissão.',
+        error,
+      );
     },
   });
 
@@ -145,11 +148,33 @@ export function PermissionFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
+  const resetCreateForm = useCallback(
+    () => form.reset(DEFAULT_VALUES, {
+      keepDirty: false,
+      keepErrors: false,
+      keepTouched: false,
+    }),
     [form],
   );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+
+  const handleDiscard = useCallback(() => {
+    if (isEditing && permission) {
+      form.reset(
+        { name: permission.name },
+        { keepDirty: false, keepErrors: false, keepTouched: false },
+      );
+      return;
+    }
+    resetCreateForm();
+  }, [form, isEditing, permission, resetCreateForm]);
+
+  const handleClear = useCallback(() => {
+    handleDiscard();
+  }, [handleDiscard]);
+
+  const formAlert = useFormToolbarAlert(form.control, handleDiscard, {
+    resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
+  });
 
   const pageTitle = formatFormPageTitle({
     isEditing,
@@ -160,9 +185,6 @@ export function PermissionFormPage() {
 
   usePageToolbar({
     title: pageTitle,
-    description: isEditing
-      ? 'Edite o identificador da permissão.'
-      : 'Cadastre uma nova permissão no catálogo.',
     alert: formAlert,
     actions: canManage ? (
       <FormToolbar
@@ -174,7 +196,7 @@ export function PermissionFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
-        onClear={() => form.reset()}
+        onClear={handleClear}
         onDelete={isEditing ? formPage.handleDelete : undefined}
         entityLabel="permissão"
         recordLabel={permission ? formatPermissionName(permission.name) : undefined}
@@ -202,6 +224,7 @@ export function PermissionFormPage() {
     <PageBody>
       <Form {...form}>
         <form
+          autoComplete="off"
           onSubmit={(event) => {
             event.preventDefault();
             handlePrimarySave();

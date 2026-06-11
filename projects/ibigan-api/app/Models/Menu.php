@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Search\TenantSearchable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ class Menu extends Model
     use HasFactory;
     use LogsActivity;
     use SoftDeletes;
+    use TenantSearchable;
 
     protected $fillable = [
         'title',
@@ -55,5 +57,30 @@ class Menu extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('order');
+    }
+
+    protected function defaultSearchableAs(): string
+    {
+        return 'menus';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => (string) $this->id,
+            'type' => 'menu',
+            'title' => $this->title,
+            'path' => $this->path,
+            'slug' => $this->slug,
+            'roles' => $this->roles ?? [],
+        ];
+    }
+
+    public function shouldBeSearchable(): bool
+    {
+        return (bool) $this->is_active;
     }
 }

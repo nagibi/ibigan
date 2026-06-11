@@ -3,10 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
+import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { parseGridUrlState } from '@/lib/grid-url-state';
@@ -26,7 +28,6 @@ import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -46,6 +47,10 @@ function formatDateTime(value?: string | null) {
   return format(new Date(value), "dd/MM/yy 'às' HH:mm", { locale: ptBR });
 }
 
+function isRoleDeletable(role: Role) {
+  return !role.is_system && role.users_count === 0;
+}
+
 export function RolesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,8 +60,6 @@ export function RolesPage() {
   const canManage = hasPermission('permissao-gerenciar');
   const initialUrlState = useRef(parseGridUrlState(searchParams)).current;
   const grid = useGrid({ defaultSearch: initialUrlState.search });
-  const [selected, setSelected] = useState<number[]>([]);
-  const [deleteIds, setDeleteIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -102,90 +105,87 @@ export function RolesPage() {
     );
   }, [grid.debouncedSearch, roles, userFilter]);
 
-  const activeFilters = useMemo(() => {
-    const items = [];
+  const deletableSelectedIds = useMemo(
+    () => grid.selected.filter((id) => {
+      const role = roles.find((item) => item.id === id);
+      return role ? isRoleDeletable(role) : false;
+    }),
+    [grid.selected, roles],
+  );
 
-    if (userFilter) {
-      items.push({
-        id: 'user',
-        label: 'Papéis associados',
-        value: userFilter.userName,
-        onRemove: clearUserFilter,
-      });
+  const selectableIds = useMemo(
+    () => filteredRoles.map((role) => role.id),
+    [filteredRoles],
+  );
+
+  const handleEditSelected = useCallback(() => {
+    if (!grid.singleSelection) return;
+    navigate(`/roles/${grid.selected[0]}`);
+  }, [grid.selected, grid.singleSelection, navigate]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (deletableSelectedIds.length === 0) return;
+    grid.requestDelete(deletableSelectedIds);
+  }, [deletableSelectedIds, grid.requestDelete]);
+
+  const handleEscape = useCallback(() => {
+    if (grid.deleteIds.length > 0) {
+      grid.clearDeleteRequest();
+      return;
     }
-
-    if (grid.search.trim()) {
-      items.push({
-        id: 'search',
-        label: 'Busca',
-        value: grid.search.trim(),
-        onRemove: grid.clearSearch,
-      });
+    if (grid.hasSelection) {
+      grid.clearSelection();
     }
+  }, [grid.clearDeleteRequest, grid.clearSelection, grid.deleteIds.length, grid.hasSelection]);
 
-    return items;
-  }, [clearUserFilter, grid.clearSearch, grid.search, userFilter]);
-
-  const hasActiveFilters = activeFilters.length > 0;
-
-  const emptyMessage = userFilter
-    ? userFilter.roleNames.length === 0
-      ? 'Este usuário não possui papéis vinculados.'
-      : 'Nenhum papel encontrado para este usuário.'
-    : 'Nenhum papel encontrado.';
-
-  const toggleSelect = useCallback((id: number) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
-  }, []);
-
-  const clearSelection = useCallback(() => setSelected([]), []);
-
-  const toggleSelectAll = useCallback((ids: number[]) => {
-    setSelected((prev) => (prev.length === ids.length ? [] : ids));
-  }, []);
+  useGridKeyboard({
+    canEdit: grid.singleSelection,
+    canDelete: deletableSelectedIds.length > 0,
+    onEdit: handleEditSelected,
+    onDelete: handleDeleteSelected,
+    onEscape: handleEscape,
+  });
 
   const handleDelete = useCallback(async () => {
-    if (deleteIds.length === 0) return;
+    if (grid.deleteIds.length === 0) return;
 
     try {
       setIsDeleting(true);
-      await Promise.all(deleteIds.map((id) => rolesService.destroy(id)));
+      await Promise.all(grid.deleteIds.map((id) => rolesService.destroy(id)));
       await queryClient.invalidateQueries({ queryKey: ['roles'] });
-      showSuccess(deleteIds.length === 1 ? 'Papel removido.' : 'Papéis removidos.');
-      setDeleteIds([]);
-      clearSelection();
+      showSuccess(grid.deleteIds.length === 1 ? 'Papel removido.' : 'Papéis removidos.');
+      grid.clearDeleteRequest();
+      grid.clearSelection();
     } catch (error) {
       showError('Erro ao remover papéis.', error);
     } finally {
       setIsDeleting(false);
     }
-  }, [clearSelection, deleteIds, queryClient, showError, showSuccess]);
+  }, [grid, queryClient, showError, showSuccess]);
 
-  const deletableSelectedIds = useMemo(
-    () => selected.filter((id) => {
-      const role = roles.find((item) => item.id === id);
-      return role && !role.is_system && role.users_count === 0;
-    }),
-    [roles, selected],
+  const handleEditRole = useCallback(
+    (roleId: number) => navigate(`/roles/${roleId}`),
+    [navigate],
   );
 
   const columnDefinitions = useMemo<GridColumnDef<Role>[]>(
     () => [
-      {
-        id: 'select',
-        label: '#',
-        pinned: 'start',
-        hideable: false,
-        className: 'w-[40px]',
-        render: (role) => (
-          <Checkbox
-            checked={selected.includes(role.id)}
-            onCheckedChange={() => toggleSelect(role.id)}
-            onClick={(event) => event.stopPropagation()}
-            disabled={role.is_system || role.users_count > 0}
-          />
-        ),
-      },
+      ...(canManage
+        ? [{
+            id: 'select',
+            label: '#',
+            pinned: 'start' as const,
+            hideable: false,
+            className: 'w-[40px]',
+            render: (role: Role) => (
+              <Checkbox
+                checked={grid.selected.includes(role.id)}
+                onCheckedChange={() => grid.toggleSelect(role.id)}
+                onClick={(event) => event.stopPropagation()}
+              />
+            ),
+          }]
+        : []),
       {
         id: 'id',
         label: 'Id',
@@ -203,14 +203,14 @@ export function RolesPage() {
               {
                 label: 'Editar',
                 icon: Pencil,
-                onClick: () => navigate(`/roles/${role.id}`),
+                onClick: () => handleEditRole(role.id),
               },
-              ...(canManage && !role.is_system && role.users_count === 0
+              ...(canManage && isRoleDeletable(role)
                 ? [{
                     label: 'Remover',
                     icon: Trash2,
                     tone: 'destructive' as const,
-                    onClick: () => setDeleteIds([role.id]),
+                    onClick: () => grid.requestDelete([role.id]),
                   }]
                 : []),
             ]}
@@ -257,46 +257,88 @@ export function RolesPage() {
         render: (role) => formatDateTime(role.created_at),
       },
     ],
-    [canManage, navigate, selected, toggleSelect],
+    [canManage, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditRole],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
-  const visibleIds = filteredRoles
-    .filter((role) => !role.is_system && role.users_count === 0)
-    .map((role) => role.id);
-  const allVisibleSelected = visibleIds.length > 0
-    && visibleIds.every((id) => selected.includes(id));
 
-  const handleClearFilters = useCallback(() => {
+  const activeFilters = useMemo(() => {
+    const items = [];
+
+    if (userFilter) {
+      items.push({
+        id: 'user',
+        label: 'Papéis associados',
+        value: userFilter.userName,
+        onRemove: clearUserFilter,
+      });
+    }
+
+    if (grid.search.trim()) {
+      items.push({
+        id: 'search',
+        label: 'Busca',
+        value: grid.search.trim(),
+        onRemove: grid.clearSearch,
+      });
+    }
+
+    return items;
+  }, [clearUserFilter, grid.clearSearch, grid.search, userFilter]);
+
+  const hasActiveFilters = activeFilters.length > 0;
+  const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
+
+  const emptyMessage = userFilter
+    ? userFilter.roleNames.length === 0
+      ? 'Este usuário não possui papéis vinculados.'
+      : 'Nenhum papel encontrado para este usuário.'
+    : 'Nenhum papel encontrado.';
+
+  function handleClearFilters() {
     grid.clearSearch();
     clearUserFilter();
-    showSuccess('Filtros removidos.');
-  }, [clearUserFilter, grid, showSuccess]);
+    toast.success('Filtros removidos.');
+  }
 
-  const handleResetGrid = useCallback(() => {
+  function handleResetGrid() {
     gridColumns.resetColumns();
     grid.resetSettings();
     grid.clearSearch();
     clearUserFilter();
-    clearSelection();
-    showSuccess('Grid restaurado ao padrão.');
-  }, [clearSelection, clearUserFilter, grid, gridColumns, showSuccess]);
+    grid.clearSelection();
+    toast.success('Grid restaurado ao padrão.');
+  }
+
+  function handleExport() {
+    toast.info('Exportação em breve.');
+  }
+
+  const toolbarActions = useMemo(
+    () => (canManage ? (
+      <StandardGridToolbar
+        onNew={() => navigate('/roles/new')}
+        newLabel="Novo papel"
+        onEdit={handleEditSelected}
+        onDelete={handleDeleteSelected}
+        hasSelection={deletableSelectedIds.length > 0}
+        singleSelection={grid.singleSelection}
+      />
+    ) : undefined),
+    [
+      canManage,
+      deletableSelectedIds.length,
+      grid.singleSelection,
+      handleDeleteSelected,
+      handleEditSelected,
+      navigate,
+    ],
+  );
 
   usePageToolbar({
     title: 'Papéis',
     description: 'Gerencie papéis e permissões de acesso da organização.',
-    actions: canManage ? (
-      <StandardGridToolbar
-        onDelete={() => deletableSelectedIds.length > 0 && setDeleteIds([...deletableSelectedIds])}
-        hasSelection={deletableSelectedIds.length > 0}
-        extra={(
-          <Button variant="primary" size="sm" className="h-8" onClick={() => navigate('/roles/new')}>
-            <Plus className="mr-1.5 size-3.5" />
-            Novo papel
-          </Button>
-        )}
-      />
-    ) : undefined,
+    actions: toolbarActions,
   });
 
   return (
@@ -304,12 +346,13 @@ export function RolesPage() {
       <GridPanel
         toolbar={(
           <GridPanelToolbar
-            onSelectAll={canManage ? () => toggleSelectAll(visibleIds) : undefined}
-            isAllSelected={allVisibleSelected}
-            selectedCount={selected.length}
-            onClearSelection={clearSelection}
+            onSelectAll={canManage ? () => grid.toggleSelectAll(selectableIds) : undefined}
+            isAllSelected={grid.isAllSelected(selectableIds.length)}
+            selectedCount={grid.selected.length}
+            onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
             isRefreshing={isLoading || isFetching}
+            onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder="Buscar papéis..."
@@ -332,12 +375,15 @@ export function RolesPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={gridColumns.resetColumns}
+                onResetDefault={() => {
+                  gridColumns.resetColumns();
+                  toast.success('Colunas restauradas ao padrão.');
+                }}
               />
             )}
             resetControl={(
               <GridResetControl
-                disabled={!grid.isCustomized && !gridColumns.isCustomized && !hasActiveFilters}
+                disabled={!isGridCustomized}
                 onReset={handleResetGrid}
               />
             )}
@@ -351,17 +397,26 @@ export function RolesPage() {
           loading={isLoading}
           emptyMessage={emptyMessage}
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
-          isRowSelected={(role) => selected.includes(role.id)}
-          onRowClick={(role) => navigate(`/roles/${role.id}`)}
-          onRowDoubleClick={(role) => navigate(`/roles/${role.id}`)}
+          isRowSelected={(role) => grid.selected.includes(role.id)}
+          onRowClick={(role, event) => {
+            if (!canManage) {
+              handleEditRole(role.id);
+              return;
+            }
+            grid.selectRow(role.id, {
+              shift: event.shiftKey,
+              rangeOrder: filteredRoles.map((item) => item.id),
+            });
+          }}
+          onRowDoubleClick={(role) => handleEditRole(role.id)}
         />
       </GridPanel>
 
-      <AlertDialog open={deleteIds.length > 0} onOpenChange={(open) => !open && setDeleteIds([])}>
+      <AlertDialog open={grid.deleteIds.length > 0} onOpenChange={grid.clearDeleteRequest}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remover {deleteIds.length === 1 ? 'papel' : `${deleteIds.length} papéis`}
+              Remover {grid.deleteIds.length === 1 ? 'papel' : `${grid.deleteIds.length} papéis`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza? Papéis do sistema ou com usuários vinculados não podem ser removidos.

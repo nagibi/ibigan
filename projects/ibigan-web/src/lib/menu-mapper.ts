@@ -28,6 +28,7 @@ export function mapApiMenusToConfig(apiMenus: ApiMenu[]): MenuConfig {
         title: m.title,
       }),
       path: m.path ?? undefined,
+      target: m.target === '_blank' ? '_blank' : '_self',
       badge: m.badge ?? undefined,
       superAdminOnly: isSuperAdminOnlyMenu(m),
       children: m.children?.length ? mapApiMenusToConfig(m.children) : undefined,

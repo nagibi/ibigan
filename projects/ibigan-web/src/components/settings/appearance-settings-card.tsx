@@ -138,6 +138,7 @@ export function useAppearanceSettings() {
   const [draftTheme, setDraftTheme] = useState<ThemeMode>('system');
   const [draftSidebarTransparent, setDraftSidebarTransparent] = useState(false);
   const [draftMenuMode, setDraftMenuMode] = useState<MenuMode>('horizontal');
+  const [userTouched, setUserTouched] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -157,14 +158,31 @@ export function useAppearanceSettings() {
 
   const hasChanges =
     mounted &&
+    userTouched &&
     (draftTheme !== ((theme as ThemeMode) ?? 'system') ||
       draftSidebarTransparent !== (settings.layouts.demo1.sidebarTransparent ?? false) ||
       draftMenuMode !== (settings.layouts.demo1.menuMode ?? 'horizontal'));
+
+  const setDraftThemeTouched = useCallback((value: ThemeMode) => {
+    setUserTouched(true);
+    setDraftTheme(value);
+  }, []);
+
+  const setDraftSidebarTransparentTouched = useCallback((value: boolean) => {
+    setUserTouched(true);
+    setDraftSidebarTransparent(value);
+  }, []);
+
+  const setDraftMenuModeTouched = useCallback((value: MenuMode) => {
+    setUserTouched(true);
+    setDraftMenuMode(value);
+  }, []);
 
   const discard = useCallback(() => {
     setDraftTheme((theme as ThemeMode) ?? 'system');
     setDraftSidebarTransparent(settings.layouts.demo1.sidebarTransparent ?? false);
     setDraftMenuMode(settings.layouts.demo1.menuMode ?? 'horizontal');
+    setUserTouched(false);
   }, [settings.layouts.demo1.menuMode, settings.layouts.demo1.sidebarTransparent, theme]);
 
   const save = useCallback(async () => {
@@ -181,6 +199,7 @@ export function useAppearanceSettings() {
       );
       storeOption('layouts.demo1.sidebarTransparent', draftSidebarTransparent);
       storeOption('layouts.demo1.menuMode', draftMenuMode);
+      setUserTouched(false);
       toast.success('Aparência salva com sucesso.');
     } finally {
       setIsSaving(false);
@@ -200,11 +219,11 @@ export function useAppearanceSettings() {
     isSaving,
     hasChanges,
     draftTheme,
-    setDraftTheme,
+    setDraftTheme: setDraftThemeTouched,
     draftSidebarTransparent,
-    setDraftSidebarTransparent,
+    setDraftSidebarTransparent: setDraftSidebarTransparentTouched,
     draftMenuMode,
-    setDraftMenuMode,
+    setDraftMenuMode: setDraftMenuModeTouched,
     save,
     discard,
   };
@@ -215,7 +234,7 @@ export type AppearanceSettingsState = ReturnType<typeof useAppearanceSettings>;
 export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsState }) {
   if (!state.mounted) {
     return (
-      <FormPanel title="Tema">
+      <FormPanel title="Aparência">
         <div className="flex justify-center py-8">
           <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
         </div>
@@ -225,10 +244,56 @@ export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsSt
 
   return (
     <FormPanel
-      title="Tema"
-      description="Selecione ou personalize o tema da interface."
+      title="Aparência"
+      description="Tema da interface, disposição do menu e preferências visuais."
     >
       <div className="space-y-8">
+        <div className="space-y-4">
+          <Label className="text-sm font-medium">Disposição do menu</Label>
+          <p className="text-sm text-muted-foreground">
+            Escolha entre menu horizontal no topo ou menu vertical na lateral.
+          </p>
+          <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+            {MENU_MODE_OPTIONS.map((option) => {
+              const isSelected = state.draftMenuMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => state.setDraftMenuMode(option.value)}
+                  className="group flex flex-col gap-2 text-left outline-none"
+                >
+                  <div
+                    className={cn(
+                      'relative overflow-hidden rounded-lg p-1 transition-all',
+                      isSelected
+                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                        : 'ring-1 ring-border hover:ring-primary/50',
+                    )}
+                  >
+                    <MenuModePreview mode={option.value} />
+                    {isSelected && (
+                      <span className="absolute bottom-2 left-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                        <Check className="size-3" strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      'text-center text-sm font-medium',
+                      isSelected ? 'text-foreground' : 'text-muted-foreground',
+                    )}
+                  >
+                    {option.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <Separator />
+
         <div className="space-y-4">
           <Label className="text-sm font-medium">Modo do tema</Label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -270,52 +335,9 @@ export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsSt
           </div>
         </div>
 
-        <Separator />
-
-        <div className="space-y-4">
-          <Label className="text-sm font-medium">Disposição do menu</Label>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {MENU_MODE_OPTIONS.map((option) => {
-              const isSelected = state.draftMenuMode === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => state.setDraftMenuMode(option.value)}
-                  className="group flex flex-col gap-2 text-left outline-none"
-                >
-                  <div
-                    className={cn(
-                      'relative overflow-hidden rounded-lg p-1 transition-all',
-                      isSelected
-                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                        : 'ring-1 ring-border hover:ring-primary/50',
-                    )}
-                  >
-                    <MenuModePreview mode={option.value} />
-                    {isSelected && (
-                      <span className="absolute bottom-2 left-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-                        <Check className="size-3" strokeWidth={3} />
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      'text-center text-sm font-medium',
-                      isSelected ? 'text-foreground' : 'text-muted-foreground',
-                    )}
-                  >
-                    {option.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <Separator />
-
         {state.draftMenuMode === 'sidebar' ? (
+        <>
+        <Separator />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <Label className="text-sm font-medium">Sidebar transparente</Label>
@@ -339,6 +361,7 @@ export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsSt
             </SwitchWrapper>
           </div>
         </div>
+        </>
         ) : null}
       </div>
     </FormPanel>

@@ -240,5 +240,71 @@ class MenuSeeder extends Seeder
             'requires_auth' => true,
             'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
+
+        // ── Ferramentas (dev) ─────────────────────────────────────
+        $apiBase = rtrim((string) config('app.url'), '/');
+
+        $ferramentas = Menu::create([
+            'title' => 'Ferramentas',
+            'slug' => 'ferramentas',
+            'icon' => 'Wrench',
+            'path' => null,
+            'order' => 5,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Documentação API',
+            'slug' => 'documentacao-api',
+            'icon' => 'BookOpen',
+            'path' => env('DEV_TOOLS_API_DOCS_URL', "{$apiBase}/docs/api"),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Horizon',
+            'slug' => 'horizon',
+            'icon' => 'Gauge',
+            'path' => env('DEV_TOOLS_HORIZON_URL', "{$apiBase}/horizon"),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'phpMyAdmin',
+            'slug' => 'phpmyadmin',
+            'icon' => 'Database',
+            'path' => env('DEV_TOOLS_PHPMYADMIN_URL', 'http://localhost:8080'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 2,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Mailpit',
+            'slug' => 'mailpit',
+            'icon' => 'Mailbox',
+            'path' => env('DEV_TOOLS_MAILPIT_URL', 'http://localhost:8025'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
     }
 }

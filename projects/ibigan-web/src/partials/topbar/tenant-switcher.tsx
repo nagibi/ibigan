@@ -58,9 +58,20 @@ export function TenantSwitcher() {
   }
 
   const currentTenant = tenants.find((tenant) => tenant.id === tenantId);
-  const currentLabel = tenantLabel(currentTenant?.name, currentTenant?.slug ?? '', tenantId ?? '');
+  const currentLabel = tenantLabel(
+    impersonatedTenant?.name ?? currentTenant?.name,
+    currentTenant?.slug ?? impersonatedTenant?.name ?? '',
+    tenantId ?? '',
+  );
   const canSwitch = tenants.length > 1;
   const busy = Boolean(switchingId) || Boolean(impersonatingId);
+
+  const triggerClassName = cn(
+    'h-9 max-w-[160px] justify-between gap-1.5 px-2 sm:max-w-[220px]',
+    isImpersonating
+      ? 'border-amber-400 bg-amber-50 font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20'
+      : 'max-w-[200px] border-dashed font-normal',
+  );
 
   async function handleSelect(nextTenantId: string) {
     if (nextTenantId === tenantId || busy) return;
@@ -90,20 +101,41 @@ export function TenantSwitcher() {
       size="sm"
       role="combobox"
       aria-expanded={open}
-      className="h-9 max-w-[160px] justify-between gap-1.5 border-dashed px-2 font-normal sm:max-w-[200px]"
+      className={triggerClassName}
       disabled={isLoading || busy}
     >
       <span className="flex min-w-0 items-center gap-1.5">
-        <Building2 className="size-4 shrink-0 text-primary" />
+        <Building2
+          className={cn(
+            'size-4 shrink-0',
+            isImpersonating ? 'text-amber-800 dark:text-amber-300' : 'text-primary',
+          )}
+        />
         <span className="hidden truncate sm:inline">
           {isLoading ? '...' : currentLabel}
         </span>
       </span>
       {busy ? (
         <LoaderCircle className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-      ) : canSwitch ? (
-        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
-      ) : null}
+      ) : (
+        <span className="flex shrink-0 items-center gap-1">
+          {isImpersonating ? (
+            <span className="rounded bg-amber-400/30 px-1 text-[10px] uppercase tracking-wide">
+              plataforma
+            </span>
+          ) : null}
+          {canSwitch ? (
+            <ChevronsUpDown
+              className={cn(
+                'size-3.5',
+                isImpersonating
+                  ? 'text-amber-800/70 dark:text-amber-300/70'
+                  : 'text-muted-foreground',
+              )}
+            />
+          ) : null}
+        </span>
+      )}
     </Button>
   );
 
@@ -119,7 +151,7 @@ export function TenantSwitcher() {
           <CommandInput placeholder="Buscar organização..." />
           <CommandList>
             <CommandEmpty>Nenhuma organização encontrada.</CommandEmpty>
-            <CommandGroup heading="Organizações">
+            <CommandGroup heading={isImpersonating ? 'Empresas da plataforma' : 'Organizações'}>
               {tenants.map((tenant) => {
                 const label = tenantLabel(tenant.name, tenant.slug, tenant.id);
                 const isActive = tenant.id === tenantId;

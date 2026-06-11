@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StoreClientTopbar } from '@/pages/store-client/components/common/topbar';
-import { SearchDialog } from '@/partials/dialogs/search/search-dialog';
+import { CommandPalette } from '@/components/search/command-palette';
 import { AppsDropdownMenu } from '@/partials/topbar/apps-dropdown-menu';
 import { ChatSheet } from '@/partials/topbar/chat-sheet';
-import { ImpersonationChip } from '@/partials/topbar/impersonation-chip';
 import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { TenantSwitcher } from '@/partials/topbar/tenant-switcher';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
@@ -40,6 +39,7 @@ import { SidebarMenu } from './sidebar-menu';
 export function Header() {
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const { pathname } = useLocation();
   const { settings } = useSettings();
@@ -142,20 +142,20 @@ export function Header() {
             <StoreClientTopbar />
           ) : (
             <>
-              {!mobileMode && (
-                <SearchDialog
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      mode="icon"
-                      shape="circle"
-                      className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
-                    >
-                      <Search className="size-4.5!" />
-                    </Button>
-                  }
-                />
-              )}
+              <CommandPalette
+                open={isCommandPaletteOpen}
+                onOpenChange={setIsCommandPaletteOpen}
+              />
+              <Button
+                variant="ghost"
+                mode="icon"
+                shape="circle"
+                className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                onClick={() => setIsCommandPaletteOpen(true)}
+                title="Buscar (⌘K)"
+              >
+                <Search className="size-4.5!" />
+              </Button>
               <NotificationsSheet
                 trigger={
                   <Button
@@ -193,7 +193,6 @@ export function Header() {
                 }
               />
               <div className="flex items-center gap-2">
-                <ImpersonationChip />
                 <TenantSwitcher />
                 <UserDropdownMenu />
               </div>
