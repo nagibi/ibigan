@@ -14,7 +14,8 @@ final class GlobalSearchService
     private const SOURCES = [
         Menu::class => 'settings',
         User::class => 'users',
-        // Doc::class => 'docs', // habilitar quando a tabela docs existir
+        // TODO(docs): YAGNI — descomentar quando houver conteúdo real de documentação
+        // Doc::class => 'docs',
     ];
 
     /**

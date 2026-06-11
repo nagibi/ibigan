@@ -5,81 +5,187 @@ declare(strict_types=1);
 use App\Models\Menu;
 use App\Models\Tenant;
 use App\Models\User;
-use Database\Seeders\MenuSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
-/**
- * @property Tenant $tenant
- * @property User $admin
- */
 uses(RefreshDatabase::class);
 
-beforeEach(function (): void {
-    /** @var TestCase&object{tenant: Tenant, admin: User} $this */
-    $tenantId = 'tenant-'.uniqid();
+/**
+ * Cria um tenant com schema + RBAC seeded e um usuário admin dentro dele.
+ *
+ * @return array{tenant: Tenant, user: User}
+ */
+function makeTenantWithAdmin(string $label, string $email): array
+{
+    $tenantId = $label . '-' . uniqid();
 
-    $this->tenant = Tenant::create([
+    $tenant = Tenant::create([
         'id' => $tenantId,
         'slug' => $tenantId,
-        'name' => 'Search Tenant',
+        'name' => ucfirst($label),
     ]);
 
-    $this->tenant->run(function (): void {
-        $this->seed(RolePermissionSeeder::class);
-        $this->seed(MenuSeeder::class);
+    $tenant->run(function () {
+        test()->seed(RolePermissionSeeder::class);
     });
 
-    $this->admin = $this->tenant->run(function (): User {
-        $user = User::factory()->create(['name' => 'Ana Busca']);
+    $user = $tenant->run(function () use ($email): User {
+        $user = User::factory()->create([
+            'email' => $email,
+            'password' => bcrypt('senha123'),
+        ]);
         $user->assignRole('admin');
 
         return $user;
     });
 
+    return ['tenant' => $tenant, 'user' => $user];
+}
+
+beforeEach(function (): void {
+    /** @var TestCase&object{a: array, b: array} $this */
+    $this->a = makeTenantWithAdmin('alpha', 'alice@alpha.com');
+    $this->b = makeTenantWithAdmin('beta', 'bob@beta.com');
 });
 
 afterEach(function (): void {
-    tenancy()->end();
-
-    $databasePath = database_path('ibigan_tenant_'.$this->tenant->id);
-    if (file_exists($databasePath)) {
-        unlink($databasePath);
-    }
+    cleanupTenantDatabaseFiles($this->a['tenant']->id, $this->b['tenant']->id);
 });
 
-function searchHeaders(string $tenantId): array
-{
-    return ['X-Tenant-ID' => $tenantId];
-}
+// ─── Endpoint: comportamento básico ──────────────────────────────
 
-it('retorna resultados agrupados na busca global', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+it('exige autenticação', function (): void {
+    $this->getJson('/api/v1/search?q=alice', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])->assertUnauthorized();
+});
 
-    $this->tenant->run(function (): void {
-        Menu::query()->get()->each->searchable();
-        User::query()->get()->each->searchable();
-    });
+it('valida o termo mínimo de busca', function (): void {
+    Sanctum::actingAs($this->a['user'], ['*'], 'sanctum');
 
-    $response = $this->getJson('/api/v1/search?q=ana', searchHeaders($this->tenant->id))
+    $this->getJson('/api/v1/search?q=a', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['q']);
+});
+
+it('retorna resultados agrupados por categoria', function (): void {
+    Sanctum::actingAs($this->a['user'], ['*'], 'sanctum');
+
+    $response = $this->getJson('/api/v1/search?q=alice', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])
         ->assertOk()
         ->assertJsonPath('status', 1);
 
-    expect($response->json('result.users'))->not->toBeEmpty();
-    expect($response->json('result.users.0.title'))->toBe('Ana Busca');
+    // o usuário alice@alpha.com deve aparecer no grupo "users"
+    $result = $response->json('result');
+
+    expect($result)->toHaveKey('users');
+    expect(collect($result['users'])->pluck('subtitle'))
+        ->toContain('alice@alpha.com');
 });
 
-it('nega busca global sem autenticação', function (): void {
-    $this->getJson('/api/v1/search?q=ana', searchHeaders($this->tenant->id))
-        ->assertUnauthorized();
+it('cada item traz o shape esperado pelo palette', function (): void {
+    Sanctum::actingAs($this->a['user'], ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/search?q=alice', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])
+        ->assertOk()
+        ->assertJsonStructure([
+            'status',
+            'result' => [
+                'users' => [
+                    ['id', 'type', 'title', 'subtitle', 'path', 'avatar_url'],
+                ],
+            ],
+        ]);
 });
 
-it('valida termo mínimo na busca global', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+// ─── Isolamento entre tenants (a garantia central) ───────────────
 
-    $this->getJson('/api/v1/search?q=a', searchHeaders($this->tenant->id))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['q']);
+it('não retorna usuários de outro tenant', function (): void {
+    // logado no tenant A, busca pelo email do usuário do tenant B
+    Sanctum::actingAs($this->a['user'], ['*'], 'sanctum');
+
+    $response = $this->getJson('/api/v1/search?q=bob', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])->assertOk();
+
+    $emails = collect($response->json('result.users') ?? [])
+        ->pluck('subtitle');
+
+    // bob@beta.com NÃO pode vazar para o tenant A
+    expect($emails)->not->toContain('bob@beta.com');
+});
+
+it('busca o mesmo termo retorna dados distintos por tenant', function (): void {
+    // tenant A enxerga alice, não bob
+    Sanctum::actingAs($this->a['user'], ['*'], 'sanctum');
+    $fromA = collect(
+        $this->getJson('/api/v1/search?q=com', [
+            'X-Tenant-ID' => $this->a['tenant']->id,
+        ])->json('result.users') ?? []
+    )->pluck('subtitle');
+
+    expect($fromA)->toContain('alice@alpha.com')
+        ->and($fromA)->not->toContain('bob@beta.com');
+
+    // tenant B enxerga bob, não alice
+    Sanctum::actingAs($this->b['user'], ['*'], 'sanctum');
+    $fromB = collect(
+        $this->getJson('/api/v1/search?q=com', [
+            'X-Tenant-ID' => $this->b['tenant']->id,
+        ])->json('result.users') ?? []
+    )->pluck('subtitle');
+
+    expect($fromB)->toContain('bob@beta.com')
+        ->and($fromB)->not->toContain('alice@alpha.com');
+});
+
+// ─── Permission: filtro pós-busca ────────────────────────────────
+
+it('esconde usuários de quem não tem a permission usuario-visualizar', function (): void {
+    $limited = $this->a['tenant']->run(function (): User {
+        // papel explicitamente vazio — zero permissions, garantido
+        $role = \Spatie\Permission\Models\Role::firstOrCreate([
+            'name' => 'sem-acesso',
+            'guard_name' => 'sanctum',
+        ]);
+
+        $user = User::factory()->create([
+            'email' => 'limitado@alpha.com',
+            'password' => bcrypt('senha123'),
+        ]);
+        $user->assignRole($role);
+
+        // sanity: confirma que o filtro de permission está em jogo
+        expect($user->can('usuario-visualizar'))->toBeFalse();
+
+        return $user;
+    });
+
+    Sanctum::actingAs($limited, ['*'], 'sanctum');
+
+    $response = $this->getJson('/api/v1/search?q=alice', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])->assertOk();
+
+    $users = collect($response->json('result.users') ?? [])->pluck('subtitle');
+    expect($users)->not->toContain('alice@alpha.com');
+});
+
+it('mostra usuários para quem tem a permission', function (): void {
+    Sanctum::actingAs($this->a['user'], ['*'], 'sanctum'); // admin tem tudo
+
+    $response = $this->getJson('/api/v1/search?q=alice', [
+        'X-Tenant-ID' => $this->a['tenant']->id,
+    ])->assertOk();
+
+    $users = collect($response->json('result.users') ?? [])->pluck('subtitle');
+    expect($users)->toContain('alice@alpha.com');
 });

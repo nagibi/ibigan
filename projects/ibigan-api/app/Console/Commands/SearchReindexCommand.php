@@ -19,7 +19,8 @@ final class SearchReindexCommand extends Command
     private array $models = [
         Menu::class,
         User::class,
-        // Doc::class, // habilitar quando a tabela docs existir
+        // TODO(docs): YAGNI — descomentar quando houver conteúdo real de documentação
+        // Doc::class,
     ];
 
     public function handle(): int
