@@ -318,3 +318,74 @@ it('cria tenant com cnpj para super-admin', function (): void {
 
     $this->createdTenantIds[] = $response->json('result.id');
 });
+
+// --- Impersonation ---
+
+it('super-admin impersona um tenant com sucesso', function (): void {
+    actingAsSuperAdmin($this->superUser);
+
+    $response = $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.tenant_id', 'acme')
+        ->assertJsonStructure([
+            'result' => [
+                'token',
+                'tenant_id',
+                'user' => ['id', 'name', 'email', 'is_platform_user', 'roles', 'permissions'],
+            ],
+        ]);
+
+    expect($response->json('result.user.is_platform_user'))->toBeTrue();
+    expect($response->json('result.user.roles'))->toContain('super-admin');
+    expect($response->json('result.token'))->not->toBeEmpty();
+});
+
+it('cria o usuário-plataforma no banco do tenant ao impersonar', function (): void {
+    actingAsSuperAdmin($this->superUser);
+
+    $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')->assertOk();
+
+    $this->tenant->run(function (): void {
+        $user = User::where('email', $this->superUser->email)
+            ->where('is_platform_user', true)
+            ->first();
+
+        expect($user)->not->toBeNull();
+        expect($user->hasRole('super-admin'))->toBeTrue();
+    });
+});
+
+it('reutiliza o usuário-plataforma em impersonações repetidas', function (): void {
+    actingAsSuperAdmin($this->superUser);
+
+    $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')->assertOk();
+    $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')->assertOk();
+
+    $this->tenant->run(function (): void {
+        $count = User::where('email', $this->superUser->email)
+            ->where('is_platform_user', true)
+            ->count();
+
+        expect($count)->toBe(1);
+    });
+});
+
+it('nega impersonação para usuário comum', function (): void {
+    actingAsAdmin($this->adminUser);
+
+    $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')
+        ->assertForbidden();
+});
+
+it('nega impersonação sem autenticação', function (): void {
+    $this->postJson('/api/central/v1/admin/tenants/acme/impersonate')
+        ->assertUnauthorized();
+});
+
+it('retorna 404 ao impersonar tenant inexistente', function (): void {
+    actingAsSuperAdmin($this->superUser);
+
+    $this->postJson('/api/central/v1/admin/tenants/inexistente/impersonate')
+        ->assertNotFound();
+});
