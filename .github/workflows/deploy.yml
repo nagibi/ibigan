@@ -1,0 +1,70 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: projects/ibigan-web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm install --force
+        working-directory: projects/ibigan-web
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: projects/ibigan-web
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='projects/ibigan-api/vendor' \
+            --exclude='projects/ibigan-api/node_modules' \
+            --exclude='projects/ibigan-api/storage/logs' \
+            --exclude='projects/ibigan-api/.env' \
+            --exclude='projects/ibigan-web/node_modules' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./ root@${{ secrets.SERVER_IP }}:/opt/ibigan/
+
+      - name: Deploy on server
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} << 'EOF'
+            set -e
+            cd /opt/ibigan
+
+            docker compose -f docker-compose.prod.yml run --rm app \
+              composer install --no-dev --optimize-autoloader --no-interaction
+
+            docker compose -f docker-compose.prod.yml up -d --build
+
+            sleep 10
+
+            docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
+            docker compose -f docker-compose.prod.yml exec -T app php artisan config:cache
+            docker compose -f docker-compose.prod.yml exec -T app php artisan route:cache
+            docker compose -f docker-compose.prod.yml exec -T app php artisan view:cache
+            docker compose -f docker-compose.prod.yml exec -T app php artisan storage:link
+
+            docker compose -f docker-compose.prod.yml restart horizon
+
+            echo "Deploy concluído com sucesso"
+          EOF
