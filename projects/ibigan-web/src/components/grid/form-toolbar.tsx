@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +86,7 @@ function FormButton({
   disabled,
   loading,
   className,
+  showLabelOnMobile = false,
 }: {
   label: string;
   tooltip?: string;
@@ -93,22 +95,32 @@ function FormButton({
   disabled?: boolean;
   loading?: boolean;
   className?: string;
+  showLabelOnMobile?: boolean;
 }) {
+  const isMobile = useIsMobile();
+  const showLabel = !isMobile || showLabelOnMobile;
+
   return (
-    <ToolbarTooltip content={tooltip}>
+    <ToolbarTooltip content={tooltip ?? label}>
       <Button
         type="button"
         variant="ghost"
         size="sm"
+        mode={showLabel ? 'default' : 'icon'}
         disabled={disabled || loading}
         onClick={onClick}
-        className={cn('h-8 gap-1.5 px-2 text-xs font-medium', className)}
+        aria-label={label}
+        className={cn(
+          'h-8 shrink-0 text-xs font-medium',
+          showLabel ? 'gap-1.5 px-2' : 'size-8',
+          className,
+        )}
       >
         {loading
           ? <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
           : <Icon className="size-3.5 shrink-0" />
         }
-        {label}
+        {showLabel && label}
       </Button>
     </ToolbarTooltip>
   );
@@ -142,6 +154,7 @@ export function FormToolbar({
   primarySaveVariant = 'primary',
 }: FormToolbarProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
@@ -173,7 +186,7 @@ export function FormToolbar({
                   size="sm"
                   disabled={saveDisabled}
                   onClick={primarySaveAction}
-                  className={cn('h-8 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
+                  className={cn('h-8 shrink-0 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
                 >
                   {isSubmitting
                     ? <LoaderCircle className="size-3.5 animate-spin" />
@@ -191,9 +204,12 @@ export function FormToolbar({
                         type="button"
                         variant={primarySaveVariant}
                         size="sm"
+                        mode="icon"
                         disabled={saveDisabled}
+                        aria-label={t('form.tooltip.save_options')}
                         className={cn(
-                          'h-8 px-1.5 rounded-l-none border-l',
+                          'h-8 shrink-0 rounded-l-none border-l',
+                          isMobile ? 'size-8' : 'px-1.5',
                           primarySaveVariant === 'destructive'
                             ? 'border-destructive-foreground/20'
                             : 'border-primary-foreground/20',
@@ -239,6 +255,7 @@ export function FormToolbar({
                 tooltip={t('form.tooltip.new')}
                 icon={Plus}
                 onClick={onNew}
+                showLabelOnMobile
               />
             )}
 

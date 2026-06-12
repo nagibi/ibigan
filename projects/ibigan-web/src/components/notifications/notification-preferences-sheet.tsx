@@ -24,7 +24,7 @@ export function NotificationPreferencesSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="inset-5 start-auto h-auto w-full gap-0 rounded-lg p-0 sm:max-w-none sm:w-[520px] [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
+      <SheetContent className="mobile-side-panel-sheet gap-0 rounded-lg p-0 sm:inset-5 sm:start-auto sm:h-auto sm:max-h-[calc(100vh-2.5rem)] sm:w-[520px] sm:max-w-none [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
         <SheetHeader className="mb-0 border-b px-5 py-4">
           <SheetTitle className="flex items-center gap-2 p-0">
             <Settings2 className="size-4 shrink-0" />
@@ -35,8 +35,8 @@ export function NotificationPreferencesSheet({
           </p>
         </SheetHeader>
 
-        <SheetBody className="grow p-0">
-          <ScrollArea className="h-[calc(100vh-11rem)]">
+        <SheetBody className="min-h-0 grow p-0">
+          <ScrollArea className="h-[calc(100dvh-12rem)] sm:h-[calc(100vh-11rem)]">
             <div className="px-5 py-5">
               <NotificationPreferencesContent />
             </div>

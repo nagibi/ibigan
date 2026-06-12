@@ -22,14 +22,23 @@ import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { adminTenantsService, type AdminTenant } from '@/services/admin-tenants.service';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridTable } from '@/components/grid/grid-table';
-import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { GridRowActions, type GridRowAction } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
+import { DataView } from '@/components/grid/data-view';
+import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
+import { OrganizationCard } from '@/components/cards/organization-card';
+import { useViewMode } from '@/hooks/use-view-mode';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { TenantActivityLogsSheet } from '@/components/activity-logs/tenant-activity-logs-sheet';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
@@ -99,6 +108,9 @@ export function AdminTenantsPage() {
   });
 
   const grid = useGrid();
+  const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.organizations, {
+    persist: 'local',
+  });
   const columnFilters = useGridFilters(() => grid.setPage(1));
 
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
@@ -112,19 +124,38 @@ export function AdminTenantsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [rowStatusId, setRowStatusId] = useState<string | null>(null);
   const [activityLogTenant, setActivityLogTenant] = useState<AdminTenant | null>(null);
+  const isMobile = useIsMobile();
+  const infiniteScrollEnabled = shouldUseGridInfiniteScroll(isMobile, viewMode);
+  const infiniteScroll = useGridInfiniteScroll<AdminTenant>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await adminTenantsService.list(
         grid.page,
-        grid.perPage,
+        grid.resolvePerPage(meta.total),
         grid.debouncedSearch,
         grid.sort,
         grid.sortDir,
         columnFilters.activeFilterParams,
       );
-      setTenants(res.data.result.data);
+      const pageTenants = res.data.result.data;
+      setTenants(pageTenants);
+      infiniteScroll.receivePage(pageTenants, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar empresas.', error);
@@ -138,8 +169,11 @@ export function AdminTenantsPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
   ]);
+
+  const displayTenants = infiniteScrollEnabled ? infiniteScroll.items : tenants;
 
   loadRef.current = load;
 
@@ -160,6 +194,28 @@ export function AdminTenantsPage() {
   const handleEditTenant = useCallback(
     (tenantId: string) => navigate(`/admin/tenants/${tenantId}/editar`),
     [navigate],
+  );
+
+  const getTenantRowActions = useCallback(
+    (tenant: AdminTenant): GridRowAction[] => [
+      {
+        label: 'Editar',
+        icon: Pencil,
+        onClick: () => handleEditTenant(tenant.id),
+      },
+      {
+        label: 'Activity Logs',
+        icon: Activity,
+        onClick: () => setActivityLogTenant(tenant),
+      },
+      {
+        label: 'Remover',
+        icon: Trash2,
+        tone: 'destructive',
+        onClick: () => selection.requestDelete([tenant.id]),
+      },
+    ],
+    [handleEditTenant, selection.requestDelete],
   );
 
   const handleEscape = useCallback(() => {
@@ -259,26 +315,7 @@ export function AdminTenantsPage() {
         hideable: false,
         className: 'w-[72px]',
         render: (tenant) => (
-          <GridRowActions
-            actions={[
-              {
-                label: 'Editar',
-                icon: Pencil,
-                onClick: () => handleEditTenant(tenant.id),
-              },
-              {
-                label: 'Activity Logs',
-                icon: Activity,
-                onClick: () => setActivityLogTenant(tenant),
-              },
-              {
-                label: 'Remover',
-                icon: Trash2,
-                tone: 'destructive',
-                onClick: () => selection.requestDelete([tenant.id]),
-              },
-            ]}
-          />
+          <GridRowActions actions={getTenantRowActions(tenant)} />
         ),
       },
       {
@@ -403,11 +440,10 @@ export function AdminTenantsPage() {
       },
     ],
     [
-      handleEditTenant,
+      getTenantRowActions,
       handleImpersonate,
       impersonatingId,
       rowStatusId,
-      selection.requestDelete,
       selection.selected,
       selection.toggleSelect,
     ],
@@ -539,12 +575,17 @@ export function AdminTenantsPage() {
             onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
-            filtersControl={
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            }
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -567,38 +608,92 @@ export function AdminTenantsPage() {
                 onReset={handleResetGrid}
               />
             }
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayTenants.length, infiniteScrollEnabled)}
           />
         }
-        footer={
+        footer={!infiniteScrollEnabled ? (
           <GridPagination
             meta={meta}
+            perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />
-        }
+        ) : undefined}
       >
-        <GridTable
-          columns={gridColumns.visibleColumns}
-          data={tenants}
-          getRowKey={(tenant) => tenant.id}
+        <DataView
+          viewMode={viewMode}
           loading={loading}
+          isEmpty={!loading && displayTenants.length === 0}
           emptyMessage="Nenhuma empresa encontrada."
-          sort={grid.sort}
-          sortDir={grid.sortDir}
-          onSort={grid.toggleSort}
-          onColumnOrderChange={gridColumns.reorderDraggableColumns}
-          columnFilters={columnFilters.filters}
-          onColumnFilterChange={columnFilters.setFilter}
-          onDateRangeFilterChange={columnFilters.setDateRangeFilter}
-          onColumnFilterClear={columnFilters.clearColumnFilter}
-          isRowSelected={(tenant) => selection.selected.includes(tenant.id)}
-          onRowClick={(tenant, event) =>
-            selection.selectRow(tenant.id, {
-              shift: event.shiftKey,
-              rangeOrder: tenants.map((item) => item.id),
-            })
-          }
-          onRowDoubleClick={(tenant) => handleEditTenant(tenant.id)}
+          infiniteScroll={infiniteScrollEnabled ? {
+            enabled: true,
+            hasMore: infiniteScroll.hasMore,
+            loading,
+            loadingMore: infiniteScroll.loadingMore,
+            onLoadMore: infiniteScroll.loadMore,
+            loadedCount: infiniteScroll.loadedCount,
+            total: infiniteScroll.total,
+          } : undefined}
+          tableView={(
+            <GridTable
+              columns={gridColumns.visibleColumns}
+              data={tenants}
+              getRowKey={(tenant) => tenant.id}
+              loading={loading}
+              emptyMessage="Nenhuma empresa encontrada."
+              sort={grid.sort}
+              sortDir={grid.sortDir}
+              onSort={grid.toggleSort}
+              onColumnOrderChange={gridColumns.reorderDraggableColumns}
+              columnFilters={columnFilters.filters}
+              onColumnFilterChange={columnFilters.setFilter}
+              onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+              onColumnFilterClear={columnFilters.clearColumnFilter}
+              isRowSelected={(tenant) => selection.selected.includes(tenant.id)}
+              onRowClick={(tenant, event) =>
+                selection.selectRow(tenant.id, {
+                  shift: event.shiftKey,
+                  rangeOrder: tenants.map((item) => item.id),
+                })
+              }
+              onRowDoubleClick={(tenant) => handleEditTenant(tenant.id)}
+            />
+          )}
+          listView={(
+            <GridListView
+              data={displayTenants}
+              getRowKey={(tenant) => tenant.id}
+              isRowSelected={(tenant) => selection.selected.includes(tenant.id)}
+              onRowClick={(tenant) =>
+                selection.selectRow(tenant.id, { rangeOrder: displayTenants.map((item) => item.id) })
+              }
+              renderItem={(tenant) => (
+                <OrganizationCard
+                  tenant={tenant}
+                  actions={getTenantRowActions(tenant)}
+                />
+              )}
+            />
+          )}
+          cardView={(
+            <GridCardsView
+              data={displayTenants}
+              getRowKey={(tenant) => tenant.id}
+              isRowSelected={(tenant) => selection.selected.includes(tenant.id)}
+              onRowClick={(tenant) =>
+                selection.selectRow(tenant.id, { rangeOrder: displayTenants.map((item) => item.id) })
+              }
+              renderCard={(tenant) => (
+                <OrganizationCard
+                  tenant={tenant}
+                  actions={getTenantRowActions(tenant)}
+                />
+              )}
+            />
+          )}
         />
       </GridPanel>
 

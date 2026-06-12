@@ -22,7 +22,6 @@ import {
 } from '@/lib/activity-log-utils';
 import { ActivityLogDetailDialog } from '@/components/activity-logs/activity-log-detail-dialog';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
@@ -96,6 +95,7 @@ export function ActivityLogsPage() {
       setLoading(true);
       const filters = columnFilters.activeFilterParams;
       const res = await activityLogsService.list(grid.page, {
+        per_page: grid.resolvePerPage(meta.total),
         subject_type: filters.subject_type || undefined,
         date_from: filters[dateRangeFilterFromKey('created_at')] || undefined,
         date_to: filters[dateRangeFilterToKey('created_at')] || undefined,
@@ -107,7 +107,7 @@ export function ActivityLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [columnFilters.activeFilterParams, grid.page, showError]);
+  }, [columnFilters.activeFilterParams, grid.page, grid.perPage, grid.resolvePerPage, meta.total, showError]);
 
   useEffect(() => {
     void load();
@@ -308,12 +308,17 @@ export function ActivityLogsPage() {
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder="Buscar por recurso ou usuário..."
-            filtersControl={(
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            )}
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -339,11 +344,13 @@ export function ActivityLogsPage() {
                 onReset={handleResetGrid}
               />
             )}
+            recordCount={{ total: meta.total }}
           />
         )}
         footer={(
           <GridPagination
             meta={meta}
+            perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />

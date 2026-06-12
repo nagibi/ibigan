@@ -13,6 +13,8 @@ import {
 } from '@/providers/page-toolbar-provider';
 import { Footer } from '@/layouts/demo1/components/footer';
 import { ScrollToTopButton } from '@/components/common/scroll-to-top-button';
+import { ScrollTopAnchor } from '@/components/common/scroll-top-anchor';
+import { PageScrollContainer, PageScrollProvider } from '@/providers/page-scroll-provider';
 import { PageContentHeader } from '@/layouts/demo1/components/page-content-header';
 import { PageToolbarBar } from '@/layouts/demo1/components/page-toolbar-bar';
 import { CentralHeader } from './components/header';
@@ -22,23 +24,26 @@ function CentralLayoutContent() {
   useClearPageToolbarAlertOnNavigate();
 
   return (
-    <div className="wrapper flex min-h-dvh min-w-0 grow flex-col overflow-y-hidden">
-      <CentralHeader />
-      <PageToolbarBar />
+    <PageScrollProvider>
+      <div className="wrapper flex min-h-dvh min-w-0 grow flex-col overflow-y-hidden">
+        <CentralHeader />
+        <PageToolbarBar />
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
-        <PageContentHeader
-          menuSource="central"
-          fallbackMenu={CENTRAL_MENU_SIDEBAR}
-        />
-        <div className="page-content-scroll flex min-h-0 min-w-0 flex-1 flex-col">
-          <Outlet />
-        </div>
-      </main>
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
+          <PageScrollContainer className="page-content-scroll flex min-h-0 min-w-0 flex-1 flex-col">
+            <ScrollTopAnchor />
+            <PageContentHeader
+              menuSource="central"
+              fallbackMenu={CENTRAL_MENU_SIDEBAR}
+            />
+            <Outlet />
+          </PageScrollContainer>
+        </main>
 
-      <Footer />
-      <ScrollToTopButton />
-    </div>
+        <Footer />
+        <ScrollToTopButton />
+      </div>
+    </PageScrollProvider>
   );
 }
 

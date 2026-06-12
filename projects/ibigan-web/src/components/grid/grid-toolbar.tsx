@@ -17,6 +17,7 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import {
   formatToolbarSelectedCount,
@@ -24,6 +25,21 @@ import {
   type ToolbarAlertConfig,
 } from './toolbar-alert';
 import { ToolbarTooltip } from './toolbar-tooltip';
+import {
+  GridFiltersControl,
+  type GridActiveFilter,
+  type GridColumnFiltersConfig,
+} from './grid-filters-control';
+import {
+  GridMobileRecordCountBar,
+  type GridRecordCountInfo,
+} from './grid-record-count';
+
+export interface GridPanelFiltersConfig {
+  active: GridActiveFilter[];
+  onClearAll?: () => void;
+  columnFilters?: GridColumnFiltersConfig;
+}
 
 export function GridToolbarRoot({
   children,
@@ -39,8 +55,14 @@ export function GridToolbarRoot({
   );
 }
 
-export function GridToolbarGroup({ children }: { children: ReactNode }) {
-  return <div className="flex items-center gap-0.5">{children}</div>;
+export function GridToolbarGroup({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn('flex min-w-0 flex-wrap items-center gap-0.5', className)}>{children}</div>;
 }
 
 export function GridToolbarSpacer() {
@@ -66,6 +88,7 @@ export function GridToolbarButton({
   tone?: 'default' | 'success' | 'warning' | 'destructive';
   className?: string;
 }) {
+  const isMobile = useIsMobile();
   const toneClass = {
     default: '',
     success: 'text-green-600 hover:text-green-700',
@@ -79,12 +102,19 @@ export function GridToolbarButton({
         type="button"
         variant="ghost"
         size="sm"
+        mode={isMobile ? 'icon' : 'default'}
         disabled={disabled || loading}
         onClick={onClick}
-        className={cn('h-8 gap-1.5 px-2 text-xs font-medium', toneClass, className)}
+        aria-label={label}
+        className={cn(
+          'h-8 shrink-0 text-xs font-medium',
+          isMobile ? 'size-8' : 'gap-1.5 px-2',
+          toneClass,
+          className,
+        )}
       >
         {Icon && <Icon className="size-3.5 shrink-0" />}
-        {label}
+        {!isMobile && label}
       </Button>
     </ToolbarTooltip>
   );
@@ -154,9 +184,11 @@ export function GridToolbarPrimary({
         type="button"
         variant={variant}
         size="sm"
+        mode="default"
         disabled={disabled || loading}
         onClick={onClick}
-        className="h-8 gap-1.5"
+        aria-label={label}
+        className="h-8 shrink-0 gap-1.5 px-2.5"
       >
         {loading
           ? <LoaderCircle className="size-4 shrink-0 animate-spin" />
@@ -180,13 +212,13 @@ export function GridToolbarSearch({
   className?: string;
 }) {
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative w-full min-w-0', className)}>
       <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-7 w-56 pl-7 text-xs"
+        className="h-7 w-full min-w-0 pl-7 text-xs sm:w-56"
       />
       {value && (
         <Button
@@ -254,9 +286,14 @@ export interface GridPanelToolbarProps {
   searchPlaceholder?: string;
 
   columnsControl?: ReactNode;
+  /** @deprecated Prefer `filters` — search is wired automatically on mobile. */
   filtersControl?: ReactNode;
+  filters?: GridPanelFiltersConfig;
   resetControl?: ReactNode;
   quickFiltersControl?: ReactNode;
+  viewModeControl?: ReactNode;
+  /** Total de registros exibido abaixo da toolbar no mobile. */
+  recordCount?: GridRecordCountInfo;
 }
 
 export function GridPanelToolbar({
@@ -274,65 +311,85 @@ export function GridPanelToolbar({
   searchPlaceholder,
   columnsControl,
   filtersControl,
+  filters,
   resetControl,
   quickFiltersControl,
+  viewModeControl,
+  recordCount,
 }: GridPanelToolbarProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const resolvedSelectAllLabel = selectAllLabel ?? t('grid.select_all');
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('grid.search_placeholder');
   const selectionAlert = buildSelectionAlert(selectedCount, onClearSelection);
+  const resolvedFiltersControl = filtersControl ?? (filters ? (
+    <GridFiltersControl
+      filters={filters.active}
+      onClearAll={filters.onClearAll}
+      columnFilters={filters.columnFilters}
+      search={search}
+      onSearch={onSearch}
+      searchPlaceholder={resolvedSearchPlaceholder}
+    />
+  ) : null);
+  const hideToolbarSearchOnMobile = isMobile && Boolean(filters);
 
   return (
     <div className="border-b border-border">
       <ToolbarAlertHost
         alert={selectionAlert}
-        contentClassName="flex items-center gap-3 px-4 py-2.5"
+        contentClassName="px-3 py-1.5 xl:px-4 xl:py-2.5"
       >
-        <GridToolbarGroup>
-          {onSelectAll && (
-            <ToolbarTooltip content={t('grid.tooltip.select_all')}>
-              <label className="flex cursor-pointer items-center gap-2 pe-1 text-xs font-medium text-muted-foreground">
-                <Checkbox checked={isAllSelected} onCheckedChange={onSelectAll} />
-                {resolvedSelectAllLabel}
-              </label>
-            </ToolbarTooltip>
-          )}
-          {onRefresh && (
-            <GridToolbarButton
-              label={t('grid.refresh')}
-              tooltip={t('grid.tooltip.refresh')}
-              icon={RefreshCw}
-              onClick={onRefresh}
-              loading={isRefreshing}
-            />
-          )}
-          {filtersControl}
-          {columnsControl}
-          {resetControl}
-          {onExport && (
-            <GridToolbarButton
-              label={t('grid.export')}
-              tooltip={t('grid.tooltip.export')}
-              icon={Download}
-              onClick={onExport}
-              loading={isExporting}
-            />
-          )}
-        </GridToolbarGroup>
+        <div className="flex w-full flex-col gap-1.5 xl:flex-row xl:items-center xl:gap-3">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-0.5 xl:flex-1">
+            {onSelectAll && (
+              <ToolbarTooltip content={t('grid.tooltip.select_all')}>
+                <label className="flex shrink-0 cursor-pointer items-center gap-2 pe-1 text-xs font-medium text-muted-foreground">
+                  <Checkbox checked={isAllSelected} onCheckedChange={onSelectAll} />
+                  <span className="hidden sm:inline">{resolvedSelectAllLabel}</span>
+                </label>
+              </ToolbarTooltip>
+            )}
+            {onRefresh && (
+              <GridToolbarButton
+                label={t('grid.refresh')}
+                tooltip={t('grid.tooltip.refresh')}
+                icon={RefreshCw}
+                onClick={onRefresh}
+                loading={isRefreshing}
+              />
+            )}
+            {resolvedFiltersControl}
+            {columnsControl}
+            {resetControl}
+            {onExport && (
+              <GridToolbarButton
+                label={t('grid.export')}
+                tooltip={t('grid.tooltip.export')}
+                icon={Download}
+                onClick={onExport}
+                loading={isExporting}
+              />
+            )}
+            {viewModeControl}
+            {quickFiltersControl}
+          </div>
 
-        <GridToolbarSpacer />
-
-        <div className="ms-auto flex shrink-0 items-center gap-2">
-          {quickFiltersControl}
-          {onSearch && (
-            <GridToolbarSearch
-              value={search ?? ''}
-              onChange={onSearch}
-              placeholder={resolvedSearchPlaceholder}
-            />
+          {onSearch && !hideToolbarSearchOnMobile && (
+            <div className="w-full shrink-0 xl:w-56">
+              <GridToolbarSearch
+                value={search ?? ''}
+                onChange={onSearch}
+                placeholder={resolvedSearchPlaceholder}
+                className="w-full"
+              />
+            </div>
           )}
         </div>
       </ToolbarAlertHost>
+      {recordCount != null ? (
+        <GridMobileRecordCountBar total={recordCount.total} loaded={recordCount.loaded} />
+      ) : null}
     </div>
   );
 }

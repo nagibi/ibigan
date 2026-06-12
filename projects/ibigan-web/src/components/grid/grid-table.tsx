@@ -26,6 +26,7 @@ import {
 } from '@/hooks/use-grid-filters';
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import type { SortDirection } from '@/hooks/use-grid';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { GridTableScroll } from '@/components/grid/grid-table-scroll';
 import {
   TableBody,
@@ -38,6 +39,7 @@ import {
   getGridColumnCellClassName,
   isGridCenteredColumn,
   resolveGridColumnLabel,
+  toGridColumnMinWidthClassName,
 } from '@/lib/grid-column-presets';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/i18next';
@@ -88,7 +90,6 @@ interface GridTableProps<T> {
   onRowClick?: (row: T, event: MouseEvent<HTMLTableRowElement>) => void;
   onRowDoubleClick?: (row: T, event: MouseEvent<HTMLTableRowElement>) => void;
   maxBodyHeight?: string;
-  minBodyHeight?: string;
 }
 
 function getSortTooltip(
@@ -107,15 +108,18 @@ function SortableHeaderCell<T>({
   sort,
   sortDir,
   onSort,
+  enableColumnReorder,
 }: {
   column: GridColumnDef<T>;
   sort?: string | null;
   sortDir?: SortDirection;
   onSort?: (sortKey: string) => void;
+  enableColumnReorder: boolean;
 }) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
+    disabled: !enableColumnReorder,
   });
 
   const sortKey = column.sortKey ?? column.id;
@@ -134,8 +138,9 @@ function SortableHeaderCell<T>({
         transition,
       }}
       className={cn(
-        'whitespace-nowrap',
-        getGridColumnCellClassName(column.id, column.className),
+        'overflow-visible whitespace-nowrap',
+        getGridColumnCellClassName(column.id, toGridColumnMinWidthClassName(column.className)),
+        enableColumnReorder && 'min-w-[6.5rem]',
         isDragging && 'opacity-60',
       )}
     >
@@ -143,25 +148,27 @@ function SortableHeaderCell<T>({
         'flex items-center gap-1',
         isGridCenteredColumn(column.id) && 'justify-center',
       )}>
-        <ToolbarTooltip content={t('grid.tooltip.drag_column')}>
-          <button
-            type="button"
-            className="cursor-grab text-muted-foreground active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="size-3.5" />
-          </button>
-        </ToolbarTooltip>
+        {enableColumnReorder ? (
+          <ToolbarTooltip content={t('grid.tooltip.drag_column')}>
+            <button
+              type="button"
+              className="shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="size-3.5" />
+            </button>
+          </ToolbarTooltip>
+        ) : null}
         {column.sortable ? (
           <ToolbarTooltip content={getSortTooltip(isActive, sortDir, t)}>
             <button
               type="button"
-              className="flex items-center gap-1 text-left text-xs font-medium hover:text-foreground"
+              className="flex min-w-0 items-center gap-1 text-left text-xs font-medium hover:text-foreground"
               onClick={() => onSort?.(sortKey)}
             >
               {resolveGridColumnLabel(column.id, column.label)}
-              <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
+              <SortIcon className={cn('size-3.5 shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground')} />
             </button>
           </ToolbarTooltip>
         ) : (
@@ -193,7 +200,11 @@ function PinnedHeaderCell<T>({
     : ArrowUpDown;
 
   return (
-    <TableHead className={cn('whitespace-nowrap', getGridColumnCellClassName(column.id, column.className))}>
+    <TableHead className={cn(
+      'overflow-visible whitespace-nowrap',
+      getGridColumnCellClassName(column.id, toGridColumnMinWidthClassName(column.className)),
+      column.sortable && 'min-w-[4.5rem]',
+    )}>
       {column.sortable ? (
         <ToolbarTooltip content={getSortTooltip(isActive, sortDir, t)}>
           <button
@@ -221,6 +232,143 @@ function PinnedHeaderCell<T>({
   );
 }
 
+export interface GridTableHeaderProps<T> {
+  columns: GridColumnDef<T>[];
+  sort?: string | null;
+  sortDir?: SortDirection;
+  onSort?: (sortKey: string) => void;
+  enableColumnReorder?: boolean;
+  columnFilters?: Record<string, string>;
+  onColumnFilterChange?: (filterKey: string, value: string) => void;
+  onDateRangeFilterChange?: (filterKey: string, from: string, to: string) => void;
+  onColumnFilterClear?: (filter: GridColumnFilterDef) => void;
+  className?: string;
+}
+
+export function GridTableHeader<T>({
+  columns,
+  sort,
+  sortDir,
+  onSort,
+  enableColumnReorder = true,
+  columnFilters = {},
+  onColumnFilterChange,
+  onDateRangeFilterChange,
+  onColumnFilterClear,
+  className,
+}: GridTableHeaderProps<T>) {
+  const isMobile = useIsMobile();
+  const draggableColumns = columns.filter((column) => !column.pinned);
+  const draggableIds = draggableColumns.map((column) => column.id);
+  const hasFilterRow = columns.some((column) => column.filter);
+  const showColumnReorder = enableColumnReorder && !isMobile;
+
+  return (
+    <TableHeader
+      className={cn(
+        'sticky top-0 z-10 bg-card',
+        hasFilterRow
+          ? '[&_tr]:border-0 [&_tr:last-child]:border-b'
+          : 'shadow-[inset_0_-1px_0_0_var(--border)]',
+        className,
+      )}
+    >
+      <TableRow className="border-0 bg-card hover:bg-card [&_th]:bg-card">
+        <SortableContext items={draggableIds} strategy={horizontalListSortingStrategy}>
+          {columns.map((column) =>
+            column.pinned ? (
+              <PinnedHeaderCell
+                key={column.id}
+                column={column}
+                sort={sort}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+            ) : (
+              <SortableHeaderCell
+                key={column.id}
+                column={column}
+                sort={sort}
+                sortDir={sortDir}
+                onSort={onSort}
+                enableColumnReorder={showColumnReorder}
+              />
+            ),
+          )}
+        </SortableContext>
+      </TableRow>
+      {hasFilterRow && !isMobile && (
+        <TableRow className="bg-muted hover:bg-muted [&_th]:bg-muted [&_th]:align-middle">
+          {columns.map((column) => (
+            <TableHead
+              key={`filter-${column.id}`}
+              className={cn(
+                'overflow-visible bg-muted px-2 py-1.5',
+                getGridColumnCellClassName(column.id, toGridColumnMinWidthClassName(column.className)),
+              )}
+            >
+              {column.filter && (onColumnFilterChange || onDateRangeFilterChange) ? (
+                <GridColumnFilter
+                  filter={column.filter}
+                  value={columnFilters[column.filter.filterKey] ?? ''}
+                  onChange={(value) => onColumnFilterChange?.(column.filter!.filterKey, value)}
+                  dateRangeFrom={columnFilters[dateRangeFilterFromKey(column.filter.filterKey)] ?? ''}
+                  dateRangeTo={columnFilters[dateRangeFilterToKey(column.filter.filterKey)] ?? ''}
+                  onDateRangeChange={(from, to) =>
+                    onDateRangeFilterChange?.(column.filter!.filterKey, from, to)
+                  }
+                  onClear={() => onColumnFilterClear?.(column.filter!)}
+                />
+              ) : null}
+            </TableHead>
+          ))}
+        </TableRow>
+      )}
+    </TableHeader>
+  );
+}
+
+export function GridTableColumnDndContext<T>({
+  columns,
+  onColumnOrderChange,
+  children,
+}: {
+  columns: GridColumnDef<T>[];
+  onColumnOrderChange?: (order: string[]) => void;
+  children: ReactNode;
+}) {
+  const draggableColumns = columns.filter((column) => !column.pinned);
+  const draggableIds = draggableColumns.map((column) => column.id);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onColumnOrderChange) return;
+
+    const oldIndex = draggableIds.indexOf(String(active.id));
+    const newIndex = draggableIds.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(draggableIds, oldIndex, newIndex);
+    const pinned = columns.filter((column) => column.pinned).map((column) => column.id);
+    onColumnOrderChange([...pinned, ...reordered]);
+  }
+
+  if (!onColumnOrderChange) {
+    return children;
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      {children}
+    </DndContext>
+  );
+}
+
 export function GridTable<T>({
   columns,
   data,
@@ -241,7 +389,6 @@ export function GridTable<T>({
   onRowClick,
   onRowDoubleClick,
   maxBodyHeight,
-  minBodyHeight,
 }: GridTableProps<T>) {
   const isRowInteractive = Boolean(onRowClick || onRowDoubleClick);
   const lastClickRef = useRef<{ rowKey: string | number; time: number } | null>(null);
@@ -271,28 +418,6 @@ export function GridTable<T>({
     },
     [getRowKey, onRowClick, onRowDoubleClick],
   );
-
-  const draggableColumns = columns.filter((column) => !column.pinned);
-  const draggableIds = draggableColumns.map((column) => column.id);
-  const hasFilterRow = columns.some((column) => column.filter);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !onColumnOrderChange) return;
-
-    const oldIndex = draggableIds.indexOf(String(active.id));
-    const newIndex = draggableIds.indexOf(String(over.id));
-    if (oldIndex < 0 || newIndex < 0) return;
-
-    const reordered = arrayMove(draggableIds, oldIndex, newIndex);
-    const pinned = columns.filter((column) => column.pinned).map((column) => column.id);
-    onColumnOrderChange([...pinned, ...reordered]);
-  }
 
   let body: ReactNode;
 
@@ -347,70 +472,23 @@ export function GridTable<T>({
   }
 
   return (
-    <GridTableScroll maxHeight={maxBodyHeight} minHeight={minBodyHeight}>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <table className="min-w-full w-max caption-bottom text-sm text-foreground">
-          <colgroup>
-            {columns.map((column) => (
-              <col key={column.id} className={column.className} />
-            ))}
-          </colgroup>
-          <TableHeader
-            className={cn(
-              'sticky top-0 z-10',
-              hasFilterRow
-                ? '[&_tr]:border-0 [&_tr:last-child]:border-b'
-                : 'shadow-[inset_0_-1px_0_0_hsl(var(--border))]',
-            )}
-          >
-            <TableRow className="border-0 bg-card hover:bg-card [&_th]:bg-card">
-              <SortableContext items={draggableIds} strategy={horizontalListSortingStrategy}>
-                {columns.map((column) =>
-                  column.pinned ? (
-                    <PinnedHeaderCell
-                      key={column.id}
-                      column={column}
-                      sort={sort}
-                      sortDir={sortDir}
-                      onSort={onSort}
-                    />
-                  ) : (
-                    <SortableHeaderCell
-                      key={column.id}
-                      column={column}
-                      sort={sort}
-                      sortDir={sortDir}
-                      onSort={onSort}
-                    />
-                  ),
-                )}
-              </SortableContext>
-            </TableRow>
-            {hasFilterRow && (
-              <TableRow className="bg-muted hover:bg-muted [&_th]:bg-muted [&_th]:align-middle">
-                {columns.map((column) => (
-                  <TableHead key={`filter-${column.id}`} className="bg-muted px-2 py-1.5">
-                    {column.filter && (onColumnFilterChange || onDateRangeFilterChange) ? (
-                      <GridColumnFilter
-                        filter={column.filter}
-                        value={columnFilters[column.filter.filterKey] ?? ''}
-                        onChange={(value) => onColumnFilterChange?.(column.filter!.filterKey, value)}
-                        dateRangeFrom={columnFilters[dateRangeFilterFromKey(column.filter.filterKey)] ?? ''}
-                        dateRangeTo={columnFilters[dateRangeFilterToKey(column.filter.filterKey)] ?? ''}
-                        onDateRangeChange={(from, to) =>
-                          onDateRangeFilterChange?.(column.filter!.filterKey, from, to)
-                        }
-                        onClear={() => onColumnFilterClear?.(column.filter!)}
-                      />
-                    ) : null}
-                  </TableHead>
-                ))}
-              </TableRow>
-            )}
-          </TableHeader>
+    <GridTableScroll maxHeight={maxBodyHeight}>
+      <GridTableColumnDndContext columns={columns} onColumnOrderChange={onColumnOrderChange}>
+        <table className="w-max min-w-full table-auto caption-bottom text-sm text-foreground">
+          <GridTableHeader
+            columns={columns}
+            sort={sort}
+            sortDir={sortDir}
+            onSort={onSort}
+            enableColumnReorder={Boolean(onColumnOrderChange)}
+            columnFilters={columnFilters}
+            onColumnFilterChange={onColumnFilterChange}
+            onDateRangeFilterChange={onDateRangeFilterChange}
+            onColumnFilterClear={onColumnFilterClear}
+          />
           <TableBody>{body}</TableBody>
         </table>
-      </DndContext>
+      </GridTableColumnDndContext>
     </GridTableScroll>
   );
 }

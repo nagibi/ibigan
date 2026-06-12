@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { resolveGridPerPage, resolveGridPerPageForSlice } from '@/lib/grid-pagination-config';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -139,6 +140,16 @@ export function useGrid({
     setPage(1);
   }, []);
 
+  const resolvePerPage = useCallback(
+    (total = 0) => resolveGridPerPage(perPage, total),
+    [perPage],
+  );
+
+  const slicePerPage = useCallback(
+    (itemCount: number) => resolveGridPerPageForSlice(perPage, itemCount),
+    [perPage],
+  );
+
   const toggleSort = useCallback((column: string) => {
     setPage(1);
 
@@ -173,6 +184,8 @@ export function useGrid({
     setPage,
     perPage,
     setPerPage,
+    resolvePerPage,
+    slicePerPage,
     search,
     setSearch: handleSearch,
     clearSearch,

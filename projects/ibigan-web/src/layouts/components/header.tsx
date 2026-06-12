@@ -78,12 +78,12 @@ export function Header() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent
-                  className="p-0 gap-0 w-[275px]"
+                  className="mobile-sidebar-sheet p-0 gap-0"
                   side="left"
                   close={false}
                 >
                   <SheetHeader className="p-0 space-y-0" />
-                  <SheetBody className="p-0 overflow-y-auto">
+                  <SheetBody className="p-0">
                     <SidebarMenu />
                   </SheetBody>
                 </SheetContent>
@@ -100,12 +100,12 @@ export function Header() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent
-                  className="p-0 gap-0 w-[275px]"
+                  className="mobile-sidebar-sheet p-0 gap-0"
                   side="left"
                   close={false}
                 >
                   <SheetHeader className="p-0 space-y-0" />
-                  <SheetBody className="p-0 overflow-y-auto">
+                  <SheetBody className="p-0">
                     <MegaMenuMobile />
                   </SheetBody>
                 </SheetContent>

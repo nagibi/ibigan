@@ -28,14 +28,23 @@ import { isUserActive, usersService, type User } from '@/services/users.service'
 import { useAuthStore } from '@/stores/auth.store';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridTable } from '@/components/grid/grid-table';
-import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { GridRowActions, type GridRowAction } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
+import { DataView } from '@/components/grid/data-view';
+import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
+import { UserCard } from '@/components/cards/user-card';
+import { useViewMode } from '@/hooks/use-view-mode';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { getInitials } from '@/lib/helpers';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -101,6 +110,7 @@ export function UsersPage() {
   const { hasPermission } = useAuthStore();
   const canViewRoles = hasPermission('permissao-visualizar');
   const { showToggleActive, showError, showSuccess } = useApiToolbarAlert();
+  const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.users);
 
   const grid = useGrid({
     defaultPage: initialUrlState.page,
@@ -154,19 +164,38 @@ export function UsersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activityLogUser, setActivityLogUser] = useState<User | null>(null);
   const [rowStatusId, setRowStatusId] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+  const infiniteScrollEnabled = shouldUseGridInfiniteScroll(isMobile, viewMode);
+  const infiniteScroll = useGridInfiniteScroll<User>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await usersService.list(
         grid.page,
-        grid.perPage,
+        grid.resolvePerPage(meta.total),
         grid.debouncedSearch,
         grid.sort,
         grid.sortDir,
         columnFilters.activeFilterParams,
       );
-      setUsers(res.data.result.data);
+      const pageUsers = res.data.result.data;
+      setUsers(pageUsers);
+      infiniteScroll.receivePage(pageUsers, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError(t('users.error.load'), error);
@@ -180,9 +209,12 @@ export function UsersPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
     t,
   ]);
+
+  const displayUsers = infiniteScrollEnabled ? infiniteScroll.items : users;
 
   loadRef.current = load;
 
@@ -255,6 +287,28 @@ export function UsersPage() {
   const handleViewUserRoles = useCallback(
     (user: User) => navigate(buildRolesUrlWithUserFilter(user)),
     [navigate],
+  );
+
+  const getUserRowActions = useCallback(
+    (user: User): GridRowAction[] => [
+      {
+        label: cols.edit,
+        icon: Pencil,
+        onClick: () => navigate(`/users/${user.id}`),
+      },
+      {
+        label: t('users.column.roles'),
+        icon: ShieldCheck,
+        hidden: !canViewRoles,
+        onClick: () => handleViewUserRoles(user),
+      },
+      {
+        label: t('form.activity_log'),
+        icon: Activity,
+        onClick: () => setActivityLogUser(user),
+      },
+    ],
+    [canViewRoles, cols.edit, handleViewUserRoles, navigate, t],
   );
 
   function handleExport() {
@@ -333,26 +387,7 @@ export function UsersPage() {
         hideable: false,
         className: 'w-[72px]',
         render: (user) => (
-          <GridRowActions
-            actions={[
-              {
-                label: cols.edit,
-                icon: Pencil,
-                onClick: () => navigate(`/users/${user.id}`),
-              },
-              {
-                label: t('users.column.roles'),
-                icon: ShieldCheck,
-                hidden: !canViewRoles,
-                onClick: () => handleViewUserRoles(user),
-              },
-              {
-                label: t('form.activity_log'),
-                icon: Activity,
-                onClick: () => setActivityLogUser(user),
-              },
-            ]}
-          />
+          <GridRowActions actions={getUserRowActions(user)} />
         ),
       },
       {
@@ -518,13 +553,11 @@ export function UsersPage() {
       },
     ],
     [
-      canViewRoles,
       cols,
       genderFilterOptions,
+      getUserRowActions,
       grid.selected,
       grid.toggleSelect,
-      handleViewUserRoles,
-      navigate,
       rowStatusId,
       statusFilterOptions,
       t,
@@ -622,6 +655,7 @@ export function UsersPage() {
   const pagination = (
     <GridPagination
       meta={meta}
+      perPage={grid.perPage}
       onPageChange={grid.setPage}
       onPerPageChange={grid.setPerPage}
     />
@@ -641,12 +675,17 @@ export function UsersPage() {
             onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
-            filtersControl={
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            }
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -669,32 +708,85 @@ export function UsersPage() {
                 onReset={handleResetGrid}
               />
             }
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayUsers.length, infiniteScrollEnabled)}
           />
         }
-        footer={pagination}
+        footer={!infiniteScrollEnabled ? pagination : undefined}
       >
-        <GridTable
-          columns={gridColumns.visibleColumns}
-          data={users}
-          getRowKey={(user) => user.id}
+        <DataView
+          viewMode={viewMode}
           loading={loading}
+          isEmpty={!loading && displayUsers.length === 0}
           emptyMessage={t('users.empty')}
-          sort={grid.sort}
-          sortDir={grid.sortDir}
-          onSort={grid.toggleSort}
-          onColumnOrderChange={gridColumns.reorderDraggableColumns}
-          columnFilters={columnFilters.filters}
-          onColumnFilterChange={columnFilters.setFilter}
-          onDateRangeFilterChange={columnFilters.setDateRangeFilter}
-          onColumnFilterClear={columnFilters.clearColumnFilter}
-          isRowSelected={(user) => grid.selected.includes(user.id)}
-          onRowClick={(user, event) =>
-            grid.selectRow(user.id, {
-              shift: event.shiftKey,
-              rangeOrder: users.map((item) => item.id),
-            })
-          }
-          onRowDoubleClick={(user) => handleEditUser(user.id)}
+          infiniteScroll={infiniteScrollEnabled ? {
+            enabled: true,
+            hasMore: infiniteScroll.hasMore,
+            loading,
+            loadingMore: infiniteScroll.loadingMore,
+            onLoadMore: infiniteScroll.loadMore,
+            loadedCount: infiniteScroll.loadedCount,
+            total: infiniteScroll.total,
+          } : undefined}
+          tableView={(
+            <GridTable
+              columns={gridColumns.visibleColumns}
+              data={users}
+              getRowKey={(user) => user.id}
+              loading={loading}
+              emptyMessage={t('users.empty')}
+              sort={grid.sort}
+              sortDir={grid.sortDir}
+              onSort={grid.toggleSort}
+              onColumnOrderChange={gridColumns.reorderDraggableColumns}
+              columnFilters={columnFilters.filters}
+              onColumnFilterChange={columnFilters.setFilter}
+              onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+              onColumnFilterClear={columnFilters.clearColumnFilter}
+              isRowSelected={(user) => grid.selected.includes(user.id)}
+              onRowClick={(user, event) =>
+                grid.selectRow(user.id, {
+                  shift: event.shiftKey,
+                  rangeOrder: users.map((item) => item.id),
+                })
+              }
+              onRowDoubleClick={(user) => handleEditUser(user.id)}
+            />
+          )}
+          listView={(
+            <GridListView
+              data={displayUsers}
+              getRowKey={(user) => String(user.id)}
+              isRowSelected={(user) => grid.selected.includes(user.id)}
+              onRowClick={(user) =>
+                grid.selectRow(user.id, { rangeOrder: displayUsers.map((item) => item.id) })
+              }
+              renderItem={(user) => (
+                <UserCard
+                  user={user}
+                  actions={getUserRowActions(user)}
+                />
+              )}
+            />
+          )}
+          cardView={(
+            <GridCardsView
+              data={displayUsers}
+              getRowKey={(user) => String(user.id)}
+              isRowSelected={(user) => grid.selected.includes(user.id)}
+              onRowClick={(user) =>
+                grid.selectRow(user.id, { rangeOrder: displayUsers.map((item) => item.id) })
+              }
+              renderCard={(user) => (
+                <UserCard
+                  user={user}
+                  actions={getUserRowActions(user)}
+                />
+              )}
+            />
+          )}
         />
       </GridPanel>
 

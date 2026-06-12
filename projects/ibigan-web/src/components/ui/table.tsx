@@ -29,18 +29,21 @@ function TableFooter({ className, ...props }: React.HTMLAttributes<HTMLTableSect
   );
 }
 
-function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
-  return (
-    <tr
-      data-slot="table-row"
-      className={cn(
-        'border-b transition-colors [&:has(td):hover]:bg-muted/50 data-[state=selected]:bg-muted',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+const TableRow = React.forwardRef<
+  HTMLTableRowElement,
+  React.HTMLAttributes<HTMLTableRowElement>
+>(({ className, ...props }, ref) => (
+  <tr
+    ref={ref}
+    data-slot="table-row"
+    className={cn(
+      'border-b transition-colors [&:has(td):hover]:bg-muted/50 data-[state=selected]:bg-muted',
+      className,
+    )}
+    {...props}
+  />
+));
+TableRow.displayName = 'TableRow';
 
 function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (

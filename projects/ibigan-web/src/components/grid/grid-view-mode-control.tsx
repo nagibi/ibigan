@@ -1,0 +1,71 @@
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LayoutGrid, LayoutList, Table2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import type { ViewMode } from '@/types/view-mode';
+import { GridToolbarGroup } from './grid-toolbar';
+import { ToolbarTooltip } from './toolbar-tooltip';
+import { Button } from '@/components/ui/button';
+
+const VIEW_OPTIONS: Array<{
+  mode: ViewMode;
+  icon: typeof Table2;
+  labelKey: string;
+  tooltipKey: string;
+  hideOnMobile?: boolean;
+}> = [
+  {
+    mode: 'list',
+    icon: LayoutList,
+    labelKey: 'grid.view.list',
+    tooltipKey: 'grid.view.list_tooltip',
+  },
+  {
+    mode: 'cards',
+    icon: LayoutGrid,
+    labelKey: 'grid.view.cards',
+    tooltipKey: 'grid.view.cards_tooltip',
+  },
+  {
+    mode: 'table',
+    icon: Table2,
+    labelKey: 'grid.view.table',
+    tooltipKey: 'grid.view.table_tooltip',
+    hideOnMobile: true,
+  },
+];
+
+export function GridViewModeControl({
+  viewMode,
+  onViewModeChange,
+}: {
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+}) {
+  const { t } = useTranslation();
+  const isMobile = useIsMobile();
+
+  const options = VIEW_OPTIONS.filter((option) => !(isMobile && option.hideOnMobile));
+
+  return (
+    <GridToolbarGroup>
+      {options.map(({ mode, icon: Icon, labelKey, tooltipKey }) => (
+        <ToolbarTooltip key={mode} content={t(tooltipKey)}>
+          <Button
+            type="button"
+            variant={viewMode === mode ? 'secondary' : 'ghost'}
+            size="sm"
+            mode="icon"
+            aria-label={t(labelKey)}
+            aria-pressed={viewMode === mode}
+            onClick={() => onViewModeChange(mode)}
+            className={cn('size-8', viewMode === mode && 'bg-muted')}
+          >
+            <Icon className="size-4" />
+          </Button>
+        </ToolbarTooltip>
+      ))}
+    </GridToolbarGroup>
+  );
+}

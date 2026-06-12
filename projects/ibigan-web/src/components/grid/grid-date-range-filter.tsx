@@ -27,6 +27,7 @@ interface GridDateRangeFilterProps {
   to: string;
   onChange: (from: string, to: string) => void;
   placeholder?: string;
+  fullWidth?: boolean;
 }
 
 const gridDatePickerActiveClassName = GRID_DATE_PICKER_ACTIVE_CLASS;
@@ -49,6 +50,7 @@ export function GridDateRangeFilter({
   to,
   onChange,
   placeholder,
+  fullWidth = false,
 }: GridDateRangeFilterProps) {
   const { t } = useTranslation();
   const { dateFormatMask } = useGridAntdConfig();
@@ -99,7 +101,7 @@ export function GridDateRangeFilter({
     <GridAntdConfigProvider>
       <div
         className={cn(
-          'w-fit max-w-full',
+          fullWidth ? 'w-full min-w-0' : 'w-fit max-w-full',
           isActive && 'grid-antd-picker-wrap-active',
         )}
       >
@@ -113,6 +115,7 @@ export function GridDateRangeFilter({
           placeholder={[resolvedPlaceholder, resolvedPlaceholder]}
           className={cn(
             'grid-antd-picker grid-antd-picker-range',
+            fullWidth && 'grid-antd-picker-range-full',
             isActive && gridDatePickerActiveClassName,
           )}
           style={getGridDatePickerActiveStyle(isActive)}

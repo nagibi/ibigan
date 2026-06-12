@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\Tenant\ReportController;
 use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
 use App\Http\Controllers\Api\V1\Tenant\UserApprovalController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
+use App\Http\Controllers\Api\V1\Tenant\UserPreferenceController;
 use App\Http\Controllers\Api\V1\Tenant\TranslationController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
@@ -142,6 +143,7 @@ Route::prefix('v1')
         Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);
 
         Route::patch('menus/reorder', [MenuController::class, 'reorder']);
+        Route::patch('menus/{menu}/toggle-active', [MenuController::class, 'toggleActive']);
         Route::apiResource('menus', MenuController::class);
 
         Route::get('translations/manage', [TranslationController::class, 'manage']);
@@ -179,6 +181,9 @@ Route::prefix('v1')
 
         Route::get('notification-preferences', [NotificationPreferenceController::class, 'index']);
         Route::patch('notification-preferences', [NotificationPreferenceController::class, 'update']);
+
+        Route::get('user-preferences', [UserPreferenceController::class, 'index']);
+        Route::patch('user-preferences', [UserPreferenceController::class, 'update']);
 
         Route::get('webhooks/{webhook}/deliveries', [WebhookController::class, 'deliveries']);
         Route::patch('webhooks/{webhook}/toggle-active', [WebhookController::class, 'toggleActive']);

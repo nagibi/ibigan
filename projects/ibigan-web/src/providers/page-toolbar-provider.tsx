@@ -20,6 +20,22 @@ export type PageToolbarConfig = {
 
 type Listener = () => void;
 
+function isSameToolbarConfig(
+  current: PageToolbarConfig | null,
+  next: PageToolbarConfig | null,
+): boolean {
+  if (current === next) return true;
+  if (!current || !next) return false;
+
+  return (
+    current.title === next.title
+    && current.description === next.description
+    && current.actions === next.actions
+    && current.alert === next.alert
+    && current.breadcrumbs === next.breadcrumbs
+  );
+}
+
 class PageToolbarStore {
   private config: PageToolbarConfig | null = null;
   private listeners = new Set<Listener>();
@@ -32,6 +48,7 @@ class PageToolbarStore {
   getSnapshot = () => this.config;
 
   setConfig = (next: PageToolbarConfig | null) => {
+    if (isSameToolbarConfig(this.config, next)) return;
     this.config = next;
     this.listeners.forEach((listener) => listener());
   };

@@ -14,3 +14,9 @@ export function isGridCenteredColumn(columnId: string): boolean {
 export function getGridColumnCellClassName(columnId: string, className?: string): string {
   return [className, isGridCenteredColumn(columnId) ? 'text-center' : ''].filter(Boolean).join(' ');
 }
+
+/** Use min-width on headers so sort/drag controls are not clipped when the table stretches to 100%. */
+export function toGridColumnMinWidthClassName(className?: string): string | undefined {
+  if (!className) return undefined;
+  return className.replace(/\bw-\[/g, 'min-w-[');
+}

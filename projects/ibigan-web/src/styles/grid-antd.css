@@ -103,6 +103,21 @@
   margin-inline-start: 0.125rem;
 }
 
+.grid-antd-picker-range-full.ant-picker {
+  width: 100%;
+  max-width: 100%;
+}
+
+.grid-antd-picker-range-full .ant-picker-input {
+  flex: 1 1 0;
+  max-width: none;
+}
+
+.grid-antd-picker-range-full .ant-picker-input > input {
+  text-align: start;
+  padding-inline: 0.25rem;
+}
+
 .grid-antd-picker .ant-picker-active-bar {
   display: none;
 }

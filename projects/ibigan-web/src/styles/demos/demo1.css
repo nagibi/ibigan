@@ -1,7 +1,8 @@
 @layer components {
   /* Variables */
   body.demo1 {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .demo1 {
@@ -13,41 +14,102 @@
     --header-height: 70px;
     --toolbar-height: 48px;
     --impersonation-banner-height: 0px;
+    --grid-sticky-top: calc(var(--header-height) + var(--impersonation-banner-height, 0px));
+    --grid-panel-chrome-height: 0px;
+    --page-content-header-height: 0px;
+    --grid-footer-height: 3.25rem;
     --grid-layout-offset: calc(
-      var(--header-height) + var(--toolbar-height) + var(--impersonation-banner-height, 0px) + 6.5rem
+      var(--header-height) + var(--toolbar-height) + var(--impersonation-banner-height, 0px)
+        + var(--grid-footer-height) + 6.5rem
     );
     --grid-body-max-height: max(6rem, calc(100dvh - var(--grid-layout-offset)));
-    --grid-body-min-height: clamp(
-      8rem,
-      calc(100dvh - var(--grid-layout-offset) - 2rem),
-      var(--grid-body-max-height)
-    );
   }
 
-  @media (max-width: 64rem) {
+  @media (max-width: theme(--breakpoint-xl)) {
+    body.demo1 {
+      overflow: hidden;
+    }
+
     .demo1 .wrapper {
-      height: auto;
-      min-height: 100dvh;
-      overflow-y: auto !important;
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden !important;
+      display: flex;
+      flex-direction: column;
     }
 
-    .demo1 main,
+    .demo1 main {
+      overflow: hidden !important;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
     .demo1 .page-content-scroll {
-      overflow: visible !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      flex: 1 1 auto;
+      min-height: 0;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: max(5rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+      scroll-padding-bottom: max(5rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+    }
+
+    .demo1 .page-content-scroll > .container-fluid:first-child {
+      flex: 0 0 auto;
+    }
+
+    .demo1 .page-content-scroll > .container-fluid:last-child {
       flex: 1 0 auto;
       min-height: auto;
     }
 
-    .demo1 .page-content-scroll .container-fluid {
-      flex: 1 0 auto;
-      min-height: auto;
+    .demo1 .footer {
+      display: none;
     }
   }
 
-  @media (max-width: 64rem) {
+  @media (max-width: theme(--breakpoint-xl)) {
     .demo1 .grid-table-scroll-mobile .grid-table-scroll {
       contain: none;
       overflow-y: visible;
+    }
+
+    .demo1 .page-content-header {
+      position: sticky;
+      top: 0;
+      z-index: 25;
+      width: 100%;
+      background-color: var(--background);
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .demo1 .grid-panel-chrome {
+      position: sticky;
+      top: var(--page-content-header-height, 0px);
+      z-index: 20;
+      background-color: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+    }
+
+    .demo1 .grid-panel,
+    .demo1 .grid-panel-body,
+    .demo1 .page-content-scroll .container-fluid {
+      overflow: visible !important;
+    }
+
+    .demo1 .grid-panel-footer {
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -1px 2px rgb(0 0 0 / 0.04);
+    }
+
+    .demo1 .grid-panel-body table thead {
+      position: sticky;
+      top: calc(var(--page-content-header-height, 0px) + var(--grid-panel-chrome-height, 0px));
+      z-index: 10;
     }
   }
 
@@ -55,13 +117,20 @@
     --impersonation-banner-height: 2.5rem;
   }
 
+  .demo1.toolbar-visible {
+    --grid-sticky-top: calc(
+      var(--header-height) + var(--impersonation-banner-height, 0px) + var(--toolbar-height)
+    );
+  }
+
   .demo1 .wrapper {
     width: 100%;
     max-width: 100%;
-    overflow-x: auto;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
-  @media (max-width: theme(--breakpoint-lg)) {
+  @media (max-width: theme(--breakpoint-xl)) {
     .demo1 {
       --sidebar-width: 280px;
       --header-height: 60px;
@@ -82,7 +151,9 @@
   }
 
   .demo1.toolbar-visible.header-fixed .wrapper {
-    padding-top: calc(var(--header-height) + var(--toolbar-height));
+    padding-top: calc(
+      var(--header-height) + var(--page-toolbar-measured-height, var(--toolbar-height))
+    );
   }
 
   .demo1 .page-toolbar {
@@ -90,8 +161,81 @@
     overflow: visible;
   }
 
-  /* Desktop mode */
-  @media (min-width: theme(--breakpoint-lg)) {
+  /* Desktop grid layout (table fill viewport) */
+  @media (min-width: theme(--breakpoint-xl)) {
+    .demo1 .page-content-scroll {
+      overflow-x: hidden;
+      overflow-y: hidden;
+      min-height: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .demo1 .page-content-scroll > .container-fluid {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+    }
+
+    .demo1 .page-content-scroll > .container-fluid:first-child {
+      flex: 0 0 auto;
+    }
+
+    .demo1 .page-content-scroll > .container-fluid:last-child {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .demo1 .grid-panel {
+      min-height: 0;
+      flex: 1 1 0%;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .demo1 .grid-panel-body {
+      min-height: 0;
+      flex: 1 1 0%;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .demo1 .grid-panel-body .grid-table-scroll-host {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+
+    .demo1 .grid-panel-body .grid-table-scroll-y {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .demo1 .grid-table-scroll-y table thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: var(--card);
+    }
+
+    .demo1 .grid-table-scroll-y table thead th {
+      background-color: var(--card);
+    }
+
+    .demo1 .grid-table-scroll-y table thead tr:last-child th {
+      background-color: var(--muted);
+    }
+
     .demo1 .sidebar {
       width: var(--sidebar-width);
       transition: width var(--sidebar-transition-duration)
@@ -131,7 +275,9 @@
     }
 
     .demo1.sidebar-fixed.toolbar-visible.header-fixed .wrapper {
-      padding-top: calc(var(--header-height) + var(--toolbar-height));
+      padding-top: calc(
+        var(--header-height) + var(--page-toolbar-measured-height, var(--toolbar-height))
+      );
     }
 
     .demo1.sidebar-collapse {

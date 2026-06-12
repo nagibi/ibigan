@@ -15,6 +15,7 @@ export interface ActivityLog {
 
 export const activityLogsService = {
   list: (page = 1, filters?: {
+    per_page?: number;
     log_name?: string;
     subject_type?: string;
     causer_id?: number;

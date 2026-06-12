@@ -1,5 +1,11 @@
 import type { SortDirection } from '@/hooks/use-grid';
 import type { RolesUserFilter } from '@/lib/roles-user-filter';
+import {
+  GRID_PER_PAGE_ALL,
+  isGridPerPageAll,
+  resolveGridPerPage,
+  resolveGridPerPageForSlice,
+} from '@/lib/grid-pagination-config';
 
 export const GRID_URL_DEFAULT_PAGE = 1;
 export const GRID_URL_DEFAULT_PER_PAGE = 15;
@@ -30,9 +36,19 @@ export interface GridUrlState {
 
 export function parseGridUrlState(searchParams: URLSearchParams): GridUrlState {
   const page = Number(searchParams.get(GRID_URL_KEYS.page));
-  const perPage = Number(searchParams.get(GRID_URL_KEYS.perPage));
+  const perPageRaw = searchParams.get(GRID_URL_KEYS.perPage);
   const sort = searchParams.get(GRID_URL_KEYS.sort);
   const sortDir = searchParams.get(GRID_URL_KEYS.sortDir);
+
+  let perPage = GRID_URL_DEFAULT_PER_PAGE;
+  if (perPageRaw === 'all') {
+    perPage = GRID_PER_PAGE_ALL;
+  } else {
+    const parsedPerPage = Number(perPageRaw);
+    if (Number.isFinite(parsedPerPage) && parsedPerPage > 0) {
+      perPage = parsedPerPage;
+    }
+  }
 
   const filters: Record<string, string> = {};
   searchParams.forEach((value, key) => {
@@ -42,7 +58,7 @@ export function parseGridUrlState(searchParams: URLSearchParams): GridUrlState {
 
   return {
     page: Number.isFinite(page) && page > 0 ? page : GRID_URL_DEFAULT_PAGE,
-    perPage: Number.isFinite(perPage) && perPage > 0 ? perPage : GRID_URL_DEFAULT_PER_PAGE,
+    perPage,
     search: searchParams.get(GRID_URL_KEYS.search) ?? '',
     sort: sort?.trim() ? sort : null,
     sortDir: sortDir === 'desc' ? 'desc' : 'asc',
@@ -66,7 +82,10 @@ export function buildGridUrlSearchParams(state: {
   }
 
   if (state.perPage && state.perPage !== GRID_URL_DEFAULT_PER_PAGE) {
-    params.set(GRID_URL_KEYS.perPage, String(state.perPage));
+    params.set(
+      GRID_URL_KEYS.perPage,
+      isGridPerPageAll(state.perPage) ? 'all' : String(state.perPage),
+    );
   }
 
   if (state.search?.trim()) {

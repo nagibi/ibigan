@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Tenant;
 
 use App\Data\MenuData;
+use App\Http\Controllers\Concerns\TogglesModelActive;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Menu\StoreMenuRequest;
 use App\Http\Requests\Menu\UpdateMenuRequest;
+use App\Http\Requests\ToggleActiveRequest;
 use App\Models\Menu;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,6 +19,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class MenuController extends Controller
 {
+    use TogglesModelActive;
+
     /**
      * Listar menus em árvore hierárquica.
      */
@@ -97,6 +102,27 @@ final class MenuController extends Controller
             'message' => 'MSG000426',
             'result' => null,
         ]);
+    }
+
+    /**
+     * Ativar ou inativar item de menu.
+     *
+     * Requer permissão `menu-gerenciar`.
+     */
+    public function toggleActive(ToggleActiveRequest $request, Menu $menu): JsonResponse
+    {
+        return $this->performToggleActive($request, $menu);
+    }
+
+    protected function toggleActivePermission(): string
+    {
+        return 'menu-gerenciar';
+    }
+
+    protected function formatToggleActiveResult(Model $model): MenuData
+    {
+        /** @var Menu $model */
+        return MenuData::fromModel($model);
     }
 
     /**

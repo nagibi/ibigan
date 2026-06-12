@@ -23,12 +23,21 @@ import { rolesService, type Role } from '@/services/roles.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { PageBody } from '@/components/common/page-body';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridPanel } from '@/components/grid/grid-panel';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
-import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { GridRowActions, type GridRowAction } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
+import { DataView } from '@/components/grid/data-view';
+import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
+import { RoleCard } from '@/components/cards/role-card';
+import { useViewMode } from '@/hooks/use-view-mode';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -65,6 +74,7 @@ export function RolesPage() {
   const canManage = hasPermission('permissao-gerenciar');
   const initialUrlState = useRef(parseGridUrlState(searchParams)).current;
   const grid = useGrid({ defaultSearch: initialUrlState.search });
+  const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.roles);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -109,6 +119,18 @@ export function RolesPage() {
       || formatRoleName(role.name).toLowerCase().includes(q),
     );
   }, [grid.debouncedSearch, roles, userFilter]);
+
+  const isMobile = useIsMobile();
+  const infiniteScrollEnabled = shouldUseGridInfiniteScroll(isMobile, viewMode);
+  const clientInfinite = useClientGridInfiniteScroll({
+    items: filteredRoles,
+    page: grid.page,
+    perPage: grid.perPage,
+    setPage: grid.setPage,
+    enabled: infiniteScrollEnabled,
+    resetDeps: [grid.debouncedSearch, userFilter, filteredRoles.length],
+  });
+  const cardListRoles = infiniteScrollEnabled ? clientInfinite.displayItems : filteredRoles;
 
   const deletableSelectedIds = useMemo(
     () => grid.selected.filter((id) => {
@@ -177,6 +199,25 @@ export function RolesPage() {
     [navigate],
   );
 
+  const getRoleRowActions = useCallback(
+    (role: Role): GridRowAction[] => [
+      {
+        label: cols.edit,
+        icon: Pencil,
+        onClick: () => handleEditRole(role.id),
+      },
+      ...(canManage && isRoleDeletable(role)
+        ? [{
+            label: cols.remove,
+            icon: Trash2,
+            tone: 'destructive' as const,
+            onClick: () => grid.requestDelete([role.id]),
+          }]
+        : []),
+    ],
+    [canManage, cols.edit, cols.remove, grid.requestDelete, handleEditRole],
+  );
+
   const columnDefinitions = useMemo<GridColumnDef<Role>[]>(
     () => [
       ...(canManage
@@ -207,23 +248,7 @@ export function RolesPage() {
         hideable: false,
         className: 'w-[72px]',
         render: (role) => (
-          <GridRowActions
-            actions={[
-              {
-                label: cols.edit,
-                icon: Pencil,
-                onClick: () => handleEditRole(role.id),
-              },
-              ...(canManage && isRoleDeletable(role)
-                ? [{
-                    label: cols.remove,
-                    icon: Trash2,
-                    tone: 'destructive' as const,
-                    onClick: () => grid.requestDelete([role.id]),
-                  }]
-                : []),
-            ]}
-          />
+          <GridRowActions actions={getRoleRowActions(role)} />
         ),
       },
       {
@@ -266,7 +291,7 @@ export function RolesPage() {
         render: (role) => formatDateTime(role.created_at),
       },
     ],
-    [canManage, cols, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditRole, t],
+    [canManage, cols, getRoleRowActions, grid.selected, grid.toggleSelect, handleEditRole, t],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
@@ -364,12 +389,10 @@ export function RolesPage() {
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder={t('roles.search_placeholder')}
-            filtersControl={(
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            )}
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -395,28 +418,87 @@ export function RolesPage() {
                 onReset={handleResetGrid}
               />
             )}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(filteredRoles.length, cardListRoles.length, infiniteScrollEnabled)}
           />
         )}
       >
-        <GridTable
-          columns={gridColumns.visibleColumns}
-          data={filteredRoles}
-          getRowKey={(role) => String(role.id)}
+        <DataView
+          viewMode={viewMode}
           loading={isLoading}
+          isEmpty={!isLoading && filteredRoles.length === 0}
           emptyMessage={emptyMessage}
-          onColumnOrderChange={gridColumns.reorderDraggableColumns}
-          isRowSelected={(role) => grid.selected.includes(role.id)}
-          onRowClick={(role, event) => {
-            if (!canManage) {
-              handleEditRole(role.id);
-              return;
-            }
-            grid.selectRow(role.id, {
-              shift: event.shiftKey,
-              rangeOrder: filteredRoles.map((item) => item.id),
-            });
-          }}
-          onRowDoubleClick={(role) => handleEditRole(role.id)}
+          infiniteScroll={infiniteScrollEnabled ? {
+            enabled: true,
+            hasMore: clientInfinite.hasMore,
+            onLoadMore: clientInfinite.loadMore,
+            loadedCount: clientInfinite.loadedCount,
+            total: clientInfinite.total,
+          } : undefined}
+          tableView={(
+            <GridTable
+              columns={gridColumns.visibleColumns}
+              data={filteredRoles}
+              getRowKey={(role) => String(role.id)}
+              loading={isLoading}
+              emptyMessage={emptyMessage}
+              onColumnOrderChange={gridColumns.reorderDraggableColumns}
+              isRowSelected={(role) => grid.selected.includes(role.id)}
+              onRowClick={(role, event) => {
+                if (!canManage) {
+                  handleEditRole(role.id);
+                  return;
+                }
+                grid.selectRow(role.id, {
+                  shift: event.shiftKey,
+                  rangeOrder: filteredRoles.map((item) => item.id),
+                });
+              }}
+              onRowDoubleClick={(role) => handleEditRole(role.id)}
+            />
+          )}
+          listView={(
+            <GridListView
+              data={cardListRoles}
+              getRowKey={(role) => String(role.id)}
+              isRowSelected={(role) => grid.selected.includes(role.id)}
+              onRowClick={(role) => {
+                if (!canManage) {
+                  handleEditRole(role.id);
+                  return;
+                }
+                grid.selectRow(role.id, { rangeOrder: filteredRoles.map((item) => item.id) });
+              }}
+              renderItem={(role) => (
+                <RoleCard
+                  role={role}
+                  actions={getRoleRowActions(role)}
+                />
+              )}
+            />
+          )}
+          cardView={(
+            <GridCardsView
+              data={cardListRoles}
+              getRowKey={(role) => String(role.id)}
+              isRowSelected={(role) => grid.selected.includes(role.id)}
+              onRowClick={(role) => {
+                if (!canManage) {
+                  handleEditRole(role.id);
+                  return;
+                }
+                grid.selectRow(role.id, { rangeOrder: filteredRoles.map((item) => item.id) });
+              }}
+              renderCard={(role) => (
+                <RoleCard
+                  role={role}
+                  actions={getRoleRowActions(role)}
+                />
+              )}
+            />
+          )}
         />
       </GridPanel>
 

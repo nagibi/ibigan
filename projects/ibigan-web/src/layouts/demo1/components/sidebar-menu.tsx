@@ -246,7 +246,7 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
   };
 
   return (
-    <div className="sidebar-menu-scroll kt-scrollable-y-hover flex w-full grow shrink-0 py-5 px-5 lg:max-h-[calc(100vh-5.5rem)]">
+    <div className="sidebar-menu-scroll kt-scrollable-y-hover flex w-full min-w-0 max-w-full shrink-0 grow overflow-x-hidden py-5 px-5 lg:max-h-[calc(100vh-5.5rem)]">
       <AccordionMenu
         selectedValue={selectedValue}
         matchPath={matchPath}

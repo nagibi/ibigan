@@ -18,7 +18,7 @@ const { BASE_URL } = import.meta.env;
 export function App() {
   return (
     <Sentry.ErrorBoundary fallback={<AppErrorFallback />}>
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden">
     <QueryProvider>
       <SettingsProvider>
         <ThemeProvider>

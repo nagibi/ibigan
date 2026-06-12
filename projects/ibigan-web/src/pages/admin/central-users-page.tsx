@@ -127,7 +127,7 @@ export function CentralUsersPage() {
         header: 'Ativo',
         accessorKey: 'is_active',
         cell: ({ row }) => (
-          <GridBadge variant={row.original.is_active ? 'success' : 'secondary'}>
+          <GridBadge variant={row.original.is_active ? 'success' : 'destructive'}>
             {row.original.is_active ? 'Ativo' : 'Inativo'}
           </GridBadge>
         ),

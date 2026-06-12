@@ -14,7 +14,6 @@ import {
   type UserApproval,
 } from '@/services/user-approvals.service';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
@@ -92,7 +91,7 @@ export function UserApprovalsPage() {
       setLoading(true);
       const res = await userApprovalsService.list(
         grid.page,
-        grid.perPage,
+        grid.resolvePerPage(meta.total),
         columnFilters.activeFilterParams,
       );
       setApprovals(res.data.result.data);
@@ -300,6 +299,7 @@ export function UserApprovalsPage() {
   const pagination = (
     <GridPagination
       meta={meta}
+      perPage={grid.perPage}
       onPageChange={grid.setPage}
       onPerPageChange={grid.setPerPage}
     />
@@ -312,12 +312,17 @@ export function UserApprovalsPage() {
           <GridPanelToolbar
             onRefresh={load}
             isRefreshing={loading}
-            filtersControl={
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={columnFilters.hasFilters ? handleClearFilters : undefined}
-              />
-            }
+            filters={{
+              active: activeFilters,
+              onClearAll: columnFilters.hasFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -340,6 +345,7 @@ export function UserApprovalsPage() {
                 onReset={handleResetGrid}
               />
             }
+            recordCount={{ total: meta.total }}
           />
         }
         footer={pagination}

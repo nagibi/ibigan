@@ -23,7 +23,6 @@ import {
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import {
   downloadReportResultCsv,
@@ -110,9 +109,12 @@ export function MyExecutionsPage() {
   const columnFilters = useGridFilters(() => grid.setPage(1));
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
+  const [knownTotal, setKnownTotal] = useState(0);
+  const requestPerPage = grid.resolvePerPage(knownTotal);
+
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['my-executions', grid.page, grid.perPage],
-    queryFn: () => reportsService.myExecutions(grid.page, grid.perPage),
+    queryKey: ['my-executions', grid.page, grid.perPage, requestPerPage],
+    queryFn: () => reportsService.myExecutions(grid.page, requestPerPage),
     refetchInterval: (query) => {
       const items = query.state.data?.data.result.data ?? [];
       return items.some((item) => ['queued', 'running'].includes(item.status)) ? 3000 : false;
@@ -128,7 +130,13 @@ export function MyExecutionsPage() {
   };
 
   useEffect(() => {
-    const prev = queryClient.getQueryData<typeof data>(['my-executions', grid.page, grid.perPage]);
+    if (meta.total > 0) {
+      setKnownTotal(meta.total);
+    }
+  }, [meta.total]);
+
+  useEffect(() => {
+    const prev = queryClient.getQueryData<typeof data>(['my-executions', grid.page, grid.perPage, requestPerPage]);
     if (!prev || !data) return;
 
     const prevItems = prev.data.result.data ?? [];
@@ -141,7 +149,7 @@ export function MyExecutionsPage() {
     if (justCompleted) {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-  }, [data, grid.page, grid.perPage, queryClient]);
+  }, [data, grid.page, grid.perPage, queryClient, requestPerPage]);
 
   const handleDownload = useCallback(async (execution: MyReportExecution) => {
     try {
@@ -364,12 +372,17 @@ export function MyExecutionsPage() {
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder="Buscar por relatório ou status..."
-            filtersControl={(
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            )}
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -395,11 +408,13 @@ export function MyExecutionsPage() {
                 onReset={handleResetGrid}
               />
             )}
+            recordCount={{ total: meta.total }}
           />
         )}
         footer={(
           <GridPagination
             meta={meta}
+            perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />

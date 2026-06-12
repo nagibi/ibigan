@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart2, Check, CheckCheck, Download, ExternalLink, Eye, MailOpen, Settings, Trash2 } from 'lucide-react';
@@ -39,7 +39,6 @@ import { NotificationDetailSheet } from '@/components/notifications/notification
 import { PageBody } from '@/components/common/page-body';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination } from '@/components/grid/grid-pagination';
@@ -91,10 +90,12 @@ export function NotificationsPage() {
   const selectedRef = useRef<string[]>([]);
   selectedRef.current = selected;
 
+  const [knownTotal, setKnownTotal] = useState(0);
+
   const listParams = useMemo(
     () => ({
       page: grid.page,
-      perPage: grid.perPage,
+      perPage: grid.resolvePerPage(knownTotal),
       search: grid.debouncedSearch,
       quickFilter: activeFilter,
       columnFilters: columnFilters.activeFilterParams,
@@ -105,6 +106,8 @@ export function NotificationsPage() {
       grid.debouncedSearch,
       grid.page,
       grid.perPage,
+      grid.resolvePerPage,
+      knownTotal,
     ],
   );
 
@@ -122,6 +125,12 @@ export function NotificationsPage() {
     total: 0,
     unread: 0,
   };
+
+  useEffect(() => {
+    if (meta.total > 0) {
+      setKnownTotal(meta.total);
+    }
+  }, [meta.total]);
 
   const reportCount = useMemo(
     () => notifications.filter(isReportNotification).length,
@@ -576,12 +585,17 @@ export function NotificationsPage() {
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder="Buscar notificações..."
-            filtersControl={(
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={activeFilters.length > 0 ? handleClearFilters : undefined}
-              />
-            )}
+            filters={{
+              active: activeFilters,
+              onClearAll: activeFilters.length > 0 ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -617,11 +631,13 @@ export function NotificationsPage() {
                 ]}
               />
             )}
+            recordCount={{ total: knownTotal || meta.total }}
           />
         )}
         footer={(
           <GridPagination
             meta={meta}
+            perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />

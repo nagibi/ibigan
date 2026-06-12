@@ -139,15 +139,15 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
           )}
         </div>
       </SheetTrigger>
-      <SheetContent className="inset-5 start-auto h-auto w-full gap-0 rounded-lg p-0 sm:max-w-none sm:w-[500px] [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
+      <SheetContent className="mobile-side-panel-sheet gap-0 rounded-lg p-0 sm:inset-5 sm:start-auto sm:h-auto sm:max-h-[calc(100vh-2.5rem)] sm:w-[500px] sm:max-w-none [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
         <SheetHeader className="mb-0 border-b px-5 py-4">
           <SheetTitle className="p-0">Notificações</SheetTitle>
         </SheetHeader>
 
-        <SheetBody className="grow p-0">
-          <ScrollArea className="h-[calc(100vh-10.5rem)]">
-            <Tabs defaultValue="all" className="relative w-full">
-              <TabsList variant="line" className="mb-5 w-full px-5">
+        <SheetBody className="min-h-0 grow p-0">
+          <ScrollArea className="h-[calc(100dvh-11rem)] max-xl:h-[calc(100dvh-12rem)] sm:h-[calc(100vh-10.5rem)]">
+            <Tabs defaultValue="all" className="relative w-full min-w-0 max-w-full overflow-hidden">
+              <TabsList variant="line" className="mb-5 w-full min-w-0 max-w-full overflow-x-auto px-5">
                 <TabsTrigger value="all">Todas</TabsTrigger>
                 <TabsTrigger value="unread" className="relative">
                   Não lidas

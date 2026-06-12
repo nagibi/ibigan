@@ -62,7 +62,7 @@ export function Header() {
     >
       <Container className="flex h-full w-full items-center gap-x-2 lg:gap-x-4">
         <div className="flex min-w-0 flex-1 items-stretch gap-2 overflow-hidden sm:gap-5">
-          <div className="flex items-center gap-1.5 sm:gap-2.5 lg:hidden">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 xl:hidden">
             <Link to="/" className="shrink-0">
               <img
                 src={toAbsoluteUrl('/media/app/mini-logo.svg')}
@@ -82,12 +82,12 @@ export function Header() {
                     </Button>
                   </SheetTrigger>
                   <SheetContent
-                    className="p-0 gap-0 w-[275px]"
+                    className="mobile-sidebar-sheet p-0 gap-0"
                     side="left"
                     close={false}
                   >
                     <SheetHeader className="p-0 space-y-0" />
-                    <SheetBody className="p-0 overflow-y-auto">
+                    <SheetBody className="p-0">
                       <SidebarMenu />
                     </SheetBody>
                   </SheetContent>
@@ -104,12 +104,12 @@ export function Header() {
                     </Button>
                   </SheetTrigger>
                   <SheetContent
-                    className="p-0 gap-0 w-[275px]"
+                    className="mobile-sidebar-sheet p-0 gap-0"
                     side="left"
                     close={false}
                   >
                     <SheetHeader className="p-0 space-y-0" />
-                    <SheetBody className="p-0 overflow-y-auto">
+                    <SheetBody className="p-0">
                       <MegaMenuMobile />
                     </SheetBody>
                   </SheetContent>
@@ -119,7 +119,7 @@ export function Header() {
           </div>
 
           {isHorizontalMenu && !mobileMode && (
-            <Link to="/" className="hidden shrink-0 items-center lg:flex">
+            <Link to="/" className="hidden shrink-0 items-center xl:flex">
               <img
                 src={toAbsoluteUrl('/media/app/mini-logo.svg')}
                 className="h-[22px] max-w-none"

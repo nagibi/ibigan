@@ -19,12 +19,21 @@ import { permissionsService, type Permission } from '@/services/permissions.serv
 import { useAuthStore } from '@/stores/auth.store';
 import { PageBody } from '@/components/common/page-body';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridPanel } from '@/components/grid/grid-panel';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
-import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { GridRowActions, type GridRowAction } from '@/components/grid/grid-row-actions';
 import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
+import { DataView } from '@/components/grid/data-view';
+import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
+import { PermissionCard } from '@/components/cards/permission-card';
+import { useViewMode } from '@/hooks/use-view-mode';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -50,6 +59,7 @@ export function PermissionsPage() {
   const { hasPermission } = useAuthStore();
   const canManage = hasPermission('permissao-gerenciar');
   const grid = useGrid();
+  const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.permissions);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -69,6 +79,18 @@ export function PermissionsPage() {
       || permission.resource.toLowerCase().includes(q),
     );
   }, [grid.debouncedSearch, permissions]);
+
+  const isMobile = useIsMobile();
+  const infiniteScrollEnabled = shouldUseGridInfiniteScroll(isMobile, viewMode);
+  const clientInfinite = useClientGridInfiniteScroll({
+    items: filteredPermissions,
+    page: grid.page,
+    perPage: grid.perPage,
+    setPage: grid.setPage,
+    enabled: infiniteScrollEnabled,
+    resetDeps: [grid.debouncedSearch, filteredPermissions.length],
+  });
+  const cardListPermissions = infiniteScrollEnabled ? clientInfinite.displayItems : filteredPermissions;
 
   const permissionIds = useMemo(
     () => filteredPermissions.map((permission) => permission.id),
@@ -129,6 +151,25 @@ export function PermissionsPage() {
     [navigate],
   );
 
+  const getPermissionRowActions = useCallback(
+    (permission: Permission): GridRowAction[] => [
+      {
+        label: cols.edit,
+        icon: Pencil,
+        onClick: () => handleEditPermission(permission.id),
+      },
+      ...(canManage
+        ? [{
+            label: cols.remove,
+            icon: Trash2,
+            tone: 'destructive' as const,
+            onClick: () => grid.requestDelete([permission.id]),
+          }]
+        : []),
+    ],
+    [canManage, cols.edit, cols.remove, grid.requestDelete, handleEditPermission],
+  );
+
   const columnDefinitions = useMemo<GridColumnDef<Permission>[]>(
     () => [
       ...(canManage
@@ -159,23 +200,7 @@ export function PermissionsPage() {
         hideable: false,
         className: 'w-[72px]',
         render: (permission) => (
-          <GridRowActions
-            actions={[
-              {
-                label: cols.edit,
-                icon: Pencil,
-                onClick: () => handleEditPermission(permission.id),
-              },
-              ...(canManage
-                ? [{
-                    label: cols.remove,
-                    icon: Trash2,
-                    tone: 'destructive' as const,
-                    onClick: () => grid.requestDelete([permission.id]),
-                  }]
-                : []),
-            ]}
-          />
+          <GridRowActions actions={getPermissionRowActions(permission)} />
         ),
       },
       {
@@ -206,7 +231,7 @@ export function PermissionsPage() {
         ),
       },
     ],
-    [canManage, cols, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditPermission, t],
+    [canManage, cols, getPermissionRowActions, grid.selected, grid.toggleSelect, handleEditPermission, t],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
@@ -283,12 +308,10 @@ export function PermissionsPage() {
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder={t('permissions.search_placeholder')}
-            filtersControl={(
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            )}
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -314,28 +337,87 @@ export function PermissionsPage() {
                 onReset={handleResetGrid}
               />
             )}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(filteredPermissions.length, cardListPermissions.length, infiniteScrollEnabled)}
           />
         )}
       >
-        <GridTable
-          columns={gridColumns.visibleColumns}
-          data={filteredPermissions}
-          getRowKey={(permission) => String(permission.id)}
+        <DataView
+          viewMode={viewMode}
           loading={isLoading}
+          isEmpty={!isLoading && filteredPermissions.length === 0}
           emptyMessage={t('permissions.empty')}
-          onColumnOrderChange={gridColumns.reorderDraggableColumns}
-          isRowSelected={(permission) => grid.selected.includes(permission.id)}
-          onRowClick={(permission, event) => {
-            if (!canManage) {
-              handleEditPermission(permission.id);
-              return;
-            }
-            grid.selectRow(permission.id, {
-              shift: event.shiftKey,
-              rangeOrder: permissionIds,
-            });
-          }}
-          onRowDoubleClick={(permission) => handleEditPermission(permission.id)}
+          infiniteScroll={infiniteScrollEnabled ? {
+            enabled: true,
+            hasMore: clientInfinite.hasMore,
+            onLoadMore: clientInfinite.loadMore,
+            loadedCount: clientInfinite.loadedCount,
+            total: clientInfinite.total,
+          } : undefined}
+          tableView={(
+            <GridTable
+              columns={gridColumns.visibleColumns}
+              data={filteredPermissions}
+              getRowKey={(permission) => String(permission.id)}
+              loading={isLoading}
+              emptyMessage={t('permissions.empty')}
+              onColumnOrderChange={gridColumns.reorderDraggableColumns}
+              isRowSelected={(permission) => grid.selected.includes(permission.id)}
+              onRowClick={(permission, event) => {
+                if (!canManage) {
+                  handleEditPermission(permission.id);
+                  return;
+                }
+                grid.selectRow(permission.id, {
+                  shift: event.shiftKey,
+                  rangeOrder: permissionIds,
+                });
+              }}
+              onRowDoubleClick={(permission) => handleEditPermission(permission.id)}
+            />
+          )}
+          listView={(
+            <GridListView
+              data={cardListPermissions}
+              getRowKey={(permission) => String(permission.id)}
+              isRowSelected={(permission) => grid.selected.includes(permission.id)}
+              onRowClick={(permission) => {
+                if (!canManage) {
+                  handleEditPermission(permission.id);
+                  return;
+                }
+                grid.selectRow(permission.id, { rangeOrder: permissionIds });
+              }}
+              renderItem={(permission) => (
+                <PermissionCard
+                  permission={permission}
+                  actions={getPermissionRowActions(permission)}
+                />
+              )}
+            />
+          )}
+          cardView={(
+            <GridCardsView
+              data={cardListPermissions}
+              getRowKey={(permission) => String(permission.id)}
+              isRowSelected={(permission) => grid.selected.includes(permission.id)}
+              onRowClick={(permission) => {
+                if (!canManage) {
+                  handleEditPermission(permission.id);
+                  return;
+                }
+                grid.selectRow(permission.id, { rangeOrder: permissionIds });
+              }}
+              renderCard={(permission) => (
+                <PermissionCard
+                  permission={permission}
+                  actions={getPermissionRowActions(permission)}
+                />
+              )}
+            />
+          )}
         />
       </GridPanel>
 

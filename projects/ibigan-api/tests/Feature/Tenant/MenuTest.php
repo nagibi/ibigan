@@ -353,3 +353,38 @@ it('admin comum não vê menu de empresas restrito a super-admin', function (): 
 
     expect(collect($response->json('result'))->pluck('title'))->not->toContain('Empresas');
 });
+
+it('ativa menu', function (): void {
+    $menu = $this->tenant->run(fn () => Menu::factory()->create(['is_active' => false]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/menus/{$menu->id}/toggle-active", [
+        'is_active' => true,
+    ], menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', true);
+});
+
+it('inativa menu', function (): void {
+    $menu = $this->tenant->run(fn () => Menu::factory()->create(['is_active' => true]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/menus/{$menu->id}/toggle-active", [
+        'is_active' => false,
+    ], menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false);
+});
+
+it('nega toggle de menu para viewer', function (): void {
+    $menu = $this->tenant->run(fn () => Menu::factory()->create());
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/menus/{$menu->id}/toggle-active", [
+        'is_active' => false,
+    ], menuHeaders($this->tenant->id))
+        ->assertForbidden();
+});

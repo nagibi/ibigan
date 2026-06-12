@@ -25,6 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import { cn } from '@/lib/utils';
 import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
@@ -161,6 +162,7 @@ export function GridColumnsControl<T>({
   onResetDefault,
 }: GridColumnsControlProps<T>) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const pinnedColumns = useMemo(
     () => columns.filter((column) => column.pinned === 'start'),
     [columns],
@@ -216,6 +218,10 @@ export function GridColumnsControl<T>({
     return column?.hideable === false || Boolean(column?.pinned);
   }
 
+  if (isMobile) {
+    return null;
+  }
+
   return (
     <Popover>
       <ToolbarTooltip content={t('grid.tooltip.columns')}>
@@ -224,13 +230,16 @@ export function GridColumnsControl<T>({
             type="button"
             variant="ghost"
             size="sm"
+            mode={isMobile ? 'icon' : 'default'}
+            aria-label={t('grid.columns')}
             className={cn(
-              'relative h-8 gap-1.5 px-2 text-xs font-medium',
+              'relative shrink-0',
+              isMobile ? 'size-8' : 'h-8 gap-1.5 px-2 text-xs font-medium',
               isCustomized && 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
             )}
           >
             <Columns3 className="size-3.5 shrink-0" />
-            {t('grid.columns')}
+            {!isMobile && t('grid.columns')}
             {isCustomized && (
               <span className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />
             )}

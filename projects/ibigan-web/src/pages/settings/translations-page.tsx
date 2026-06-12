@@ -20,7 +20,8 @@ import { translationsService } from '@/services/translations.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { PageBody } from '@/components/common/page-body';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl, type GridActiveFilter } from '@/components/grid/grid-filters-control';
+import { type GridActiveFilter } from '@/components/grid/grid-filters-control';
+import { isGridPerPageAll } from '@/lib/grid-pagination-config';
 import { GridPagination } from '@/components/grid/grid-pagination';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridQuickFilters } from '@/components/grid/grid-quick-filters';
@@ -97,17 +98,21 @@ export function TranslationsPage() {
     });
   }, [filteredCatalog, grid.sort, grid.sortDir]);
 
-  const meta = useMemo(() => ({
-    current_page: grid.page,
-    last_page: Math.max(1, Math.ceil(sortedCatalog.length / grid.perPage)),
-    per_page: grid.perPage,
-    total: sortedCatalog.length,
-  }), [grid.page, grid.perPage, sortedCatalog.length]);
+  const meta = useMemo(() => {
+    const pageSize = grid.slicePerPage(sortedCatalog.length);
+    return {
+      current_page: grid.page,
+      last_page: Math.max(1, Math.ceil(sortedCatalog.length / pageSize)),
+      per_page: isGridPerPageAll(grid.perPage) ? sortedCatalog.length : grid.perPage,
+      total: sortedCatalog.length,
+    };
+  }, [grid.page, grid.perPage, grid.slicePerPage, sortedCatalog.length]);
 
   const paginatedCatalog = useMemo(() => {
-    const start = (grid.page - 1) * grid.perPage;
-    return sortedCatalog.slice(start, start + grid.perPage);
-  }, [grid.page, grid.perPage, sortedCatalog]);
+    const pageSize = grid.slicePerPage(sortedCatalog.length);
+    const start = (grid.page - 1) * pageSize;
+    return sortedCatalog.slice(start, start + pageSize);
+  }, [grid.page, grid.slicePerPage, sortedCatalog]);
 
   const rowIds = useMemo(
     () => paginatedCatalog.map((row) => getTranslationRowId(row)),
@@ -351,9 +356,9 @@ export function TranslationsPage() {
   const pagination = (
     <GridPagination
       meta={meta}
+      perPage={grid.perPage}
       onPageChange={grid.setPage}
       onPerPageChange={grid.setPerPage}
-      perPageOptions={[15, 25, 50, 100]}
     />
   );
 
@@ -371,12 +376,17 @@ export function TranslationsPage() {
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder={t('settings.translations.search_placeholder')}
-            filtersControl={(
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            )}
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -426,6 +436,7 @@ export function TranslationsPage() {
                 ]}
               />
             )}
+            recordCount={{ total: meta.total }}
           />
         )}
         footer={pagination}

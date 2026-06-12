@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { MENU_SIDEBAR } from '@/config/menu.config';
@@ -39,7 +39,7 @@ function PageBreadcrumbs({ menu }: { menu: MenuConfig }) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="mb-1 flex items-center gap-1 text-[0.6875rem] font-normal lg:text-xs"
+      className="mb-1 flex items-center gap-1 text-[0.6875rem] font-normal max-lg:hidden lg:text-xs"
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
@@ -89,26 +89,53 @@ export function PageContentHeader({
 
   const title = config?.title ?? menuItem?.title;
   const description = config?.description;
+  const headerRef = useRef<HTMLDivElement>(null);
 
-  if (!title && !description) {
-    return (
-      <Container className="pb-4 pt-3">
-        <PageBreadcrumbs menu={menu} />
-      </Container>
-    );
-  }
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return undefined;
 
-  return (
-    <Container className="pb-4 pt-3">
+    const scrollRoot = header.closest<HTMLElement>('.page-content-scroll');
+    if (!scrollRoot) return undefined;
+
+    const syncHeight = () => {
+      scrollRoot.style.setProperty('--page-content-header-height', `${header.offsetHeight}px`);
+    };
+
+    syncHeight();
+
+    const resizeObserver = new ResizeObserver(syncHeight);
+    resizeObserver.observe(header);
+
+    return () => {
+      resizeObserver.disconnect();
+      scrollRoot.style.removeProperty('--page-content-header-height');
+    };
+  }, [description, title]);
+
+  const containerClassName = 'max-xl:shrink-0 max-xl:flex-none max-xl:pb-1 max-xl:pt-1 xl:pb-4 xl:pt-3';
+
+  const content = !title && !description ? (
+    <PageBreadcrumbs menu={menu} />
+  ) : (
+    <>
       <PageBreadcrumbs menu={menu} />
       {title ? (
-        <h1 className="font-medium text-lg text-mono">
+        <h1 className="font-medium text-base text-mono lg:text-lg">
           {title}
         </h1>
       ) : null}
       {description ? (
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        <p className="mt-1 text-xs text-muted-foreground max-lg:hidden">{description}</p>
       ) : null}
-    </Container>
+    </>
+  );
+
+  return (
+    <div ref={headerRef} className="page-content-header shrink-0 max-xl:bg-background">
+      <Container className={containerClassName}>
+        {content}
+      </Container>
+    </div>
   );
 }

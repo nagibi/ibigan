@@ -14,7 +14,6 @@ import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { reportsService, type ReportTemplate } from '@/services/reports.service';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridFiltersControl } from '@/components/grid/grid-filters-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
@@ -93,7 +92,7 @@ export function ReportsPage() {
       setLoading(true);
       const res = await reportsService.list(
         grid.page,
-        grid.perPage,
+        grid.resolvePerPage(meta.total),
         grid.debouncedSearch,
         grid.sort,
         grid.sortDir,
@@ -419,6 +418,7 @@ export function ReportsPage() {
   const pagination = (
     <GridPagination
       meta={meta}
+      perPage={grid.perPage}
       onPageChange={grid.setPage}
       onPerPageChange={grid.setPerPage}
     />
@@ -438,12 +438,17 @@ export function ReportsPage() {
             onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
-            filtersControl={
-              <GridFiltersControl
-                filters={activeFilters}
-                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
-              />
-            }
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -466,6 +471,7 @@ export function ReportsPage() {
                 onReset={handleResetGrid}
               />
             }
+            recordCount={{ total: meta.total }}
           />
         }
         footer={pagination}

@@ -126,36 +126,92 @@
   }
 
   .grid-table-scroll {
-    contain: inline-size;
-    overflow-x: scroll;
+    overflow-x: auto;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--color-input) var(--color-muted);
+  }
+
+  .grid-table-scroll-host {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .grid-table-scroll-y {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overscroll-behavior-x: contain;
+  }
+
+  .grid-table-scroll-y:not(.grid-table-scroll-y-hide-x) {
     scrollbar-gutter: stable;
   }
 
-  .grid-table-scroll-top {
+  /* Hide native horizontal bar; dedicated .grid-table-scroll-x tracks handle horizontal scroll */
+  .grid-table-scroll.grid-table-scroll-y-hide-x {
+    scrollbar-gutter: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-input) var(--color-muted);
+  }
+
+  .grid-table-scroll-x {
+    height: 1rem;
+    min-height: 1rem;
+    flex-shrink: 0;
+    overflow-x: scroll;
     overflow-y: hidden;
-    max-height: 0.625rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-input) var(--color-muted);
   }
 
-  .grid-table-scroll::-webkit-scrollbar {
-    width: 0.625rem;
+  .grid-table-scroll-x::-webkit-scrollbar {
     height: 0.625rem;
+    width: auto;
   }
 
-  .grid-table-scroll::-webkit-scrollbar-track {
+  .grid-table-scroll-x::-webkit-scrollbar-track {
     background-color: var(--color-muted);
     border-radius: 0.375rem;
   }
 
-  .grid-table-scroll::-webkit-scrollbar-thumb {
+  .grid-table-scroll-x::-webkit-scrollbar-thumb {
     background-color: var(--color-input);
     border-radius: 0.375rem;
     border: 2px solid var(--color-muted);
   }
 
-  .grid-table-scroll::-webkit-scrollbar-corner {
+  .grid-table-scroll-y table {
+    width: 100%;
+    min-width: 100%;
+    table-layout: auto;
+  }
+
+  .grid-table-scroll-y table thead th {
+    overflow: visible;
+  }
+
+  .grid-table-scroll:not(.grid-table-scroll-y-hide-x)::-webkit-scrollbar {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+
+  .grid-table-scroll:not(.grid-table-scroll-y-hide-x)::-webkit-scrollbar-track {
+    background-color: var(--color-muted);
+    border-radius: 0.375rem;
+  }
+
+  .grid-table-scroll:not(.grid-table-scroll-y-hide-x)::-webkit-scrollbar-thumb {
+    background-color: var(--color-input);
+    border-radius: 0.375rem;
+    border: 2px solid var(--color-muted);
+  }
+
+  .grid-table-scroll:not(.grid-table-scroll-y-hide-x)::-webkit-scrollbar-corner {
     background-color: var(--color-muted);
   }
 
@@ -174,6 +230,134 @@
     .kt-scrollable-x,
     .kt-scrollable-x-hover {
       overflow-x: auto;
+    }
+  }
+
+  /* Mobile grid filters sheet — fixed viewport height + reliable inner scroll */
+  .grid-filters-sheet {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    height: min(96dvh, 100dvh) !important;
+    max-height: min(96dvh, 100dvh) !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .grid-filters-sheet-scroll-host {
+    position: relative;
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .grid-filters-sheet-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-color, var(--color-input)) transparent;
+  }
+
+  .grid-filters-sheet-scroll::-webkit-scrollbar {
+    width: 0.35rem;
+  }
+
+  .grid-filters-sheet-scroll::-webkit-scrollbar-thumb {
+    border-radius: 1.25rem;
+    background-color: var(--scrollbar-thumb-color, var(--color-input));
+  }
+
+  .grid-filters-sheet-header {
+    flex: 0 0 auto;
+  }
+
+  .grid-filters-sheet-footer {
+    flex: 0 0 auto;
+  }
+
+  /* Right-side panels (notifications, preferences) — fit mobile viewport */
+  @media (max-width: 1279px) {
+    .mobile-side-panel-sheet {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0 !important;
+      inset: 1rem !important;
+      width: auto !important;
+      max-width: calc(100vw - 2rem) !important;
+      height: auto !important;
+      max-height: calc(100dvh - 2rem) !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .mobile-side-panel-sheet [data-slot='sheet-body'] {
+      display: flex;
+      min-height: 0;
+      min-width: 0;
+      flex: 1 1 auto;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .mobile-side-panel-sheet [data-slot='sheet-header'],
+    .mobile-side-panel-sheet [data-slot='sheet-footer'] {
+      flex-shrink: 0;
+      min-width: 0;
+    }
+
+    .mobile-side-panel-sheet [data-slot='tabs-list'] {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* Left navigation drawer — fit mobile viewport */
+  @media (max-width: 1279px) {
+    .mobile-sidebar-sheet {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0 !important;
+      top: 0 !important;
+      right: auto !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: min(275px, 100vw) !important;
+      max-width: 100vw !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .mobile-sidebar-sheet [data-slot='sheet-body'] {
+      min-height: 0;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-sidebar-sheet .sidebar-menu-scroll {
+      box-sizing: border-box;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+    }
+
+    .mobile-sidebar-sheet [data-slot='accordion-menu'],
+    .mobile-sidebar-sheet [data-slot='accordion-menu-item'],
+    .mobile-sidebar-sheet [data-slot='accordion-menu-sub-trigger'] {
+      max-width: 100%;
+      min-width: 0;
     }
   }
 }

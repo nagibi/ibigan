@@ -26,6 +26,7 @@ interface GridColumnFilterProps {
   dateRangeTo?: string;
   onDateRangeChange?: (from: string, to: string) => void;
   onClear?: () => void;
+  layout?: 'inline' | 'stacked';
 }
 
 function isFilterActive(
@@ -53,11 +54,13 @@ export function GridColumnFilter({
   dateRangeTo = '',
   onDateRangeChange,
   onClear,
+  layout = 'inline',
 }: GridColumnFilterProps) {
   const { t } = useTranslation();
   const isActive = isFilterActive(filter, value, dateRangeFrom, dateRangeTo);
   const inputClassName = cn(
-    'h-7 w-full min-w-[72px] text-xs',
+    'h-7 w-full min-w-0 text-xs',
+    layout === 'inline' && 'min-w-[72px]',
     isActive && 'border-primary/60 bg-primary/5',
   );
 
@@ -95,6 +98,7 @@ export function GridColumnFilter({
         to={dateRangeTo}
         onChange={(from, to) => onDateRangeChange?.(from, to)}
         placeholder={filter.placeholder ?? t('grid.date_period')}
+        fullWidth={layout === 'stacked'}
       />
     );
   } else if (filter.type === 'date') {
@@ -128,7 +132,7 @@ export function GridColumnFilter({
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className={cn('flex items-center gap-0.5', layout === 'stacked' && 'w-full')}>
       <div className="min-w-0 flex-1">{control}</div>
       {isActive && onClear && (
         <Button

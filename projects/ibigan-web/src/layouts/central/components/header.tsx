@@ -44,9 +44,9 @@ export function CentralHeader() {
                     <Menu className="text-muted-foreground/70" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[275px] gap-0 p-0" side="left" close={false}>
+                <SheetContent className="mobile-sidebar-sheet gap-0 p-0" side="left" close={false}>
                   <SheetHeader className="space-y-0 p-0" />
-                  <SheetBody className="overflow-y-auto p-0">
+                  <SheetBody className="p-0">
                     <SidebarMenu menuSource="central" />
                   </SheetBody>
                 </SheetContent>

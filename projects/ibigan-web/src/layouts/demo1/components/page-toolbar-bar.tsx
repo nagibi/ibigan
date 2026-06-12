@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   mergeToolbarAlerts,
   ToolbarAlertOverlay,
@@ -13,6 +13,7 @@ import {
 import { Container } from '@/components/common/container';
 
 export function PageToolbarBar() {
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const config = usePageToolbarConfig();
   const globalAlert = useGlobalToolbarAlert();
   const dismissGlobalAlert = useDismissGlobalToolbarAlert();
@@ -42,20 +43,46 @@ export function PageToolbarBar() {
     return () => document.body.classList.remove('toolbar-visible');
   }, [showBar]);
 
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!showBar || !toolbar) {
+      document.documentElement.style.removeProperty('--page-toolbar-measured-height');
+      return undefined;
+    }
+
+    const syncHeight = () => {
+      document.documentElement.style.setProperty(
+        '--page-toolbar-measured-height',
+        `${toolbar.offsetHeight}px`,
+      );
+    };
+
+    syncHeight();
+
+    const resizeObserver = new ResizeObserver(syncHeight);
+    resizeObserver.observe(toolbar);
+
+    return () => {
+      resizeObserver.disconnect();
+      document.documentElement.style.removeProperty('--page-toolbar-measured-height');
+    };
+  }, [showBar]);
+
   if (!showBar) {
     return null;
   }
 
   return (
     <div
-      className={cn(
-        'page-toolbar fixed z-[9] flex shrink-0 overflow-visible border-b border-border bg-background end-0 start-0',
-        'top-[var(--header-height)] min-h-[var(--toolbar-height)]',
+      ref={toolbarRef}
+        className={cn(
+        'page-toolbar fixed z-[9] flex shrink-0 overflow-x-auto overflow-y-visible border-b border-border bg-background end-0 start-0',
+        'top-[var(--header-height)] min-h-[var(--toolbar-height)] max-xl:min-h-0',
       )}
     >
       <Container
         className={cn(
-          'relative flex w-full min-h-[var(--toolbar-height)] items-center py-1.5',
+          'relative flex w-full min-w-0 min-h-[var(--toolbar-height)] flex-wrap items-center gap-x-0.5 gap-y-1 py-1 max-xl:py-0.5',
           alertVisible && 'pointer-events-none invisible',
         )}
       >
