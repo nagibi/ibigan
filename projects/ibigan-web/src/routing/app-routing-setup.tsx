@@ -33,6 +33,7 @@ import { NotificationPreferencesPage } from '@/pages/profile/notification-prefer
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
 import { TranslationsPage } from '@/pages/settings/translations-page';
+import { TranslationFormPage } from '@/pages/settings/translation-form-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
 import { WebhookFormPage } from '@/pages/webhooks/webhook-form-page';
 import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
@@ -174,6 +175,8 @@ export function AppRoutingSetup() {
         <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/settings/translations" element={<TranslationsPage />} />
+        <Route path="/settings/translations/new" element={<TranslationFormPage key="translation-new" />} />
+        <Route path="/settings/translations/:id" element={<TranslationFormPage key="translation-edit" />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/new" element={<ReportFormPage key="report-new" />} />

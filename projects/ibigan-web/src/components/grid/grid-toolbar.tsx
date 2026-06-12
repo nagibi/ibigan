@@ -181,12 +181,12 @@ export function GridToolbarSearch({
 }) {
   return (
     <div className={cn('relative', className)}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-9 w-72 pl-9 text-sm"
+        className="h-7 w-56 pl-7 text-xs"
       />
       {value && (
         <Button
@@ -194,10 +194,10 @@ export function GridToolbarSearch({
           variant="ghost"
           size="sm"
           mode="icon"
-          className="absolute right-1 top-1/2 size-6 -translate-y-1/2"
+          className="absolute right-0 top-1/2 size-5 -translate-y-1/2"
           onClick={() => onChange('')}
         >
-          <X className="size-3" />
+          <X className="size-2.5" />
         </Button>
       )}
     </div>
