@@ -52,6 +52,8 @@ jobs:
             set -e
             cd /opt/ibigan
 
+            chown -R 1000:1000 /opt/ibigan/projects/ibigan-api
+
             DC="docker compose -f docker-compose.prod.yml --env-file /opt/ibigan/.env"
 
             $DC run --rm app composer install --no-dev --optimize-autoloader --no-interaction
