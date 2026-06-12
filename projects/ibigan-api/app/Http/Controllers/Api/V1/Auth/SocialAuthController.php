@@ -9,7 +9,6 @@ use App\Models\Central\CentralUser;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -23,7 +22,7 @@ final class SocialAuthController extends Controller
 
     private const PROVIDERS = ['google', 'apple'];
 
-    public function redirect(Request $request, string $provider): JsonResponse
+    public function redirect(Request $request, string $provider): RedirectResponse
     {
         $this->assertProvider($provider);
 
@@ -37,12 +36,7 @@ final class SocialAuthController extends Controller
             $driver->scopes(['name', 'email']);
         }
 
-        $url = $driver->redirect()->getTargetUrl();
-
-        return response()->json([
-            'status' => 1,
-            'result' => ['url' => $url],
-        ]);
+        return $driver->redirect();
     }
 
     public function callback(Request $request, string $provider): RedirectResponse

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import api from '@/lib/axios';
 import { Icons } from '@/components/layouts/layout-1/shared/common/icons';
 import { Button } from '@/components/ui/button';
 
@@ -18,24 +17,31 @@ const PROVIDERS: Array<{
   id: SocialProvider;
   icon: typeof Icons.googleColorful;
   labelKey: 'auth.login.google' | 'auth.login.apple';
-  failedKey: 'auth.login.google_failed' | 'auth.login.apple_failed';
   startFailedKey: 'auth.login.google_start_failed' | 'auth.login.apple_start_failed';
 }> = [
   {
     id: 'google',
     icon: Icons.googleColorful,
     labelKey: 'auth.login.google',
-    failedKey: 'auth.login.google_failed',
     startFailedKey: 'auth.login.google_start_failed',
   },
   {
     id: 'apple',
     icon: Icons.apple,
     labelKey: 'auth.login.apple',
-    failedKey: 'auth.login.apple_failed',
     startFailedKey: 'auth.login.apple_start_failed',
   },
 ];
+
+function getOAuthStartUrl(scope: 'tenant' | 'central', provider: SocialProvider, tenantId?: string): string {
+  const apiBase = (import.meta.env.VITE_API_URL ?? 'http://localhost/api').replace(/\/$/, '');
+
+  if (scope === 'central') {
+    return `${apiBase}/central/v1/auth/${provider}`;
+  }
+
+  return `${apiBase}/v1/auth/${provider}?tenant_id=${encodeURIComponent(tenantId!.trim())}`;
+}
 
 export function SocialLoginButtons({
   scope,
@@ -46,35 +52,23 @@ export function SocialLoginButtons({
   const { t } = useTranslation();
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null);
 
-  async function handleSocialLogin(provider: SocialProvider) {
+  function handleSocialLogin(provider: SocialProvider) {
     if (scope === 'tenant' && !tenantId?.trim()) {
       onTenantIdRequired?.();
       return;
     }
 
     const config = PROVIDERS.find((item) => item.id === provider)!;
+    const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost/api';
 
-    try {
-      setLoadingProvider(provider);
-      onError(null);
-
-      const endpoint =
-        scope === 'central'
-          ? `/central/v1/auth/${provider}`
-          : `/v1/auth/${provider}?tenant_id=${encodeURIComponent(tenantId!.trim())}`;
-
-      const { data } = await api.get<{ result: { url: string } }>(endpoint);
-      const url = data?.result?.url;
-
-      if (!url) {
-        throw new Error('missing_oauth_url');
-      }
-
-      window.location.href = url;
-    } catch {
+    if (!apiBase.trim()) {
       onError(t(config.startFailedKey));
-      setLoadingProvider(null);
+      return;
     }
+
+    onError(null);
+    setLoadingProvider(provider);
+    window.location.assign(getOAuthStartUrl(scope, provider, tenantId));
   }
 
   return (
