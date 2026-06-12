@@ -53,12 +53,14 @@ jobs:
             cd /opt/ibigan
 
             chown -R 1000:1000 /opt/ibigan/projects/ibigan-api
+            chmod -R 775 /opt/ibigan/projects/ibigan-api/bootstrap/cache
+            chmod -R 775 /opt/ibigan/projects/ibigan-api/storage
 
             DC="docker compose -f docker-compose.prod.yml --env-file /opt/ibigan/.env"
 
             $DC run --rm app composer install --no-dev --optimize-autoloader --no-interaction
 
-            $DC up -d --build
+            $DC up -d --build --force-recreate
 
             sleep 10
 
