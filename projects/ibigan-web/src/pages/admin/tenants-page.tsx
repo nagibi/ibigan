@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, LoaderCircle, LogIn, Pencil, Trash2 } from 'lucide-react';
+import { Activity, LogIn, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -41,7 +41,6 @@ import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { TenantActivityLogsSheet } from '@/components/activity-logs/tenant-activity-logs-sheet';
 import { GridBadge } from '@/components/grid/grid-badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -55,7 +54,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v4';
+const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v5';
 
 const STATUS_FILTER_OPTIONS = [
   { label: 'Ativo', value: 'active' },
@@ -199,6 +198,12 @@ export function AdminTenantsPage() {
   const getTenantRowActions = useCallback(
     (tenant: AdminTenant): GridRowAction[] => [
       {
+        label: 'Entrar na empresa',
+        icon: LogIn,
+        disabled: Boolean(impersonatingId),
+        onClick: () => void handleImpersonate(tenant),
+      },
+      {
         label: 'Editar',
         icon: Pencil,
         onClick: () => handleEditTenant(tenant.id),
@@ -215,7 +220,7 @@ export function AdminTenantsPage() {
         onClick: () => selection.requestDelete([tenant.id]),
       },
     ],
-    [handleEditTenant, selection.requestDelete],
+    [handleEditTenant, handleImpersonate, impersonatingId, selection.requestDelete],
   );
 
   const handleEscape = useCallback(() => {
@@ -340,37 +345,6 @@ export function AdminTenantsPage() {
         ),
       },
       {
-        id: 'enter',
-        label: 'Entrar',
-        hideable: false,
-        className: 'w-[100px]',
-        render: (tenant) => {
-          const isEntering = impersonatingId === tenant.id;
-
-          return (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={Boolean(impersonatingId)}
-              onClick={(event) => {
-                event.stopPropagation();
-                void handleImpersonate(tenant);
-              }}
-            >
-              {isEntering ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="size-4 shrink-0" />
-                  <span>Entrar</span>
-                </>
-              )}
-            </Button>
-          );
-        },
-      },
-      {
         id: 'name',
         label: 'Empresa',
         sortable: true,
@@ -441,8 +415,6 @@ export function AdminTenantsPage() {
     ],
     [
       getTenantRowActions,
-      handleImpersonate,
-      impersonatingId,
       rowStatusId,
       selection.selected,
       selection.toggleSelect,
