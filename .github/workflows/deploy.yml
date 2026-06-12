@@ -51,20 +51,21 @@ jobs:
             set -e
             cd /opt/ibigan
 
-            docker compose -f docker-compose.prod.yml run --rm app \
-              composer install --no-dev --optimize-autoloader --no-interaction
+            DC="docker compose -f docker-compose.prod.yml --env-file /opt/ibigan/.env"
 
-            docker compose -f docker-compose.prod.yml up -d --build
+            $DC run --rm app composer install --no-dev --optimize-autoloader --no-interaction
+
+            $DC up -d --build
 
             sleep 10
 
-            docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-            docker compose -f docker-compose.prod.yml exec -T app php artisan config:cache
-            docker compose -f docker-compose.prod.yml exec -T app php artisan route:cache
-            docker compose -f docker-compose.prod.yml exec -T app php artisan view:cache
-            docker compose -f docker-compose.prod.yml exec -T app php artisan storage:link
+            $DC exec -T app php artisan migrate --force
+            $DC exec -T app php artisan config:cache
+            $DC exec -T app php artisan route:cache
+            $DC exec -T app php artisan view:cache
+            $DC exec -T app php artisan storage:link
 
-            docker compose -f docker-compose.prod.yml restart horizon
+            $DC restart horizon
 
             echo "Deploy concluído com sucesso"
           EOF
