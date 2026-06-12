@@ -62,6 +62,8 @@ jobs:
 
             sleep 10
 
+            $DC restart nginx
+
             $DC exec -T app php artisan migrate --force
             $DC exec -T app php artisan config:cache
             $DC exec -T app php artisan route:cache
