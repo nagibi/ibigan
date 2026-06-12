@@ -40,7 +40,7 @@ import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
 import { UserApprovalsPage } from '@/pages/user-approvals/user-approvals-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useParams } from 'react-router';
 import { CentralLayout } from '@/components/layouts/central-layout';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
 import { RequireSuperAdmin } from '@/routing/require-super-admin';
@@ -81,6 +81,11 @@ function GuestOnly({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+function ReportExecuteRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/reports/${id}/execute`} replace />;
 }
 
 export function AppRoutingSetup() {
@@ -181,7 +186,8 @@ export function AppRoutingSetup() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/new" element={<ReportFormPage key="report-new" />} />
         <Route path="/reports/executions" element={<MyExecutionsPage />} />
-        <Route path="/reports/:id/executar" element={<ReportExecutePage />} />
+        <Route path="/reports/:id/execute" element={<ReportExecutePage />} />
+        <Route path="/reports/:id/executar" element={<ReportExecuteRedirect />} />
         <Route path="/reports/:id" element={<ReportFormPage key="report-edit" />} />
         <Route path="/invites" element={<InvitesPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />

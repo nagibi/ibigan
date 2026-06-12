@@ -213,7 +213,7 @@ export function ReportFormPage() {
     void form.handleSubmit((data) => saveMutation.mutate(data))();
   }, [form, formPage, saveMutation]);
 
-  const handlePrimarySave = isEditing ? handleSaveAndList : handleSaveAndNew;
+  const handlePrimarySave = handleSaveAndList;
 
   useFormKeyboard({
     enabled: !isEditing || !isLoading,

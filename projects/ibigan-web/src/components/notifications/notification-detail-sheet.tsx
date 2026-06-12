@@ -196,7 +196,7 @@ export function NotificationDetailSheet({
           ) : null}
           {reportMeta?.templateId ? (
             <Button type="button" variant="outline" size="sm" asChild>
-              <Link to={`/reports/${reportMeta.templateId}/executar`} onClick={() => onOpenChange(false)}>
+              <Link to={`/reports/${reportMeta.templateId}/execute`} onClick={() => onOpenChange(false)}>
                 <ExternalLink className="mr-1 size-3.5" />
                 Abrir relatório
               </Link>

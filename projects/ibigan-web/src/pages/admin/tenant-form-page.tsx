@@ -189,7 +189,7 @@ export function AdminTenantFormPage() {
     void form.handleSubmit((values) => saveMutation.mutate(values))();
   }, [form, formPage, saveMutation]);
 
-  const handlePrimarySave = isEditing ? handleSaveAndList : handleSaveAndNew;
+  const handlePrimarySave = handleSaveAndList;
 
   useFormKeyboard({
     enabled: !isEditing || !isLoading,

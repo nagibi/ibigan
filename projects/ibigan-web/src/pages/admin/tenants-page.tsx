@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, LogIn, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useImpersonate } from '@/hooks/use-impersonate';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
@@ -69,7 +68,7 @@ function formatCreatedAt(value?: string | null) {
 export function AdminTenantsPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
+  const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
   const { impersonate, impersonatingId } = useImpersonate();
 
   const handleImpersonate = useCallback(
@@ -281,7 +280,7 @@ export function AdminTenantsPage() {
   }
 
   function handleExport() {
-    toast.info('Exportação em breve.');
+    showInfo('Exportação em breve.');
   }
 
   const columnDefinitions = useMemo<GridColumnDef<AdminTenant>[]>(
@@ -482,13 +481,13 @@ export function AdminTenantsPage() {
 
   function handleResetColumns() {
     gridColumns.resetColumns();
-    toast.success('Colunas restauradas ao padrão.');
+    showSuccess('Colunas restauradas ao padrão.');
   }
 
   function handleClearFilters() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
-    toast.success('Filtros removidos.');
+    showSuccess('Filtros removidos.');
   }
 
   function handleResetGrid() {
@@ -496,7 +495,7 @@ export function AdminTenantsPage() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
     grid.resetSettings();
-    toast.success('Grid restaurado ao padrão.');
+    showSuccess('Grid restaurado ao padrão.');
   }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;

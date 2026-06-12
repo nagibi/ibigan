@@ -238,22 +238,27 @@
     display: flex !important;
     flex-direction: column !important;
     gap: 0 !important;
-    height: min(96dvh, 100dvh) !important;
-    max-height: min(96dvh, 100dvh) !important;
+    box-sizing: border-box !important;
+    height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px))) !important;
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px))) !important;
     overflow: hidden !important;
     padding: 0 !important;
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  .grid-filters-sheet-scroll-host {
-    position: relative;
-    flex: 1 1 0%;
+  .grid-filters-sheet-header,
+  .grid-filters-sheet-footer,
+  .grid-filters-sheet [data-slot='sheet-header'],
+  .grid-filters-sheet [data-slot='sheet-footer'] {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .grid-filters-sheet-body,
+  .grid-filters-sheet [data-slot='sheet-body'] {
+    display: block;
+    flex: 1 1 auto;
     min-height: 0;
-  }
-
-  .grid-filters-sheet-scroll {
-    position: absolute;
-    inset: 0;
+    min-width: 0;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -263,21 +268,15 @@
     scrollbar-color: var(--scrollbar-thumb-color, var(--color-input)) transparent;
   }
 
-  .grid-filters-sheet-scroll::-webkit-scrollbar {
+  .grid-filters-sheet-body::-webkit-scrollbar,
+  .grid-filters-sheet [data-slot='sheet-body']::-webkit-scrollbar {
     width: 0.35rem;
   }
 
-  .grid-filters-sheet-scroll::-webkit-scrollbar-thumb {
+  .grid-filters-sheet-body::-webkit-scrollbar-thumb,
+  .grid-filters-sheet [data-slot='sheet-body']::-webkit-scrollbar-thumb {
     border-radius: 1.25rem;
     background-color: var(--scrollbar-thumb-color, var(--color-input));
-  }
-
-  .grid-filters-sheet-header {
-    flex: 0 0 auto;
-  }
-
-  .grid-filters-sheet-footer {
-    flex: 0 0 auto;
   }
 
   /* Right-side panels (notifications, preferences) — fit mobile viewport */

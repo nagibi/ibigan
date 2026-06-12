@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
@@ -274,19 +273,19 @@ export function UserApprovalsPage() {
 
   function handleResetColumns() {
     gridColumns.resetColumns();
-    toast.success('Colunas restauradas ao padrão.');
+    showSuccess('Colunas restauradas ao padrão.');
   }
 
   function handleClearFilters() {
     columnFilters.clearAllFilters();
-    toast.success('Filtros removidos.');
+    showSuccess('Filtros removidos.');
   }
 
   function handleResetGrid() {
     gridColumns.resetColumns();
     columnFilters.clearAllFilters();
     grid.resetSettings();
-    toast.success('Grid restaurado ao padrão.');
+    showSuccess('Grid restaurado ao padrão.');
   }
 
   const isGridCustomized = columnFilters.hasFilters || grid.isCustomized || gridColumns.isCustomized;

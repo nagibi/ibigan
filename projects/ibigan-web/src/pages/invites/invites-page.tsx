@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Copy, LoaderCircle, Mail, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 import { z } from 'zod';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
@@ -102,7 +101,7 @@ function formatAuditDate(value?: string | null) {
 
 export function InvitesPage() {
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showError } = useApiToolbarAlert();
+  const { showSuccess, showError, showInfo } = useApiToolbarAlert();
 
   const grid = useGrid();
   const columnFilters = useGridFilters(() => grid.setPage(1));
@@ -243,7 +242,7 @@ export function InvitesPage() {
   }
 
   function handleExport() {
-    toast.info('Exportação em breve.');
+    showInfo('Exportação em breve.');
   }
 
   const columnDefinitions = useMemo<GridColumnDef<Invite>[]>(
@@ -419,13 +418,13 @@ export function InvitesPage() {
 
   function handleResetColumns() {
     gridColumns.resetColumns();
-    toast.success('Colunas restauradas ao padrão.');
+    showSuccess('Colunas restauradas ao padrão.');
   }
 
   function handleClearFilters() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
-    toast.success('Filtros removidos.');
+    showSuccess('Filtros removidos.');
   }
 
   function handleResetGrid() {
@@ -433,7 +432,7 @@ export function InvitesPage() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
     grid.resetSettings();
-    toast.success('Grid restaurado ao padrão.');
+    showSuccess('Grid restaurado ao padrão.');
   }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;

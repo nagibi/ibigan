@@ -245,7 +245,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
             <div className="mb-px text-sm font-medium">
               {templateId ? (
                 <Link
-                  to={`/reports/${templateId}/executar`}
+                  to={`/reports/${templateId}/execute`}
                   className="font-semibold text-mono hover:text-primary"
                   onClick={() => isUnread && onMarkRead(notification.id)}
                 >
@@ -266,7 +266,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
               fileMeta={fileMeta}
               onDownload={handleDownloadReport}
               downloading={downloading}
-              href={templateId ? `/reports/${templateId}/executar` : undefined}
+              href={templateId ? `/reports/${templateId}/execute` : undefined}
               onNavigate={() => isUnread && onMarkRead(notification.id)}
             />
             <div className="flex flex-wrap gap-2">

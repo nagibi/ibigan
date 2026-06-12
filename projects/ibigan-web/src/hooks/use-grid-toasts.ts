@@ -1,33 +1,38 @@
 import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { toolbarAlertStore } from '@/stores/toolbar-alert-store';
 
 export function useGridToasts() {
   const { t } = useTranslation();
   const alertId = useRef(0);
 
-  const columnsRestored = useCallback(
-    () => toast.success(t('grid.columns_restored_toast')),
-    [t],
-  );
-
-  const filtersCleared = useCallback(() => {
+  const showAlert = useCallback((variant: 'success' | 'info', title: string) => {
     alertId.current += 1;
     toolbarAlertStore.show({
-      variant: 'success',
-      title: t('grid.filters_cleared_toast'),
+      variant,
+      title,
       id: alertId.current,
     });
-  }, [t]);
+  }, []);
+
+  const columnsRestored = useCallback(
+    () => showAlert('success', t('grid.columns_restored_toast')),
+    [showAlert, t],
+  );
+
+  const filtersCleared = useCallback(
+    () => showAlert('success', t('grid.filters_cleared_toast')),
+    [showAlert, t],
+  );
 
   const gridRestored = useCallback(
-    () => toast.success(t('grid.restored_toast')),
-    [t],
+    () => showAlert('success', t('grid.restored_toast')),
+    [showAlert, t],
   );
+
   const exportSoon = useCallback(
-    () => toast.info(t('common.export_soon')),
-    [t],
+    () => showAlert('info', t('common.export_soon')),
+    [showAlert, t],
   );
 
   return {

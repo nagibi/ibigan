@@ -3,7 +3,6 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Pencil, Play, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
@@ -49,7 +48,7 @@ function formatAuditDate(value?: string | null) {
 export function ReportsPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
+  const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
 
   const grid = useGrid({
     onActivate: async (ids) => {
@@ -195,7 +194,7 @@ export function ReportsPage() {
   }
 
   function handleExport() {
-    toast.info('Exportação em breve.');
+    showInfo('Exportação em breve.');
   }
 
   const columnDefinitions = useMemo<GridColumnDef<ReportTemplate>[]>(
@@ -235,7 +234,7 @@ export function ReportsPage() {
                 label: 'Executar',
                 icon: Play,
                 hidden: !report.is_active,
-                onClick: () => navigate(`/reports/${report.id}/executar`),
+                onClick: () => navigate(`/reports/${report.id}/execute`),
               },
               {
                 label: 'Editar',
@@ -364,13 +363,13 @@ export function ReportsPage() {
 
   function handleResetColumns() {
     gridColumns.resetColumns();
-    toast.success('Colunas restauradas ao padrão.');
+    showSuccess('Colunas restauradas ao padrão.');
   }
 
   function handleClearFilters() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
-    toast.success('Filtros removidos.');
+    showSuccess('Filtros removidos.');
   }
 
   function handleResetGrid() {
@@ -378,7 +377,7 @@ export function ReportsPage() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
     grid.resetSettings();
-    toast.success('Grid restaurado ao padrão.');
+    showSuccess('Grid restaurado ao padrão.');
   }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;

@@ -57,6 +57,7 @@ export interface FormToolbarProps {
   onBack?: () => void;
   onClear?: () => void;
   onNew?: () => void;
+  backImmediatelyAfterPrimary?: boolean;
 
   onToggleActive?: () => void;
   onDelete?: () => void;
@@ -75,6 +76,10 @@ export interface FormToolbarProps {
   entityLabel?: string;
   recordLabel?: string;
   extra?: ReactNode;
+  primarySaveLabel?: string;
+  primarySaveTooltip?: string;
+  primarySaveIcon?: ElementType;
+  primarySaveDisabled?: boolean;
   primarySaveVariant?: VariantProps<typeof buttonVariants>['variant'];
 }
 
@@ -139,6 +144,7 @@ export function FormToolbar({
   onBack,
   onClear,
   onNew,
+  backImmediatelyAfterPrimary = false,
   onToggleActive,
   onDelete,
   onDuplicate,
@@ -151,6 +157,10 @@ export function FormToolbar({
   entityLabel = 'registro',
   recordLabel,
   extra,
+  primarySaveLabel: primarySaveLabelProp,
+  primarySaveTooltip: primarySaveTooltipProp,
+  primarySaveIcon: PrimarySaveIconProp,
+  primarySaveDisabled = false,
   primarySaveVariant = 'primary',
 }: FormToolbarProps) {
   const { t } = useTranslation();
@@ -160,18 +170,19 @@ export function FormToolbar({
   const [activityLogOpen, setActivityLogOpen] = useState(false);
 
   const hasSave = Boolean(onSaveAndList || onSaveAndNew || onSaveAndEdit);
-  const useSaveAndNewAsPrimary = !isEditing && Boolean(onSaveAndNew);
-  const primarySaveAction = useSaveAndNewAsPrimary ? onSaveAndNew : onSaveAndList;
-  const primarySaveLabel = t('form.save');
-  const PrimarySaveIcon = Save;
-  const saveDisabled = isSubmitting || !primarySaveAction || (isEditing && !isDirty);
-  const hasSaveDropdown = Boolean(onSaveAndNew || onSaveAndEdit);
+  const primarySaveAction = onSaveAndList ?? onSaveAndNew ?? onSaveAndEdit;
+  const primarySaveLabel = primarySaveLabelProp ?? t('form.save');
+  const PrimarySaveIcon = PrimarySaveIconProp ?? Save;
+  const saveDisabled = isSubmitting || !primarySaveAction || primarySaveDisabled || (isEditing && !isDirty);
+  const hasSaveDropdown = Boolean(
+    (onSaveAndNew && primarySaveAction !== onSaveAndNew)
+    || (onSaveAndEdit && primarySaveAction !== onSaveAndEdit)
+    || (onSaveAndList && primarySaveAction !== onSaveAndList),
+  );
   const hasLifecycle = isEditing && (onToggleActive || onDelete || onDuplicate);
   const hasAudit = isEditing && (createdBy || updatedBy || createdAt || updatedAt);
   const hasActivityLog = isEditing && Boolean(activityLog);
-  const primarySaveTooltip = isEditing
-    ? t('form.tooltip.save_and_list')
-    : t('form.tooltip.save_and_new');
+  const primarySaveTooltip = primarySaveTooltipProp ?? t('form.tooltip.save_and_list');
 
   return (
     <>
@@ -247,6 +258,15 @@ export function FormToolbar({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
+              {backImmediatelyAfterPrimary && onBack && (
+                <FormButton
+                  label={t('common.back')}
+                  tooltip={t('form.tooltip.back')}
+                  icon={ArrowLeft}
+                  onClick={onBack}
+                />
+              )}
             </GridToolbarGroup>
 
             {isEditing && onNew && (
@@ -259,7 +279,7 @@ export function FormToolbar({
               />
             )}
 
-            {onBack && (
+            {!backImmediatelyAfterPrimary && onBack && (
               <FormButton
                 label={t('common.back')}
                 tooltip={t('form.tooltip.back')}

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/popover';
 import {
   Sheet,
+  SheetBody,
   SheetClose,
   SheetContent,
   SheetFooter,
@@ -332,21 +333,18 @@ export function GridFiltersControl({
           <SheetHeader className="grid-filters-sheet-header border-b border-border px-4 py-3 pe-12 text-start">
             <SheetTitle>{t('grid.filters')}</SheetTitle>
           </SheetHeader>
-          <div className="grid-filters-sheet-scroll-host">
-            <div className="grid-filters-sheet-scroll px-4 py-4">
-              <MobileFiltersSheetContent
-                filters={filters}
-                onClearAll={onClearAll}
-                columnFilters={columnFilters}
-                hasColumnFilterInputs={hasColumnFilterInputs}
-                search={search}
-                onSearch={onSearch}
-                searchPlaceholder={searchPlaceholder}
-              />
-              <div className="h-6 shrink-0" aria-hidden />
-            </div>
-          </div>
-          <SheetFooter className="grid-filters-sheet-footer border-t border-border px-4 py-3">
+          <SheetBody className="grid-filters-sheet-body px-4 py-4">
+            <MobileFiltersSheetContent
+              filters={filters}
+              onClearAll={onClearAll}
+              columnFilters={columnFilters}
+              hasColumnFilterInputs={hasColumnFilterInputs}
+              search={search}
+              onSearch={onSearch}
+              searchPlaceholder={searchPlaceholder}
+            />
+          </SheetBody>
+          <SheetFooter className="grid-filters-sheet-footer border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <SheetClose asChild>
               <Button type="button" variant="primary" className="w-full">
                 {t('grid.apply')}

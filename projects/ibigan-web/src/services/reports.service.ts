@@ -27,11 +27,12 @@ export interface ReportTemplate {
 
 export interface ReportExecution {
   id: number;
-  executed_by: string;
+  executed_by?: string | null;
   parameters: Record<string, string> | null;
   rows_count: number;
   duration_ms: number;
-  status: 'success' | 'error';
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'success' | 'error';
+  progress_message?: string | null;
   error_message: string | null;
   executed_at: string;
 }
@@ -115,7 +116,11 @@ export const reportsService = {
     ),
 
   execute: (id: number, parameters: Record<string, string>) =>
-    api.post<{ status: number; result: { rows: Record<string, unknown>[]; count: number; duration: number } }>(
+    api.post<{ status: number; result: {
+      execution_id: number;
+      status: 'queued' | 'running' | 'completed' | 'failed';
+      progress_message: string | null;
+    } }>(
       `/v1/reports/${id}/execute`, { parameters },
     ),
 

@@ -198,7 +198,7 @@ export function MyExecutionsPage() {
               {
                 label: 'Abrir relatório',
                 icon: ArrowRight,
-                onClick: () => navigate(`/reports/${execution.template_id}/executar`),
+                onClick: () => navigate(`/reports/${execution.template_id}/execute`),
               },
             ]}
           />
@@ -431,7 +431,7 @@ export function MyExecutionsPage() {
           onColumnFilterChange={columnFilters.setFilter}
           onDateRangeFilterChange={columnFilters.setDateRangeFilter}
           onColumnFilterClear={columnFilters.clearColumnFilter}
-          onRowDoubleClick={(execution) => navigate(`/reports/${execution.template_id}/executar`)}
+          onRowDoubleClick={(execution) => navigate(`/reports/${execution.template_id}/execute`)}
         />
       </GridPanel>
     </PageBody>
