@@ -96,6 +96,7 @@ export function ReportFormPage() {
 
   const formPage = useFormPage({
     backPath: '/reports',
+    newPath: '/reports/new',
     entityLabel: 'relatório',
     notify: apiNotify,
     onDelete: isEditing
@@ -176,14 +177,15 @@ export function ReportFormPage() {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/reports',
         newPath: '/reports/new',
         getEditPath: (recordId) => `/reports/${recordId}`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -219,11 +221,7 @@ export function ReportFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
-    [form],
-  );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+  const formAlert = useFormToolbarAlert(form);
 
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
@@ -255,6 +253,7 @@ export function ReportFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
         onToggleActive={isEditing && report
           ? () => formPage.handleToggleActive(isActive)

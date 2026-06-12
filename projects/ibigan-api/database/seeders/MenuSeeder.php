@@ -318,5 +318,76 @@ class MenuSeeder extends Seeder
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
         ]);
+
+        // ── Configurações ─────────────────────────────────────────
+        $configuracoes = Menu::create([
+            'title' => 'Configurações',
+            'slug' => 'configuracoes',
+            'icon' => 'Settings',
+            'path' => null,
+            'order' => 6,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        $idiomas = Menu::create([
+            'title' => 'Idiomas',
+            'slug' => 'idiomas',
+            'icon' => 'Languages',
+            'path' => null,
+            'parent_id' => $configuracoes->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Traduções',
+            'slug' => 'traducoes',
+            'icon' => 'FileText',
+            'path' => '/settings/translations',
+            'parent_id' => $idiomas->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        $translationKeys = [
+            'dashboard' => 'menu.dashboard',
+            'gestao' => 'menu.management',
+            'usuarios' => 'menu.users',
+            'aprovacoes' => 'menu.user_approvals',
+            'convites' => 'menu.invites',
+            'campanhas' => 'menu.campaigns',
+            'templates-mensagem' => 'menu.message_templates',
+            'relatorios-grupo' => 'menu.reports',
+            'templates-relatorio' => 'menu.report_templates',
+            'minhas-execucoes' => 'menu.my_executions',
+            'administracao' => 'menu.administration',
+            'empresas' => 'menu.tenants',
+            'menus' => 'menu.menus',
+            'funcoes' => 'menu.roles',
+            'permissoes' => 'menu.permissions',
+            'webhooks' => 'menu.webhooks',
+            'activity-log' => 'menu.activity_log',
+            'conta' => 'menu.account',
+            'notificacoes' => 'menu.notifications',
+            'meu-perfil' => 'menu.profile',
+            'ferramentas' => 'menu.tools',
+            'documentacao-api' => 'menu.api_docs',
+            'horizon' => 'menu.horizon',
+            'phpmyadmin' => 'menu.phpmyadmin',
+            'mailpit' => 'menu.mailpit',
+            'configuracoes' => 'menu.settings',
+            'idiomas' => 'menu.languages',
+            'traducoes' => 'menu.translations',
+        ];
+
+        foreach ($translationKeys as $slug => $translationKey) {
+            Menu::query()->where('slug', $slug)->update(['translation_key' => $translationKey]);
+        }
     }
 }

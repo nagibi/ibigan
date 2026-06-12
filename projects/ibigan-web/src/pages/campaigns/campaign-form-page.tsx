@@ -80,7 +80,7 @@ const CHANNELS = [
 
 const RECIPIENT_TYPES = [
   { value: 'all', label: 'Todos os usuários' },
-  { value: 'role', label: 'Por papel (role)' },
+  { value: 'role', label: 'Por função (role)' },
   { value: 'permission', label: 'Por permissão' },
   { value: 'user', label: 'Usuário específico' },
 ];
@@ -116,6 +116,7 @@ export function CampaignFormPage() {
 
   const formPage = useFormPage({
     backPath: '/campaigns',
+    newPath: '/campaigns/new',
     entityLabel: 'campanha',
     notify: apiNotify,
     onDelete: isEditing
@@ -191,14 +192,15 @@ export function CampaignFormPage() {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/campaigns',
         newPath: '/campaigns/new',
         getEditPath: (recordId) => `/campaigns/${recordId}/edit`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -234,11 +236,7 @@ export function CampaignFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
-    [form],
-  );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+  const formAlert = useFormToolbarAlert(form);
 
   const pageTitle = formatFormPageTitle({
     isEditing,
@@ -260,6 +258,7 @@ export function CampaignFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
         onDelete={isEditing && campaign && isDeletable(campaign) ? formPage.handleDelete : undefined}
         entityLabel="campanha"

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Permission } from '@/services/permissions.service';
 import {
   formatPermissionAction,
@@ -20,6 +21,7 @@ export function RolePermissionsPanel({
   disabled = false,
   onChange,
 }: RolePermissionsPanelProps) {
+  const { t } = useTranslation();
   const grouped = useMemo(() => {
     const map = new Map<string, Permission[]>();
 
@@ -48,16 +50,16 @@ export function RolePermissionsPanel({
 
   if (grouped.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">Nenhuma permissão disponível.</p>
+      <p className="text-sm text-muted-foreground">{t('roles.permissions.empty')}</p>
     );
   }
 
   return (
     <div className="divide-y rounded-md border">
       <div className="grid grid-cols-[minmax(0,1fr)_88px_88px] gap-3 px-4 py-3 text-xs font-medium text-muted-foreground">
-        <span>Recurso</span>
-        <span className="text-center">Visualizar</span>
-        <span className="text-center">Gerenciar</span>
+        <span>{t('roles.permissions.resource')}</span>
+        <span className="text-center">{t('roles.permissions.view')}</span>
+        <span className="text-center">{t('roles.permissions.manage')}</span>
       </div>
 
       {grouped.map(({ resource, permissions }) => {

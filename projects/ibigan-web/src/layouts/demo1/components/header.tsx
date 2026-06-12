@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StoreClientTopbar } from '@/pages/store-client/components/common/topbar';
 import { CommandPalette } from '@/components/search/command-palette';
+import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { TenantSwitcher } from '@/partials/topbar/tenant-switcher';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
@@ -33,6 +35,7 @@ import { MegaMenuMobile } from './mega-menu-mobile';
 import { SidebarMenu } from './sidebar-menu';
 
 export function Header() {
+  const { t } = useTranslation();
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -142,26 +145,29 @@ export function Header() {
                 open={isCommandPaletteOpen}
                 onOpenChange={setIsCommandPaletteOpen}
               />
-              <Button
-                variant="ghost"
-                mode="icon"
-                shape="circle"
-                className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
-                onClick={() => setIsCommandPaletteOpen(true)}
-                title="Buscar (⌘K)"
-              >
-                <Search className="size-4.5!" />
-              </Button>
+              <ToolbarTooltip content={t('header.tooltip.search')}>
+                <Button
+                  variant="ghost"
+                  mode="icon"
+                  shape="circle"
+                  className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                >
+                  <Search className="size-4.5!" />
+                </Button>
+              </ToolbarTooltip>
               <NotificationsSheet
                 trigger={
-                  <Button
-                    variant="ghost"
-                    mode="icon"
-                    shape="circle"
-                    className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
-                  >
-                    <Bell className="size-4.5!" />
-                  </Button>
+                  <ToolbarTooltip content={t('header.tooltip.notifications')}>
+                    <Button
+                      variant="ghost"
+                      mode="icon"
+                      shape="circle"
+                      className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                    >
+                      <Bell className="size-4.5!" />
+                    </Button>
+                  </ToolbarTooltip>
                 }
               />
               <div className="flex items-center gap-2">

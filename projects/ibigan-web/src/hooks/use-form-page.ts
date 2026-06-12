@@ -8,6 +8,7 @@ export type { FormSaveMode };
 
 export interface UseFormPageOptions {
   backPath: string;
+  newPath?: string;
   entityLabel?: string;
   onDelete?: () => Promise<void>;
   onToggleActive?: (isActive: boolean) => Promise<void>;
@@ -17,6 +18,7 @@ export interface UseFormPageOptions {
 
 export function useFormPage({
   backPath,
+  newPath,
   entityLabel = 'registro',
   onDelete,
   onToggleActive,
@@ -30,6 +32,10 @@ export function useFormPage({
   const [saveMode, setSaveMode] = useState<FormSaveMode>('list');
 
   const handleBack = useCallback(() => navigate(backPath), [navigate, backPath]);
+
+  const handleNew = useCallback(() => {
+    if (newPath) navigate(newPath);
+  }, [navigate, newPath]);
 
   const handleDelete = useCallback(async () => {
     if (!onDelete) return;
@@ -75,6 +81,7 @@ export function useFormPage({
     saveMode,
     setSaveMode,
     handleBack,
+    handleNew,
     handleDelete,
     handleToggleActive,
     handleDuplicate,

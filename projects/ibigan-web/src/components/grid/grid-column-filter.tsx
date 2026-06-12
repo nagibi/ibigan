@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { GridColumnFilterDef } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
+import { GridDateFilter } from '@/components/grid/grid-date-filter';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
 import { GridMultiValueFilter } from '@/components/grid/grid-multi-value-filter';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ export function GridColumnFilter({
   onDateRangeChange,
   onClear,
 }: GridColumnFilterProps) {
+  const { t } = useTranslation();
   const isActive = isFilterActive(filter, value, dateRangeFrom, dateRangeTo);
   const inputClassName = cn(
     'h-7 w-full min-w-[72px] text-xs',
@@ -90,16 +93,15 @@ export function GridColumnFilter({
         from={dateRangeFrom}
         to={dateRangeTo}
         onChange={(from, to) => onDateRangeChange?.(from, to)}
-        placeholder={filter.placeholder ?? 'Período'}
+        placeholder={filter.placeholder ?? t('grid.date_period')}
       />
     );
   } else if (filter.type === 'date') {
     control = (
-      <Input
-        type="date"
+      <GridDateFilter
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={inputClassName}
+        onChange={onChange}
+        placeholder={filter.placeholder ?? t('grid.date_period')}
       />
     );
   } else {
@@ -124,7 +126,7 @@ export function GridColumnFilter({
           size="sm"
           className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
           onClick={onClear}
-          title="Limpar filtro"
+          title={t('grid.clear_filter')}
         >
           <X className="size-3" />
         </Button>

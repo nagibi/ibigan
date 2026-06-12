@@ -1,11 +1,9 @@
-export const GRID_SELECT_COLUMN_LABEL = '#';
-export const GRID_ID_COLUMN_LABEL = 'Id';
-export const GRID_ACTIONS_COLUMN_LABEL = 'Ações';
+import i18n from '@/i18n/i18next';
 
 export function resolveGridColumnLabel(columnId: string, label: string): string {
-  if (columnId === 'select') return GRID_SELECT_COLUMN_LABEL;
-  if (columnId === 'id') return GRID_ID_COLUMN_LABEL;
-  if (columnId === 'actions') return GRID_ACTIONS_COLUMN_LABEL;
+  if (columnId === 'select') return '#';
+  if (columnId === 'id') return i18n.t('columns.id');
+  if (columnId === 'actions') return i18n.t('columns.actions');
   return label;
 }
 

@@ -22,6 +22,7 @@
         "pragmarx/google2fa-laravel": "^3.0",
         "saimaz/laravel-prometheus": "^2.0",
         "sentry/sentry-laravel": "^4.26",
+        "socialiteproviders/apple": "^5.10",
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-data": "^4.23",
         "spatie/laravel-medialibrary": "^11.23",

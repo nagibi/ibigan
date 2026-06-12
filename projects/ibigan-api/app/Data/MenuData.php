@@ -17,6 +17,7 @@ final class MenuData extends Data
     public function __construct(
         public int $id,
         public string $title,
+        public ?string $translation_key,
         public string $slug,
         public ?string $icon,
         public ?string $badge,
@@ -43,6 +44,7 @@ final class MenuData extends Data
         return new self(
             id: $menu->id,
             title: $menu->title,
+            translation_key: $menu->translation_key,
             slug: $menu->slug,
             icon: $menu->icon,
             badge: $menu->badge,
@@ -125,6 +127,7 @@ final class MenuData extends Data
             $pruned[] = new self(
                 id: $item->id,
                 title: $item->title,
+                translation_key: $item->translation_key,
                 slug: $item->slug,
                 icon: $item->icon,
                 badge: $item->badge,

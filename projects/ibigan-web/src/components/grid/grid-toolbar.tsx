@@ -1,5 +1,7 @@
 import type { VariantProps } from 'class-variance-authority';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/i18next';
 import {
   Download,
   LoaderCircle,
@@ -21,6 +23,7 @@ import {
   ToolbarAlertHost,
   type ToolbarAlertConfig,
 } from './toolbar-alert';
+import { ToolbarTooltip } from './toolbar-tooltip';
 
 export function GridToolbarRoot({
   children,
@@ -46,6 +49,7 @@ export function GridToolbarSpacer() {
 
 export function GridToolbarButton({
   label,
+  tooltip,
   icon: Icon,
   onClick,
   disabled,
@@ -54,6 +58,7 @@ export function GridToolbarButton({
   className,
 }: {
   label: string;
+  tooltip?: string;
   icon?: React.ElementType;
   onClick: () => void;
   disabled?: boolean;
@@ -69,22 +74,25 @@ export function GridToolbarButton({
   }[tone ?? 'default'];
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      disabled={disabled || loading}
-      onClick={onClick}
-      className={cn('h-8 gap-1.5 px-2 text-xs font-medium', toneClass, className)}
-    >
-      {Icon && <Icon className="size-3.5 shrink-0" />}
-      {label}
-    </Button>
+    <ToolbarTooltip content={tooltip ?? label}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled || loading}
+        onClick={onClick}
+        className={cn('h-8 gap-1.5 px-2 text-xs font-medium', toneClass, className)}
+      >
+        {Icon && <Icon className="size-3.5 shrink-0" />}
+        {label}
+      </Button>
+    </ToolbarTooltip>
   );
 }
 
 export function GridToolbarIconButton({
   label,
+  tooltip,
   icon: Icon,
   onClick,
   disabled,
@@ -92,6 +100,7 @@ export function GridToolbarIconButton({
   tone,
 }: {
   label: string;
+  tooltip?: string;
   icon: React.ElementType;
   onClick: () => void;
   disabled?: boolean;
@@ -106,23 +115,25 @@ export function GridToolbarIconButton({
   }[tone ?? 'default'];
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      mode="icon"
-      disabled={disabled || loading}
-      onClick={onClick}
-      title={label}
-      className={cn('size-8 shrink-0', toneClass)}
-    >
-      <Icon className="size-4" />
-    </Button>
+    <ToolbarTooltip content={tooltip ?? label}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        mode="icon"
+        disabled={disabled || loading}
+        onClick={onClick}
+        className={cn('size-8 shrink-0', toneClass)}
+      >
+        <Icon className="size-4" />
+      </Button>
+    </ToolbarTooltip>
   );
 }
 
 export function GridToolbarPrimary({
   label,
+  tooltip,
   icon: Icon,
   onClick,
   disabled,
@@ -130,6 +141,7 @@ export function GridToolbarPrimary({
   variant = 'primary',
 }: {
   label: string;
+  tooltip?: string;
   icon?: React.ElementType;
   onClick: () => void;
   disabled?: boolean;
@@ -137,27 +149,29 @@ export function GridToolbarPrimary({
   variant?: VariantProps<typeof buttonVariants>['variant'];
 }) {
   return (
-    <Button
-      type="button"
-      variant={variant}
-      size="sm"
-      disabled={disabled || loading}
-      onClick={onClick}
-      className="h-8 gap-1.5"
-    >
-      {loading
-        ? <LoaderCircle className="size-4 shrink-0 animate-spin" />
-        : Icon && <Icon className="size-4 shrink-0" />
-      }
-      {label}
-    </Button>
+    <ToolbarTooltip content={tooltip ?? label}>
+      <Button
+        type="button"
+        variant={variant}
+        size="sm"
+        disabled={disabled || loading}
+        onClick={onClick}
+        className="h-8 gap-1.5"
+      >
+        {loading
+          ? <LoaderCircle className="size-4 shrink-0 animate-spin" />
+          : Icon && <Icon className="size-4 shrink-0" />
+        }
+        {label}
+      </Button>
+    </ToolbarTooltip>
   );
 }
 
 export function GridToolbarSearch({
   value,
   onChange,
-  placeholder = 'Buscar...',
+  placeholder = i18n.t('grid.search_placeholder'),
   className,
 }: {
   value: string;
@@ -196,6 +210,8 @@ export function buildSelectionAlert(
 ): ToolbarAlertConfig | null {
   if (selectedCount <= 0) return null;
 
+  const clearSelectionLabel = i18n.t('grid.clear_selection');
+
   return {
     variant: 'info',
     title: formatToolbarSelectedCount(selectedCount),
@@ -208,12 +224,12 @@ export function buildSelectionAlert(
         onCheckedChange={(checked) => {
           if (checked === false) onClearSelection?.();
         }}
-        aria-label="Limpar seleção"
+        aria-label={clearSelectionLabel}
       />
     ),
     actions: onClearSelection ? (
       <GridToolbarIconButton
-        label="Limpar seleção"
+        label={clearSelectionLabel}
         icon={X}
         onClick={onClearSelection}
       />
@@ -246,7 +262,7 @@ export interface GridPanelToolbarProps {
 export function GridPanelToolbar({
   onSelectAll,
   isAllSelected = false,
-  selectAllLabel = 'Selecionar todos',
+  selectAllLabel,
   selectedCount = 0,
   onClearSelection,
   onRefresh,
@@ -261,6 +277,9 @@ export function GridPanelToolbar({
   resetControl,
   quickFiltersControl,
 }: GridPanelToolbarProps) {
+  const { t } = useTranslation();
+  const resolvedSelectAllLabel = selectAllLabel ?? t('grid.select_all');
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('grid.search_placeholder');
   const selectionAlert = buildSelectionAlert(selectedCount, onClearSelection);
 
   return (
@@ -271,14 +290,17 @@ export function GridPanelToolbar({
       >
         <GridToolbarGroup>
           {onSelectAll && (
-            <label className="flex cursor-pointer items-center gap-2 pe-1 text-xs font-medium text-muted-foreground">
-              <Checkbox checked={isAllSelected} onCheckedChange={onSelectAll} />
-              {selectAllLabel}
-            </label>
+            <ToolbarTooltip content={t('grid.tooltip.select_all')}>
+              <label className="flex cursor-pointer items-center gap-2 pe-1 text-xs font-medium text-muted-foreground">
+                <Checkbox checked={isAllSelected} onCheckedChange={onSelectAll} />
+                {resolvedSelectAllLabel}
+              </label>
+            </ToolbarTooltip>
           )}
           {onRefresh && (
             <GridToolbarButton
-              label="Atualizar"
+              label={t('grid.refresh')}
+              tooltip={t('grid.tooltip.refresh')}
               icon={RefreshCw}
               onClick={onRefresh}
               loading={isRefreshing}
@@ -289,7 +311,8 @@ export function GridPanelToolbar({
           {resetControl}
           {onExport && (
             <GridToolbarButton
-              label="Exportar"
+              label={t('grid.export')}
+              tooltip={t('grid.tooltip.export')}
               icon={Download}
               onClick={onExport}
               loading={isExporting}
@@ -305,7 +328,7 @@ export function GridPanelToolbar({
             <GridToolbarSearch
               value={search ?? ''}
               onChange={onSearch}
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
             />
           )}
         </div>
@@ -340,7 +363,7 @@ export interface StandardGridToolbarProps {
 
 export function StandardGridToolbar({
   onNew,
-  newLabel = 'Novo',
+  newLabel,
   newVariant = 'primary',
   onEdit,
   onDelete,
@@ -357,11 +380,15 @@ export function StandardGridToolbar({
   onSearch,
   extra,
 }: StandardGridToolbarProps) {
+  const { t } = useTranslation();
+  const resolvedNewLabel = newLabel ?? t('common.new');
+
   return (
     <GridToolbarRoot>
       {onNew && (
         <GridToolbarPrimary
-          label={newLabel}
+          label={resolvedNewLabel}
+          tooltip={t('grid.tooltip.new')}
           icon={Plus}
           onClick={onNew}
           variant={newVariant}
@@ -369,7 +396,8 @@ export function StandardGridToolbar({
       )}
       {onEdit && (
         <GridToolbarButton
-          label="Editar"
+          label={t('common.edit')}
+          tooltip={t('grid.tooltip.edit')}
           icon={Pencil}
           disabled={!singleSelection}
           onClick={onEdit}
@@ -377,7 +405,8 @@ export function StandardGridToolbar({
       )}
       {onActivate && (
         <GridToolbarButton
-          label="Ativar"
+          label={t('common.activate')}
+          tooltip={t('grid.tooltip.activate')}
           icon={Power}
           disabled={!hasSelection || isTogglingActive}
           loading={isTogglingActive}
@@ -386,7 +415,8 @@ export function StandardGridToolbar({
       )}
       {onDeactivate && (
         <GridToolbarButton
-          label="Inativar"
+          label={t('common.deactivate')}
+          tooltip={t('grid.tooltip.deactivate')}
           icon={PowerOff}
           disabled={!hasSelection || isTogglingActive}
           loading={isTogglingActive}
@@ -395,7 +425,8 @@ export function StandardGridToolbar({
       )}
       {onDelete && (
         <GridToolbarButton
-          label="Excluir"
+          label={t('common.delete')}
+          tooltip={t('grid.tooltip.delete')}
           icon={Trash2}
           disabled={!hasSelection}
           onClick={onDelete}
@@ -403,7 +434,8 @@ export function StandardGridToolbar({
       )}
       {onRefresh && (
         <GridToolbarButton
-          label="Atualizar"
+          label={t('grid.refresh')}
+          tooltip={t('grid.tooltip.refresh')}
           icon={RefreshCw}
           onClick={onRefresh}
           loading={isRefreshing}
@@ -411,13 +443,20 @@ export function StandardGridToolbar({
       )}
       {onExport && (
         <GridToolbarButton
-          label="Exportar"
+          label={t('grid.export')}
+          tooltip={t('grid.tooltip.export')}
           icon={Download}
           onClick={onExport}
           loading={isExporting}
         />
       )}
-      {onSearch && <GridToolbarSearch value={search ?? ''} onChange={onSearch} />}
+      {onSearch && (
+        <GridToolbarSearch
+          value={search ?? ''}
+          onChange={onSearch}
+          placeholder={t('grid.search_placeholder')}
+        />
+      )}
       {extra}
     </GridToolbarRoot>
   );

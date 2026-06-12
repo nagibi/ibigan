@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, Pencil, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
@@ -8,7 +9,9 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
+import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
   dateRangeFilterFromKey,
@@ -18,7 +21,7 @@ import {
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { formatCpf, formatPhone } from '@/lib/brazilian-masks';
-import { formatUserGender, USER_GENDER_OPTIONS } from '@/lib/user-gender';
+import { formatUserGender, getUserGenderOptions } from '@/lib/user-gender';
 import { parseGridUrlState } from '@/lib/grid-url-state';
 import { buildRolesUrlWithUserFilter } from '@/lib/roles-user-filter';
 import { isUserActive, usersService, type User } from '@/services/users.service';
@@ -49,7 +52,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
 
 const USER_ACTIVITY_LOG_TYPE = 'users';
 const GRID_COLUMNS_KEY = 'grid-columns:users';
@@ -69,11 +71,6 @@ function truncateText(value?: string | null, max = 60) {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
-const GENDER_FILTER_OPTIONS = USER_GENDER_OPTIONS.map((option) => ({
-  label: option.label,
-  value: option.value,
-}));
-
 function getAuditUserName(
   user: User,
   field: 'created_by' | 'updated_by',
@@ -85,12 +82,18 @@ function getAuditUserName(
   return flatName ?? '—';
 }
 
-const STATUS_FILTER_OPTIONS = [
-  { label: 'Ativo', value: 'active' },
-  { label: 'Inativo', value: 'inactive' },
-];
-
 export function UsersPage() {
+  const { t } = useTranslation();
+  const cols = useGridColumnLabels();
+  const gridToasts = useGridToasts();
+  const statusFilterOptions = useMemo(
+    () => [
+      { label: t('status.active'), value: 'active' },
+      { label: t('status.inactive'), value: 'inactive' },
+    ],
+    [t],
+  );
+  const genderFilterOptions = useMemo(() => getUserGenderOptions(), [t]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialUrlState = useRef(parseGridUrlState(searchParams)).current;
@@ -111,7 +114,7 @@ export function UsersPage() {
         showToggleActive(true, TOGGLE_ACTIVE_LABELS.user, ids.length);
         await loadRef.current();
       } catch (error) {
-        showError('Erro ao ativar usuário(s).', error);
+        showError(t('users.error.activate'), error);
         throw new Error('toggle-active-failed');
       }
     },
@@ -121,7 +124,7 @@ export function UsersPage() {
         showToggleActive(false, TOGGLE_ACTIVE_LABELS.user, ids.length);
         await loadRef.current();
       } catch (error) {
-        showError('Erro ao inativar usuário(s).', error);
+        showError(t('users.error.deactivate'), error);
         throw new Error('toggle-active-failed');
       }
     },
@@ -166,7 +169,7 @@ export function UsersPage() {
       setUsers(res.data.result.data);
       setMeta(res.data.result.meta);
     } catch (error) {
-      showError('Erro ao carregar usuários.', error);
+      showError(t('users.error.load'), error);
     } finally {
       setLoading(false);
     }
@@ -178,6 +181,7 @@ export function UsersPage() {
     grid.sortDir,
     columnFilters.activeFilterParams,
     showError,
+    t,
   ]);
 
   loadRef.current = load;
@@ -230,14 +234,14 @@ export function UsersPage() {
       await Promise.all(grid.deleteIds.map((id) => usersService.destroy(id)));
       showSuccess(
         grid.deleteIds.length === 1
-          ? 'Usuário removido.'
-          : `${grid.deleteIds.length} usuários removidos.`,
+          ? t('users.success.deleted_one')
+          : t('users.success.deleted_many', { count: grid.deleteIds.length }),
       );
       grid.clearDeleteRequest();
       grid.clearSelection();
       void load();
     } catch (error) {
-      showError('Erro ao remover usuário(s).', error);
+      showError(t('users.error.delete'), error);
     } finally {
       setIsDeleting(false);
     }
@@ -254,7 +258,7 @@ export function UsersPage() {
   );
 
   function handleExport() {
-    toast.info('Exportação em breve.');
+    gridToasts.exportSoon();
   }
 
   async function handleRowStatusChange(user: User, active: boolean) {
@@ -267,7 +271,7 @@ export function UsersPage() {
       showToggleActive(active, TOGGLE_ACTIVE_LABELS.user);
       void load();
     } catch (error) {
-      showError('Erro ao atualizar status do usuário.', error);
+      showError(t('users.error.update_status'), error);
     } finally {
       setRowStatusId(null);
     }
@@ -302,7 +306,7 @@ export function UsersPage() {
     () => [
       {
         id: 'select',
-        label: '#',
+        label: cols.select,
         pinned: 'start',
         hideable: false,
         className: 'w-[40px]',
@@ -316,34 +320,34 @@ export function UsersPage() {
       },
       {
         id: 'id',
-        label: 'Id',
+        label: cols.id,
         sortable: true,
         sortKey: 'id',
-        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+        filter: { type: 'multi', filterKey: 'id', placeholder: cols.id, inputMode: 'numeric' },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (user) => user.id,
       },
       {
         id: 'actions',
-        label: 'Ações',
+        label: cols.actions,
         hideable: false,
         className: 'w-[72px]',
         render: (user) => (
           <GridRowActions
             actions={[
               {
-                label: 'Editar',
+                label: cols.edit,
                 icon: Pencil,
                 onClick: () => navigate(`/users/${user.id}`),
               },
               {
-                label: 'Papéis associados',
+                label: t('users.column.roles'),
                 icon: ShieldCheck,
                 hidden: !canViewRoles,
                 onClick: () => handleViewUserRoles(user),
               },
               {
-                label: 'Activity Logs',
+                label: t('form.activity_log'),
                 icon: Activity,
                 onClick: () => setActivityLogUser(user),
               },
@@ -353,14 +357,14 @@ export function UsersPage() {
       },
       {
         id: 'active',
-        label: 'Ativo',
+        label: cols.active,
         sortable: true,
         sortKey: 'status',
         filter: {
           type: 'select',
           filterKey: 'status',
-          placeholder: 'Todos',
-          options: STATUS_FILTER_OPTIONS,
+          placeholder: cols.all,
+          options: statusFilterOptions,
         },
         className: 'w-[80px]',
         render: (user) => (
@@ -374,10 +378,10 @@ export function UsersPage() {
       },
       {
         id: 'user',
-        label: 'Usuário',
+        label: t('users.column.user'),
         sortable: true,
         sortKey: 'name',
-        filter: { type: 'multi', filterKey: 'user', placeholder: 'Nome ou e-mail' },
+        filter: { type: 'multi', filterKey: 'user', placeholder: t('users.filter.name_or_email') },
         className: 'min-w-[220px]',
         render: (user) => (
           <div className="flex items-center gap-3">
@@ -396,8 +400,8 @@ export function UsersPage() {
       },
       {
         id: 'roles',
-        label: 'Papel',
-        filter: { type: 'text', filterKey: 'role', placeholder: 'Papel' },
+        label: t('users.column.role'),
+        filter: { type: 'text', filterKey: 'role', placeholder: t('users.column.role') },
         className: 'min-w-[120px]',
         render: (user) => (
           <div className="flex gap-1">
@@ -411,25 +415,25 @@ export function UsersPage() {
       },
       {
         id: 'cpf',
-        label: 'CPF',
+        label: t('users.column.cpf'),
         sortable: true,
         sortKey: 'cpf',
-        filter: { type: 'text', filterKey: 'cpf', placeholder: 'CPF' },
+        filter: { type: 'text', filterKey: 'cpf', placeholder: t('users.column.cpf') },
         className: 'min-w-[130px] text-sm whitespace-nowrap',
         render: (user) => formatCpf(user.cpf) || '—',
       },
       {
         id: 'phone',
-        label: 'Telefone',
+        label: t('users.column.phone'),
         sortable: true,
         sortKey: 'phone',
-        filter: { type: 'text', filterKey: 'phone', placeholder: 'Telefone' },
+        filter: { type: 'text', filterKey: 'phone', placeholder: t('users.column.phone') },
         className: 'min-w-[130px] text-sm whitespace-nowrap',
         render: (user) => formatPhone(user.phone) || '—',
       },
       {
         id: 'birth_date',
-        label: 'Nascimento',
+        label: t('users.column.birth_date'),
         sortable: true,
         sortKey: 'birth_date',
         filter: { type: 'dateRange', filterKey: 'birth_date' },
@@ -438,28 +442,28 @@ export function UsersPage() {
       },
       {
         id: 'gender',
-        label: 'Gênero',
+        label: t('users.column.gender'),
         sortable: true,
         sortKey: 'gender',
         filter: {
           type: 'select',
           filterKey: 'gender',
-          placeholder: 'Todos',
-          options: GENDER_FILTER_OPTIONS,
+          placeholder: cols.all,
+          options: genderFilterOptions,
         },
         className: 'min-w-[150px] text-sm',
         render: (user) => formatUserGender(user.gender),
       },
       {
         id: 'bio',
-        label: 'Bio',
-        filter: { type: 'text', filterKey: 'bio', placeholder: 'Bio' },
+        label: t('users.column.bio'),
+        filter: { type: 'text', filterKey: 'bio', placeholder: t('users.column.bio') },
         className: 'min-w-[180px] text-sm text-muted-foreground',
         render: (user) => truncateText(user.bio),
       },
       {
         id: 'last_login_at',
-        label: 'Último login',
+        label: t('users.column.last_login_at'),
         sortable: true,
         sortKey: 'last_login_at',
         filter: { type: 'dateRange', filterKey: 'last_login_at' },
@@ -468,21 +472,21 @@ export function UsersPage() {
       },
       {
         id: 'last_login_ip',
-        label: 'IP último login',
-        filter: { type: 'text', filterKey: 'last_login_ip', placeholder: 'IP' },
+        label: t('users.column.last_login_ip'),
+        filter: { type: 'text', filterKey: 'last_login_ip', placeholder: t('users.column.last_login_ip') },
         className: 'min-w-[130px] text-sm text-muted-foreground font-mono text-xs',
         render: (user) => user.last_login_ip ?? '—',
       },
       {
         id: 'last_login_device',
-        label: 'Dispositivo',
-        filter: { type: 'text', filterKey: 'last_login_device', placeholder: 'Dispositivo' },
+        label: t('users.column.last_login_device'),
+        filter: { type: 'text', filterKey: 'last_login_device', placeholder: t('users.column.last_login_device') },
         className: 'min-w-[180px] text-sm text-muted-foreground',
         render: (user) => truncateText(user.last_login_device, 40),
       },
       {
         id: 'created_at',
-        label: 'Data criação',
+        label: cols.createdAt,
         sortable: true,
         sortKey: 'created_at',
         filter: { type: 'dateRange', filterKey: 'created_at' },
@@ -491,14 +495,14 @@ export function UsersPage() {
       },
       {
         id: 'created_by',
-        label: 'Usuário criação',
-        filter: { type: 'text', filterKey: 'created_by', placeholder: 'Usuário' },
+        label: cols.createdBy,
+        filter: { type: 'text', filterKey: 'created_by', placeholder: t('users.column.user') },
         className: 'min-w-[160px] text-sm text-muted-foreground',
         render: (user) => getAuditUserName(user, 'created_by'),
       },
       {
         id: 'updated_at',
-        label: 'Data atualização',
+        label: cols.updatedAt,
         sortable: true,
         sortKey: 'updated_at',
         filter: { type: 'dateRange', filterKey: 'updated_at' },
@@ -507,19 +511,23 @@ export function UsersPage() {
       },
       {
         id: 'updated_by',
-        label: 'Usuário atualização',
-        filter: { type: 'text', filterKey: 'updated_by', placeholder: 'Usuário' },
+        label: cols.updatedBy,
+        filter: { type: 'text', filterKey: 'updated_by', placeholder: t('users.column.user') },
         className: 'min-w-[170px] text-sm text-muted-foreground',
         render: (user) => getAuditUserName(user, 'updated_by'),
       },
     ],
     [
       canViewRoles,
+      cols,
+      genderFilterOptions,
       grid.selected,
       grid.toggleSelect,
       handleViewUserRoles,
       navigate,
       rowStatusId,
+      statusFilterOptions,
+      t,
     ],
   );
 
@@ -531,7 +539,7 @@ export function UsersPage() {
     if (grid.search.trim()) {
       items.push({
         id: 'search',
-        label: 'Busca',
+        label: cols.search,
         value: grid.search.trim(),
         onRemove: grid.clearSearch,
       });
@@ -580,17 +588,18 @@ export function UsersPage() {
     columnFilters.clearDateRangeFilter,
     grid.search,
     grid.clearSearch,
+    cols.search,
   ]);
 
   function handleResetColumns() {
     gridColumns.resetColumns();
-    toast.success('Colunas restauradas ao padrão.');
+    gridToasts.columnsRestored();
   }
 
   function handleClearFilters() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
-    toast.success('Filtros removidos.');
+    gridToasts.filtersCleared();
   }
 
   function handleResetGrid() {
@@ -598,15 +607,15 @@ export function UsersPage() {
     grid.clearSearch();
     columnFilters.clearAllFilters();
     grid.resetSettings();
-    toast.success('Grid restaurado ao padrão.');
+    gridToasts.gridRestored();
   }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   usePageToolbar({
-    title: 'Usuários',
-    description: 'Gerencie os usuários da organização.',
+    title: t('users.title'),
+    description: t('users.description'),
     actions: toolbarActions,
   });
 
@@ -669,7 +678,7 @@ export function UsersPage() {
           data={users}
           getRowKey={(user) => user.id}
           loading={loading}
-          emptyMessage="Nenhum usuário encontrado."
+          emptyMessage={t('users.empty')}
           sort={grid.sort}
           sortDir={grid.sortDir}
           onSort={grid.toggleSort}
@@ -704,20 +713,22 @@ export function UsersPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {grid.deleteIds.length === 1 ? 'Remover usuário' : `Remover ${grid.deleteIds.length} usuários`}
+              {grid.deleteIds.length === 1
+                ? t('users.delete.title_one')
+                : t('users.delete.title_many', { count: grid.deleteIds.length })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza? Esta ação não pode ser desfeita.
+              {t('common.confirm_delete')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}
               disabled={isDeleting}
             >
-              Remover
+              {t('common.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,3 +1,5 @@
+import i18n from '@/i18n/i18next';
+
 export type ToggleActiveLabels = {
   singular: string;
   plural: string;
@@ -47,10 +49,10 @@ export function formatToggleActiveMessage(
   labels: ToggleActiveLabels,
   count = 1,
 ): string {
-  const label = count === 1 ? labels.singular : labels.plural;
-  const verb = isActive
-    ? (count === 1 ? 'ativado' : 'ativados')
-    : (count === 1 ? 'inativado' : 'inativados');
+  const entity = count === 1 ? labels.singular : labels.plural;
+  const key = isActive
+    ? (count === 1 ? 'toolbar.activated_one' : 'toolbar.activated_many')
+    : (count === 1 ? 'toolbar.deactivated_one' : 'toolbar.deactivated_many');
 
-  return `${label} ${verb}.`;
+  return i18n.t(key, { entity });
 }

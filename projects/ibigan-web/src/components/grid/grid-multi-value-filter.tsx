@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ export function GridMultiValueFilter({
   placeholder = 'Filtrar...',
   inputMode = 'text',
 }: GridMultiValueFilterProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const items = parseMultiFilterValue(value);
@@ -95,7 +97,7 @@ export function GridMultiValueFilter({
               className="text-xs text-primary hover:underline"
               onClick={clearAll}
             >
-              Limpar
+              {t('common.clear')}
             </button>
           )}
         </div>
@@ -149,7 +151,7 @@ export function GridMultiValueFilter({
           </div>
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">
-            Nenhum item adicionado.
+            {t('grid.no_items')}
           </p>
         )}
       </PopoverContent>

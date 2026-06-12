@@ -228,12 +228,6 @@ export function ProfilePage() {
     );
   }, [passwordForm]);
 
-  const handleDiscard = useCallback(() => {
-    resetProfilePhantomDirty();
-    resetPasswordPhantomDirty();
-    appearance.discard();
-  }, [appearance, resetPasswordPhantomDirty, resetProfilePhantomDirty]);
-
   const handleSave = useCallback(async () => {
     const appearanceDirty = appearance.hasChanges;
 
@@ -272,13 +266,11 @@ export function ProfilePage() {
     updateMutation,
   ]);
 
-  const profileAlert = useFormToolbarAlert(profileForm.control, handleDiscard, {
+  const profileAlert = useFormToolbarAlert(profileForm, {
     resetPhantomDirty: resetProfilePhantomDirty,
-    showUnsavedAlert: false,
   });
-  const passwordAlert = useFormToolbarAlert(passwordForm.control, handleDiscard, {
+  const passwordAlert = useFormToolbarAlert(passwordForm, {
     resetPhantomDirty: resetPasswordPhantomDirty,
-    showUnsavedAlert: false,
   });
 
   const alert = profileAlert ?? passwordAlert ?? null;

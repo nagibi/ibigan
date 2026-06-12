@@ -1,13 +1,31 @@
-export const USER_GENDER_OPTIONS = [
-  { value: 'male', label: 'Masculino' },
-  { value: 'female', label: 'Feminino' },
-  { value: 'other', label: 'Outro' },
-  { value: 'prefer_not_to_say', label: 'Prefiro não informar' },
+import i18n from '@/i18n/i18next';
+
+export const USER_GENDER_VALUES = [
+  'male',
+  'female',
+  'other',
+  'prefer_not_to_say',
 ] as const;
 
-export type UserGender = (typeof USER_GENDER_OPTIONS)[number]['value'];
+export type UserGender = (typeof USER_GENDER_VALUES)[number];
+
+export function getUserGenderLabel(gender: UserGender): string {
+  return i18n.t(`users.gender.${gender}`);
+}
+
+export function getUserGenderOptions() {
+  return USER_GENDER_VALUES.map((value) => ({
+    value,
+    label: getUserGenderLabel(value),
+  }));
+}
 
 export function formatUserGender(gender?: string | null): string {
   if (!gender) return '—';
-  return USER_GENDER_OPTIONS.find((option) => option.value === gender)?.label ?? gender;
+
+  if (USER_GENDER_VALUES.includes(gender as UserGender)) {
+    return getUserGenderLabel(gender as UserGender);
+  }
+
+  return gender;
 }

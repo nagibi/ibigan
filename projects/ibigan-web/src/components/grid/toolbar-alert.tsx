@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/i18next';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { Alert, AlertContent, AlertIcon, AlertTitle, AlertToolbar } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -50,7 +52,7 @@ export function resolveToolbarAlert(alert: ToolbarAlertConfig): ToolbarAlertConf
 export function buildInactiveAlert(entityLabel = 'registro'): ToolbarAlertConfig {
   return {
     variant: 'destructive',
-    title: `Este ${entityLabel} está inativo`,
+    title: i18n.t('toolbar.inactive_record', { entity: entityLabel }),
     autoDismissMs: false,
     id: 'inactive',
   };
@@ -97,8 +99,9 @@ export function mergeToolbarAlerts(
 }
 
 export function formatToolbarSelectedCount(count: number) {
-  if (count === 1) return '1 registro selecionado';
-  return `${count} registros selecionados`;
+  return count === 1
+    ? i18n.t('grid.selected_one')
+    : i18n.t('grid.selected_many', { count });
 }
 
 const toolbarAlertClassName =
@@ -111,6 +114,7 @@ export function ToolbarAlertOverlay({
   alert: ToolbarAlertConfig;
   onClose?: () => void;
 }) {
+  const { t } = useTranslation();
   const resolvedAlert = resolveToolbarAlert(alert);
 
   return (
@@ -135,7 +139,7 @@ export function ToolbarAlertOverlay({
               onClick={onClose}
               className="h-8 px-2 text-xs font-medium"
             >
-              Fechar
+              {t('common.close')}
             </Button>
           ) : null}
         </AlertToolbar>

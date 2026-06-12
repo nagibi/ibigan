@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
+import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
@@ -52,6 +54,9 @@ function isRoleDeletable(role: Role) {
 }
 
 export function RolesPage() {
+  const { t } = useTranslation();
+  const cols = useGridColumnLabels();
+  const gridToasts = useGridToasts();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -153,15 +158,19 @@ export function RolesPage() {
       setIsDeleting(true);
       await Promise.all(grid.deleteIds.map((id) => rolesService.destroy(id)));
       await queryClient.invalidateQueries({ queryKey: ['roles'] });
-      showSuccess(grid.deleteIds.length === 1 ? 'Papel removido.' : 'Papéis removidos.');
+      showSuccess(
+        grid.deleteIds.length === 1
+          ? t('roles.success.deleted_one')
+          : t('roles.success.deleted_many'),
+      );
       grid.clearDeleteRequest();
       grid.clearSelection();
     } catch (error) {
-      showError('Erro ao remover papéis.', error);
+      showError(t('roles.error.delete'), error);
     } finally {
       setIsDeleting(false);
     }
-  }, [grid, queryClient, showError, showSuccess]);
+  }, [grid, queryClient, showError, showSuccess, t]);
 
   const handleEditRole = useCallback(
     (roleId: number) => navigate(`/roles/${roleId}`),
@@ -173,7 +182,7 @@ export function RolesPage() {
       ...(canManage
         ? [{
             id: 'select',
-            label: '#',
+            label: cols.select,
             pinned: 'start' as const,
             hideable: false,
             className: 'w-[40px]',
@@ -188,26 +197,26 @@ export function RolesPage() {
         : []),
       {
         id: 'id',
-        label: 'Id',
+        label: cols.id,
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (role) => role.id,
       },
       {
         id: 'actions',
-        label: 'Ações',
+        label: cols.actions,
         hideable: false,
         className: 'w-[72px]',
         render: (role) => (
           <GridRowActions
             actions={[
               {
-                label: 'Editar',
+                label: cols.edit,
                 icon: Pencil,
                 onClick: () => handleEditRole(role.id),
               },
               ...(canManage && isRoleDeletable(role)
                 ? [{
-                    label: 'Remover',
+                    label: cols.remove,
                     icon: Trash2,
                     tone: 'destructive' as const,
                     onClick: () => grid.requestDelete([role.id]),
@@ -219,7 +228,7 @@ export function RolesPage() {
       },
       {
         id: 'name',
-        label: 'Papel',
+        label: t('roles.column.name'),
         className: 'min-w-[180px]',
         render: (role) => (
           <div>
@@ -230,34 +239,34 @@ export function RolesPage() {
       },
       {
         id: 'type',
-        label: 'Tipo',
+        label: t('roles.column.type'),
         className: 'w-[120px]',
         render: (role) => (
           <GridBadge variant={role.is_system ? 'outline' : 'secondary'}>
-            {role.is_system ? 'Sistema' : 'Personalizado'}
+            {role.is_system ? t('roles.type.system') : t('roles.type.custom')}
           </GridBadge>
         ),
       },
       {
         id: 'permissions',
-        label: 'Permissões',
+        label: t('roles.column.permissions'),
         className: 'w-[110px] text-sm text-muted-foreground',
         render: (role) => role.permissions.length,
       },
       {
         id: 'users_count',
-        label: 'Usuários',
+        label: t('roles.column.users'),
         className: 'w-[90px] text-sm text-muted-foreground',
         render: (role) => role.users_count,
       },
       {
         id: 'created_at',
-        label: 'Criado em',
+        label: t('roles.column.created_at'),
         className: 'w-[150px] text-sm text-muted-foreground whitespace-nowrap',
         render: (role) => formatDateTime(role.created_at),
       },
     ],
-    [canManage, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditRole],
+    [canManage, cols, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditRole, t],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
@@ -268,7 +277,7 @@ export function RolesPage() {
     if (userFilter) {
       items.push({
         id: 'user',
-        label: 'Papéis associados',
+        label: t('roles.filter.associated_roles'),
         value: userFilter.userName,
         onRemove: clearUserFilter,
       });
@@ -277,28 +286,28 @@ export function RolesPage() {
     if (grid.search.trim()) {
       items.push({
         id: 'search',
-        label: 'Busca',
+        label: cols.search,
         value: grid.search.trim(),
         onRemove: grid.clearSearch,
       });
     }
 
     return items;
-  }, [clearUserFilter, grid.clearSearch, grid.search, userFilter]);
+  }, [clearUserFilter, cols.search, grid.clearSearch, grid.search, t, userFilter]);
 
   const hasActiveFilters = activeFilters.length > 0;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   const emptyMessage = userFilter
     ? userFilter.roleNames.length === 0
-      ? 'Este usuário não possui papéis vinculados.'
-      : 'Nenhum papel encontrado para este usuário.'
-    : 'Nenhum papel encontrado.';
+      ? t('roles.empty.user_no_roles')
+      : t('roles.empty.user_filtered')
+    : t('roles.empty');
 
   function handleClearFilters() {
     grid.clearSearch();
     clearUserFilter();
-    toast.success('Filtros removidos.');
+    gridToasts.filtersCleared();
   }
 
   function handleResetGrid() {
@@ -307,11 +316,11 @@ export function RolesPage() {
     grid.clearSearch();
     clearUserFilter();
     grid.clearSelection();
-    toast.success('Grid restaurado ao padrão.');
+    gridToasts.gridRestored();
   }
 
   function handleExport() {
-    toast.info('Exportação em breve.');
+    gridToasts.exportSoon();
   }
 
   const toolbarActions = useMemo(
@@ -335,8 +344,8 @@ export function RolesPage() {
   );
 
   usePageToolbar({
-    title: 'Papéis',
-    description: 'Gerencie papéis e permissões de acesso da organização.',
+    title: t('roles.title'),
+    description: t('roles.description'),
     actions: toolbarActions,
   });
 
@@ -354,7 +363,7 @@ export function RolesPage() {
             onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder="Buscar papéis..."
+            searchPlaceholder={t('roles.search_placeholder')}
             filtersControl={(
               <GridFiltersControl
                 filters={activeFilters}
@@ -376,7 +385,7 @@ export function RolesPage() {
                 onHideAll={gridColumns.hideAllColumns}
                 onResetDefault={() => {
                   gridColumns.resetColumns();
-                  toast.success('Colunas restauradas ao padrão.');
+                  gridToasts.columnsRestored();
                 }}
               />
             )}
@@ -415,20 +424,22 @@ export function RolesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remover {grid.deleteIds.length === 1 ? 'papel' : `${grid.deleteIds.length} papéis`}
+              {grid.deleteIds.length === 1
+                ? t('roles.delete.title_one')
+                : t('roles.delete.title_many', { count: grid.deleteIds.length })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza? Papéis do sistema ou com usuários vinculados não podem ser removidos.
+              {t('roles.delete.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}
               disabled={isDeleting}
             >
-              Remover
+              {t('common.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

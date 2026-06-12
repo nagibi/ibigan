@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, ChevronsUpDown, LoaderCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,6 +12,11 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Command,
   CommandCheck,
@@ -29,6 +35,7 @@ function tenantLabel(name: string | null | undefined, slug: string, id: string) 
 }
 
 export function TenantSwitcher() {
+  const { t } = useTranslation();
   const { tenantId } = useAuthStore();
   const isCentralOnly = useCentralOnlySession();
   const impersonatedTenant = useCentralAuthStore((s) => s.impersonatedTenant);
@@ -95,6 +102,10 @@ export function TenantSwitcher() {
     }
   }
 
+  const tenantTooltip = canSwitch
+    ? t('header.tooltip.tenant_switch')
+    : t('header.tooltip.tenant_current', { name: currentLabel });
+
   const trigger = (
     <Button
       variant="outline"
@@ -139,13 +150,31 @@ export function TenantSwitcher() {
     </Button>
   );
 
+  const triggerWithTooltip = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {trigger}
+      </TooltipTrigger>
+      <TooltipContent side="bottom" variant="light">
+        {tenantTooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+
   if (!canSwitch) {
-    return trigger;
+    return triggerWithTooltip;
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" variant="light">
+          {tenantTooltip}
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-80 p-0">
         <Command>
           <CommandInput placeholder="Buscar organização..." />

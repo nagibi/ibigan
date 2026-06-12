@@ -21,6 +21,7 @@ final class UpdateMenuRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
+            'translation_key' => ['nullable', 'string', 'max:255'],
             'slug' => [
                 'required',
                 'string',

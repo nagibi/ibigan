@@ -15,12 +15,17 @@ function isSuperAdminOnlyMenu(menu: ApiMenu): boolean {
   return menu.roles.every((role) => role === 'super-admin');
 }
 
-export function mapApiMenusToConfig(apiMenus: ApiMenu[]): MenuConfig {
+export function mapApiMenusToConfig(
+  apiMenus: ApiMenu[],
+  translate?: (key: string, fallback: string) => string,
+): MenuConfig {
+  const t = translate ?? ((_key, fallback) => fallback);
+
   return apiMenus
     .filter((m) => m.is_active)
     .sort((a, b) => a.order - b.order)
     .map((m): MenuItem => ({
-      title: m.title,
+      title: m.translation_key ? t(m.translation_key, m.title) : m.title,
       icon: resolveMenuIcon({
         icon: m.icon,
         path: m.path,
@@ -31,6 +36,6 @@ export function mapApiMenusToConfig(apiMenus: ApiMenu[]): MenuConfig {
       target: m.target === '_blank' ? '_blank' : '_self',
       badge: m.badge ?? undefined,
       superAdminOnly: isSuperAdminOnlyMenu(m),
-      children: m.children?.length ? mapApiMenusToConfig(m.children) : undefined,
+      children: m.children?.length ? mapApiMenusToConfig(m.children, t) : undefined,
     }));
 }

@@ -1,5 +1,6 @@
 import { type VariantProps } from 'class-variance-authority';
 import { type ElementType, type ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Activity,
   ArrowLeft,
@@ -39,6 +40,7 @@ import {
   GridToolbarGroup,
 } from './grid-toolbar';
 import { FormAuditSheet } from './form-audit-sheet';
+import { ToolbarTooltip } from './toolbar-tooltip';
 
 export interface FormToolbarProps {
   isEditing: boolean;
@@ -53,6 +55,7 @@ export interface FormToolbarProps {
   onSaveAndEdit?: () => void;
   onBack?: () => void;
   onClear?: () => void;
+  onNew?: () => void;
 
   onToggleActive?: () => void;
   onDelete?: () => void;
@@ -76,6 +79,7 @@ export interface FormToolbarProps {
 
 function FormButton({
   label,
+  tooltip,
   icon: Icon,
   onClick,
   disabled,
@@ -83,6 +87,7 @@ function FormButton({
   className,
 }: {
   label: string;
+  tooltip?: string;
   icon: ElementType;
   onClick: () => void;
   disabled?: boolean;
@@ -90,20 +95,22 @@ function FormButton({
   className?: string;
 }) {
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      disabled={disabled || loading}
-      onClick={onClick}
-      className={cn('h-8 gap-1.5 px-2 text-xs font-medium', className)}
-    >
-      {loading
-        ? <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
-        : <Icon className="size-3.5 shrink-0" />
-      }
-      {label}
-    </Button>
+    <ToolbarTooltip content={tooltip}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled || loading}
+        onClick={onClick}
+        className={cn('h-8 gap-1.5 px-2 text-xs font-medium', className)}
+      >
+        {loading
+          ? <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
+          : <Icon className="size-3.5 shrink-0" />
+        }
+        {label}
+      </Button>
+    </ToolbarTooltip>
   );
 }
 
@@ -119,6 +126,7 @@ export function FormToolbar({
   onSaveAndEdit,
   onBack,
   onClear,
+  onNew,
   onToggleActive,
   onDelete,
   onDuplicate,
@@ -133,21 +141,24 @@ export function FormToolbar({
   extra,
   primarySaveVariant = 'primary',
 }: FormToolbarProps) {
+  const { t } = useTranslation();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
 
-  const hasSave = Boolean(onSaveAndList || onSaveAndNew);
+  const hasSave = Boolean(onSaveAndList || onSaveAndNew || onSaveAndEdit);
   const useSaveAndNewAsPrimary = !isEditing && Boolean(onSaveAndNew);
   const primarySaveAction = useSaveAndNewAsPrimary ? onSaveAndNew : onSaveAndList;
-  const primarySaveLabel = 'Salvar';
+  const primarySaveLabel = t('form.save');
   const PrimarySaveIcon = Save;
-  const hasSaveDropdown = isEditing
-    ? Boolean(onSaveAndNew)
-    : Boolean(onSaveAndList || onSaveAndEdit);
+  const saveDisabled = isSubmitting || !primarySaveAction || (isEditing && !isDirty);
+  const hasSaveDropdown = Boolean(onSaveAndNew || onSaveAndEdit);
   const hasLifecycle = isEditing && (onToggleActive || onDelete || onDuplicate);
   const hasAudit = isEditing && (createdBy || updatedBy || createdAt || updatedAt);
   const hasActivityLog = isEditing && Boolean(activityLog);
+  const primarySaveTooltip = isEditing
+    ? t('form.tooltip.save_and_list')
+    : t('form.tooltip.save_and_new');
 
   return (
     <>
@@ -155,53 +166,66 @@ export function FormToolbar({
         {hasSave && (
           <>
             <GridToolbarGroup>
-              <Button
-                type="button"
-                variant={primarySaveVariant}
-                size="sm"
-                disabled={isSubmitting || !primarySaveAction || (isEditing && !isDirty)}
-                onClick={primarySaveAction}
-                className={cn('h-8 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
-              >
-                {isSubmitting
-                  ? <LoaderCircle className="size-3.5 animate-spin" />
-                  : <PrimarySaveIcon className="size-3.5" />
-                }
-                {primarySaveLabel}
-              </Button>
+              <ToolbarTooltip content={primarySaveTooltip}>
+                <Button
+                  type="button"
+                  variant={primarySaveVariant}
+                  size="sm"
+                  disabled={saveDisabled}
+                  onClick={primarySaveAction}
+                  className={cn('h-8 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
+                >
+                  {isSubmitting
+                    ? <LoaderCircle className="size-3.5 animate-spin" />
+                    : <PrimarySaveIcon className="size-3.5" />
+                  }
+                  {primarySaveLabel}
+                </Button>
+              </ToolbarTooltip>
 
               {hasSaveDropdown && (
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant={primarySaveVariant}
-                      size="sm"
-                      disabled={isSubmitting}
-                      className={cn(
-                        'h-8 px-1.5 rounded-l-none border-l',
-                        primarySaveVariant === 'destructive'
-                          ? 'border-destructive-foreground/20'
-                          : 'border-primary-foreground/20',
-                      )}
-                    >
-                      <ChevronDown className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <ToolbarTooltip content={t('form.tooltip.save_options')}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={primarySaveVariant}
+                        size="sm"
+                        disabled={saveDisabled}
+                        className={cn(
+                          'h-8 px-1.5 rounded-l-none border-l',
+                          primarySaveVariant === 'destructive'
+                            ? 'border-destructive-foreground/20'
+                            : 'border-primary-foreground/20',
+                        )}
+                      >
+                        <ChevronDown className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </ToolbarTooltip>
                   <DropdownMenuContent align="start">
-                    {isEditing && onSaveAndNew && (
-                      <DropdownMenuItem onClick={onSaveAndNew}>
-                        <Plus className="size-4 mr-2" /> Salvar e novo
+                    {onSaveAndNew && primarySaveAction !== onSaveAndNew && (
+                      <DropdownMenuItem
+                        disabled={saveDisabled}
+                        onClick={onSaveAndNew}
+                      >
+                        <Plus className="size-4 mr-2" /> {t('form.save_and_new')}
                       </DropdownMenuItem>
                     )}
-                    {!isEditing && onSaveAndList && (
-                      <DropdownMenuItem onClick={onSaveAndList}>
-                        <Save className="size-4 mr-2" /> Salvar e listar
+                    {onSaveAndEdit && primarySaveAction !== onSaveAndEdit && (
+                      <DropdownMenuItem
+                        disabled={saveDisabled}
+                        onClick={onSaveAndEdit}
+                      >
+                        <Pencil className="size-4 mr-2" /> {t('form.save_and_edit')}
                       </DropdownMenuItem>
                     )}
-                    {!isEditing && onSaveAndEdit && (
-                      <DropdownMenuItem onClick={onSaveAndEdit}>
-                        <Pencil className="size-4 mr-2" /> Salvar e editar
+                    {onSaveAndList && primarySaveAction !== onSaveAndList && (
+                      <DropdownMenuItem
+                        disabled={saveDisabled}
+                        onClick={onSaveAndList}
+                      >
+                        <Save className="size-4 mr-2" /> {t('form.save_and_list')}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -209,13 +233,28 @@ export function FormToolbar({
               )}
             </GridToolbarGroup>
 
+            {isEditing && onNew && (
+              <FormButton
+                label={t('common.new')}
+                tooltip={t('form.tooltip.new')}
+                icon={Plus}
+                onClick={onNew}
+              />
+            )}
+
             {onBack && (
-              <FormButton label="Voltar" icon={ArrowLeft} onClick={onBack} />
+              <FormButton
+                label={t('common.back')}
+                tooltip={t('form.tooltip.back')}
+                icon={ArrowLeft}
+                onClick={onBack}
+              />
             )}
 
             {onClear && (
               <FormButton
-                label="Limpar"
+                label={t('common.clear')}
+                tooltip={t('form.tooltip.clear')}
                 icon={RotateCcw}
                 onClick={onClear}
                 disabled={!isDirty}
@@ -229,18 +268,25 @@ export function FormToolbar({
             <GridToolbarGroup>
               {onToggleActive && (
                 <FormButton
-                  label={isActive ? 'Inativar' : 'Ativar'}
+                  label={isActive ? t('common.deactivate') : t('common.activate')}
+                  tooltip={isActive ? t('form.tooltip.deactivate') : t('form.tooltip.activate')}
                   icon={isActive ? UserX : UserCheck}
                   onClick={onToggleActive}
                   loading={isTogglingActive}
                 />
               )}
               {onDuplicate && (
-                <FormButton label="Duplicar" icon={Copy} onClick={onDuplicate} />
+                <FormButton
+                  label={t('common.duplicate')}
+                  tooltip={t('form.tooltip.duplicate')}
+                  icon={Copy}
+                  onClick={onDuplicate}
+                />
               )}
               {onDelete && (
                 <FormButton
-                  label="Excluir"
+                  label={t('common.delete')}
+                  tooltip={t('form.tooltip.delete')}
                   icon={Trash2}
                   onClick={() => setDeleteOpen(true)}
                   loading={isDeleting}
@@ -254,17 +300,24 @@ export function FormToolbar({
           <GridToolbarGroup>
             {hasActivityLog && (
               <FormButton
-                label="Activity Log"
+                label={t('form.activity_log')}
+                tooltip={t('form.tooltip.activity_log')}
                 icon={Activity}
                 onClick={() => setActivityLogOpen(true)}
               />
             )}
             {!hasActivityLog && onHistory && (
-              <FormButton label="Activity Log" icon={Activity} onClick={onHistory} />
+              <FormButton
+                label={t('form.activity_log')}
+                tooltip={t('form.tooltip.activity_log')}
+                icon={Activity}
+                onClick={onHistory}
+              />
             )}
             {hasAudit && (
               <FormButton
-                label="Auditoria"
+                label={t('form.audit')}
+                tooltip={t('form.tooltip.audit')}
                 icon={ClipboardList}
                 onClick={() => setAuditOpen(true)}
               />
@@ -298,18 +351,18 @@ export function FormToolbar({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir {entityLabel}</AlertDialogTitle>
+            <AlertDialogTitle>{t('form.delete_title', { entity: entityLabel })}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza? Esta ação não pode ser desfeita.
+              {t('common.confirm_delete')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => { setDeleteOpen(false); onDelete?.(); }}
             >
-              Excluir
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

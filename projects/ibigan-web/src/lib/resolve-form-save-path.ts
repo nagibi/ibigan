@@ -14,10 +14,15 @@ export function resolveFormSavePath({
   getEditPath: (id: number) => string;
   isEditing: boolean;
   createdId?: number;
-}): string {
+}): string | null {
   if (saveMode === 'new') return newPath;
-  if (saveMode === 'edit' && !isEditing && createdId != null) {
-    return getEditPath(createdId);
+  if (saveMode === 'edit') {
+    if (!isEditing && createdId != null) {
+      return getEditPath(createdId);
+    }
+    if (isEditing) {
+      return null;
+    }
   }
   return listPath;
 }

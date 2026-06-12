@@ -8,6 +8,7 @@ import { CampaignsPage } from '@/pages/campaigns/campaigns-page';
 import { CallbackPage } from '@/pages/auth/callback-page';
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password-page';
 import { InvitePage } from '@/pages/auth/invite-page';
+import { CentralCallbackPage } from '@/pages/auth/central-callback-page';
 import { CentralLoginPage } from '@/pages/auth/central-login-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
@@ -31,6 +32,7 @@ import { RolesPage } from '@/pages/roles/roles-page';
 import { NotificationPreferencesPage } from '@/pages/profile/notification-preferences-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
+import { TranslationsPage } from '@/pages/settings/translations-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
 import { WebhookFormPage } from '@/pages/webhooks/webhook-form-page';
 import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
@@ -91,6 +93,7 @@ export function AppRoutingSetup() {
           </CentralGuestOnly>
         }
       />
+      <Route path="/central/auth/callback" element={<CentralCallbackPage />} />
       <Route
         path="/auth/login"
         element={
@@ -170,6 +173,7 @@ export function AppRoutingSetup() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
         <Route path="/security" element={<SecurityPage />} />
+        <Route path="/settings/translations" element={<TranslationsPage />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/new" element={<ReportFormPage key="report-new" />} />

@@ -75,7 +75,6 @@ const TIMEZONES = [
 const LOCALES = [
   { value: 'pt_BR', label: 'Português (Brasil)' },
   { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
 ];
 
 export function AdminTenantFormPage() {
@@ -96,6 +95,7 @@ export function AdminTenantFormPage() {
 
   const formPage = useFormPage({
     backPath: '/admin/tenants',
+    newPath: '/admin/tenants/nova',
     entityLabel: 'empresa',
     notify: apiNotify,
     onDelete: isEditing
@@ -154,13 +154,14 @@ export function AdminTenantFormPage() {
         return;
       }
 
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/admin/tenants',
         newPath: '/admin/tenants/nova',
         getEditPath: () => `/admin/tenants/${id}/editar`,
         isEditing,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -196,11 +197,7 @@ export function AdminTenantFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
-    [form],
-  );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+  const formAlert = useFormToolbarAlert(form);
 
   const pageTitle = formatFormPageTitle({
     isEditing,
@@ -222,6 +219,7 @@ export function AdminTenantFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset(isEditing && tenant ? {
           name: tenant.name ?? '',
           cnpj: tenant.cnpj ?? '',

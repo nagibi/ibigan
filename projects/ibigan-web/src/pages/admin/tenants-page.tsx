@@ -498,7 +498,6 @@ export function AdminTenantsPage() {
     () => (
       <StandardGridToolbar
         onNew={() => navigate('/admin/tenants/nova')}
-        newLabel="Nova Empresa"
         onEdit={handleEditSelected}
         onActivate={() => void selection.activateSelected()}
         onDeactivate={() => void selection.deactivateSelected()}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,30 +36,35 @@ import { Input } from '@/components/ui/input';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-const createSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
-  email: z.string().email('E-mail inválido.'),
-  password: z
-    .string()
-    .min(8, 'Mínimo 8 caracteres.')
-    .regex(/\d/, 'A senha deve conter pelo menos um número.'),
-  password_confirmation: z.string(),
-  roles: z.array(z.string()).min(1, 'Selecione ao menos um papel.'),
-  ...userProfileFieldsSchema,
-}).refine((d) => d.password === d.password_confirmation, {
-  message: 'As senhas não coincidem.',
-  path: ['password_confirmation'],
-});
 
-const editSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
-  email: z.string().email('E-mail inválido.'),
-  roles: z.array(z.string()).min(1, 'Selecione ao menos um papel.'),
-  ...userProfileFieldsSchema,
-});
+function buildCreateSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t('validation.name_min')),
+    email: z.string().email(t('validation.email')),
+    password: z
+      .string()
+      .min(8, t('validation.password_min'))
+      .regex(/\d/, t('validation.password_number')),
+    password_confirmation: z.string(),
+    roles: z.array(z.string()).min(1, t('validation.roles_min')),
+    ...userProfileFieldsSchema,
+  }).refine((d) => d.password === d.password_confirmation, {
+    message: t('validation.password_mismatch'),
+    path: ['password_confirmation'],
+  });
+}
 
-type CreateData = z.infer<typeof createSchema>;
-type EditData = z.infer<typeof editSchema>;
+function buildEditSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(2, t('validation.name_min')),
+    email: z.string().email(t('validation.email')),
+    roles: z.array(z.string()).min(1, t('validation.roles_min')),
+    ...userProfileFieldsSchema,
+  });
+}
+
+type CreateData = z.infer<ReturnType<typeof buildCreateSchema>>;
+type EditData = z.infer<ReturnType<typeof buildEditSchema>>;
 
 const USER_ACTIVITY_LOG_TYPE = 'users';
 
@@ -84,6 +90,9 @@ function getAuditName(
 }
 
 export function UserFormPage() {
+  const { t } = useTranslation();
+  const createSchema = useMemo(() => buildCreateSchema(t), [t]);
+  const editSchema = useMemo(() => buildEditSchema(t), [t]);
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -106,6 +115,7 @@ export function UserFormPage() {
 
   const formPage = useFormPage({
     backPath: '/users',
+    newPath: '/users/new',
     entityLabel: 'usuário',
     notify: apiNotify,
     onDelete: isEditing
@@ -185,25 +195,26 @@ export function UserFormPage() {
       if (isEditing) {
         queryClient.invalidateQueries({ queryKey: ['user', id] });
       }
-      apiNotify.showSuccess(isEditing ? 'Usuário atualizado!' : 'Usuário criado!');
+      apiNotify.showSuccess(isEditing ? t('users.form.updated') : t('users.form.created'));
       if (!isEditing && formPage.saveMode === 'new') {
         createForm.reset(CREATE_DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/users',
         newPath: '/users/new',
         getEditPath: (recordId) => `/users/${recordId}`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
       if (!handled) {
         apiNotify.showError(
-          isEditing ? 'Erro ao atualizar usuário.' : 'Erro ao criar usuário.',
+          isEditing ? t('users.form.error_update') : t('users.form.error_create'),
           error,
         );
       }
@@ -242,12 +253,7 @@ export function UserFormPage() {
     [createForm],
   );
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false, keepTouched: false }),
-    [form],
-  );
-
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard, {
+  const formAlert = useFormToolbarAlert(form, {
     resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
   });
 
@@ -281,13 +287,14 @@ export function UserFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
         onToggleActive={isEditing && user
           ? () => formPage.handleToggleActive(isActive)
           : undefined
         }
         onDelete={isEditing ? formPage.handleDelete : undefined}
-        entityLabel="usuário"
+        entityLabel={t('users.entity')}
         recordLabel={user?.name}
         activityLog={isEditing && id
           ? { subjectType: USER_ACTIVITY_LOG_TYPE, subjectId: Number(id) }
@@ -323,7 +330,7 @@ export function UserFormPage() {
           }}
         >
           <FormPanel
-            title="Dados pessoais"
+            title={t('users.form.personal_data')}
             isActive={isEditing ? isActive : undefined}
           >
             <FormFieldGrid>
@@ -345,11 +352,11 @@ export function UserFormPage() {
           </FormPanel>
 
           {isEditing && user && (
-            <FormPanel title="Último acesso">
+            <FormPanel title={t('users.form.last_access')}>
               <FormFieldGrid>
                 <FormFieldGridItem>
                   <FormItem>
-                    <FormLabel>Data</FormLabel>
+                    <FormLabel>{t('users.form.last_access_date')}</FormLabel>
                     <FormControl>
                       <Input readOnly value={formatLastLoginDate(user.last_login_at)} className="bg-muted" />
                     </FormControl>
@@ -357,7 +364,7 @@ export function UserFormPage() {
                 </FormFieldGridItem>
                 <FormFieldGridItem>
                   <FormItem>
-                    <FormLabel>IP</FormLabel>
+                    <FormLabel>{t('users.column.last_login_ip')}</FormLabel>
                     <FormControl>
                       <Input readOnly value={user.last_login_ip ?? '—'} className="bg-muted font-mono text-sm" />
                     </FormControl>
@@ -365,7 +372,7 @@ export function UserFormPage() {
                 </FormFieldGridItem>
                 <FormFieldGridItem span={2}>
                   <FormItem>
-                    <FormLabel>Dispositivo</FormLabel>
+                    <FormLabel>{t('users.column.last_login_device')}</FormLabel>
                     <FormControl>
                       <Input readOnly value={user.last_login_device ?? '—'} className="bg-muted" />
                     </FormControl>
@@ -376,16 +383,16 @@ export function UserFormPage() {
           )}
 
           {!isEditing && (
-            <FormPanel title="Senha">
+            <FormPanel title={t('users.form.password_panel')}>
               <FormFieldGrid>
                 <FormFieldGridItem span={2}>
                   <FormField control={createForm.control} name="password" render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>Senha</FormLabel>
+                      <FormLabel required>{t('users.form.password')}</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="Mínimo 8 caracteres"
+                          placeholder={t('validation.password_min')}
                           autoComplete="new-password"
                           {...field}
                         />
@@ -397,11 +404,11 @@ export function UserFormPage() {
                 <FormFieldGridItem span={2}>
                   <FormField control={createForm.control} name="password_confirmation" render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>Confirmar senha</FormLabel>
+                      <FormLabel required>{t('users.form.password_confirm')}</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="Repita a senha"
+                          placeholder={t('users.form.password_confirm_placeholder')}
                           autoComplete="new-password"
                           {...field}
                         />

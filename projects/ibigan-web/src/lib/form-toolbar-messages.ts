@@ -1,2 +1,5 @@
-export const FORM_TOOLBAR_VALIDATION_MESSAGE = 'Verifique todos os campos';
-export const FORM_TOOLBAR_UNSAVED_MESSAGE = 'Alterações não salvas';
+import i18n from '@/i18n/i18next';
+
+export function getFormToolbarValidationMessage(): string {
+  return i18n.t('toolbar.validation');
+}

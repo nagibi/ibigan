@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Columns3, GripVertical, Lock, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/popover';
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import { cn } from '@/lib/utils';
+import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 
 interface GridColumnsControlProps<T> {
   columns: GridColumnDef<T>[];
@@ -48,12 +50,14 @@ function ColumnItem({
   locked,
   dragHandle,
   onSetVisibility,
+  lockedTooltip,
 }: {
   label: string;
   visible: boolean;
   locked?: boolean;
   dragHandle?: ReactNode;
   onSetVisibility: (visible: boolean) => void;
+  lockedTooltip?: string;
 }) {
   return (
     <div
@@ -63,9 +67,11 @@ function ColumnItem({
       )}
     >
       {locked ? (
-        <span className="flex size-7 items-center justify-center text-muted-foreground">
-          <Lock className="size-3.5" />
-        </span>
+        <ToolbarTooltip content={lockedTooltip}>
+          <span className="flex size-7 items-center justify-center text-muted-foreground">
+            <Lock className="size-3.5" />
+          </span>
+        </ToolbarTooltip>
       ) : (
         dragHandle
       )}
@@ -92,12 +98,16 @@ function SortableColumnItem({
   visible,
   locked,
   onSetVisibility,
+  dragTooltip,
+  lockedTooltip,
 }: {
   id: string;
   label: string;
   visible: boolean;
   locked?: boolean;
   onSetVisibility: (visible: boolean) => void;
+  dragTooltip: string;
+  lockedTooltip: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -117,16 +127,19 @@ function SortableColumnItem({
         label={label}
         visible={visible}
         locked={locked}
+        lockedTooltip={lockedTooltip}
         onSetVisibility={onSetVisibility}
         dragHandle={
-          <button
-            type="button"
-            className="flex size-7 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="size-4" />
-          </button>
+          <ToolbarTooltip content={dragTooltip}>
+            <button
+              type="button"
+              className="flex size-7 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="size-4" />
+            </button>
+          </ToolbarTooltip>
         }
       />
     </div>
@@ -147,6 +160,7 @@ export function GridColumnsControl<T>({
   onHideAll,
   onResetDefault,
 }: GridColumnsControlProps<T>) {
+  const { t } = useTranslation();
   const pinnedColumns = useMemo(
     () => columns.filter((column) => column.pinned === 'start'),
     [columns],
@@ -204,29 +218,34 @@ export function GridColumnsControl<T>({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'relative h-8 gap-1.5 px-2 text-xs font-medium',
-            isCustomized && 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
-          )}
-        >
-          <Columns3 className="size-3.5 shrink-0" />
-          Colunas
-          {isCustomized && (
-            <span className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />
-          )}
-        </Button>
-      </PopoverTrigger>
+      <ToolbarTooltip content={t('grid.tooltip.columns')}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'relative h-8 gap-1.5 px-2 text-xs font-medium',
+              isCustomized && 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
+            )}
+          >
+            <Columns3 className="size-3.5 shrink-0" />
+            {t('grid.columns')}
+            {isCustomized && (
+              <span className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />
+            )}
+          </Button>
+        </PopoverTrigger>
+      </ToolbarTooltip>
       <PopoverContent align="start" className="w-72 p-3">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium">Colunas</p>
+            <p className="text-sm font-medium">{t('grid.columns')}</p>
             <p className="text-xs text-muted-foreground">
-              {resolvedVisibleCount} de {resolvedTotalCount} visíveis
+              {t('grid.columns_visible', {
+                visible: resolvedVisibleCount,
+                total: resolvedTotalCount,
+              })}
             </p>
           </div>
         </div>
@@ -234,28 +253,38 @@ export function GridColumnsControl<T>({
         {(onShowAll || onHideAll) && (
           <div className="mb-3 grid grid-cols-2 gap-2">
             {onShowAll && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                disabled={!hasHiddenColumns}
-                onClick={onShowAll}
+              <ToolbarTooltip
+                content={t('grid.tooltip.show_all_columns')}
+                className="flex w-full min-w-0"
               >
-                Exibir todas
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full px-2"
+                  disabled={!hasHiddenColumns}
+                  onClick={onShowAll}
+                >
+                  {t('grid.show_all_columns')}
+                </Button>
+              </ToolbarTooltip>
             )}
             {onHideAll && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                disabled={resolvedVisibleCount <= 1}
-                onClick={onHideAll}
+              <ToolbarTooltip
+                content={t('grid.tooltip.hide_all_columns')}
+                className="flex w-full min-w-0"
               >
-                Ocultar todas
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full px-2"
+                  disabled={resolvedVisibleCount <= 1}
+                  onClick={onHideAll}
+                >
+                  {t('grid.hide_all_columns')}
+                </Button>
+              </ToolbarTooltip>
             )}
           </div>
         )}
@@ -268,6 +297,7 @@ export function GridColumnsControl<T>({
                 label={column.label}
                 visible
                 locked
+                lockedTooltip={t('grid.tooltip.columns_locked')}
                 onSetVisibility={() => undefined}
               />
             ))}
@@ -288,6 +318,8 @@ export function GridColumnsControl<T>({
                     label={column.label}
                     visible={!hidden.includes(columnId)}
                     locked={isColumnLocked(columnId)}
+                    dragTooltip={t('grid.tooltip.columns_drag_item')}
+                    lockedTooltip={t('grid.tooltip.columns_locked')}
                     onSetVisibility={(visible) => onSetVisibility(columnId, visible)}
                   />
                 );
@@ -297,17 +329,22 @@ export function GridColumnsControl<T>({
         </DndContext>
 
         {onResetDefault && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3 w-full"
-            disabled={!isCustomized}
-            onClick={onResetDefault}
+          <ToolbarTooltip
+            content={t('grid.tooltip.reset_columns')}
+            className="mt-3 flex w-full"
           >
-            <RotateCcw className="size-3.5" />
-            Restaurar padrão
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 w-full justify-center gap-1.5 px-2"
+              disabled={!isCustomized}
+              onClick={onResetDefault}
+            >
+              <RotateCcw className="size-3.5 shrink-0" />
+              {t('grid.reset_columns')}
+            </Button>
+          </ToolbarTooltip>
         )}
       </PopoverContent>
     </Popover>

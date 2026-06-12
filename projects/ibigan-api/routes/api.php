@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
-use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
+use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\CentralAuthController;
+use App\Http\Controllers\Api\V1\Central\CentralSocialAuthController;
 use App\Http\Controllers\Api\V1\Central\CentralUserController;
 use App\Http\Controllers\Api\V1\Central\TenantAdminController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Api\V1\Tenant\ReportController;
 use App\Http\Controllers\Api\V1\Tenant\TwoFactorController;
 use App\Http\Controllers\Api\V1\Tenant\UserApprovalController;
 use App\Http\Controllers\Api\V1\Tenant\UserController;
+use App\Http\Controllers\Api\V1\Tenant\TranslationController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Broadcast;
@@ -36,8 +38,10 @@ Broadcast::routes([
 // Rotas públicas
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
-        Route::get('google', [GoogleAuthController::class, 'redirect']);
-        Route::get('google/callback', [GoogleAuthController::class, 'callback']);
+        Route::get('{provider}', [SocialAuthController::class, 'redirect'])
+            ->where('provider', 'google|apple');
+        Route::match(['get', 'post'], '{provider}/callback', [SocialAuthController::class, 'callback'])
+            ->where('provider', 'google|apple');
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('register', [AuthController::class, 'register'])->middleware('throttle:register');
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
@@ -47,6 +51,9 @@ Route::prefix('v1')->group(function () {
 
     Route::post('invites/accept', [InviteController::class, 'accept'])
         ->middleware([InitializeTenancyByHeader::class, 'throttle:invite-accept']);
+
+    Route::get('translations', [TranslationController::class, 'index'])
+        ->middleware([InitializeTenancyByHeader::class]);
 });
 
 // ─── Auth central (público) ───────────────────────────────────────────────
@@ -54,6 +61,8 @@ Route::prefix('central/v1/auth')
     ->middleware(['throttle:api'])
     ->group(function () {
         Route::post('login', [CentralAuthController::class, 'login']);
+        Route::get('{provider}', [CentralSocialAuthController::class, 'redirect'])
+            ->where('provider', 'google|apple');
     });
 
 // ─── Rotas centrais para usuários de TENANT (auth:sanctum) ───────────────
@@ -134,6 +143,10 @@ Route::prefix('v1')
 
         Route::patch('menus/reorder', [MenuController::class, 'reorder']);
         Route::apiResource('menus', MenuController::class);
+
+        Route::get('translations/manage', [TranslationController::class, 'manage']);
+        Route::post('translations', [TranslationController::class, 'store']);
+        Route::put('translations/{tenantTranslation}', [TranslationController::class, 'update']);
 
         Route::apiResource('permissions', PermissionController::class)->only([
             'index',

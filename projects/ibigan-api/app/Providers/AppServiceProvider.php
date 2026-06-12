@@ -22,6 +22,8 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
+use SocialiteProviders\Apple\Provider as AppleProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -57,6 +59,10 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(JobProcessing::class, function (): void {
             SentryContext::applyForQueue();
+        });
+
+        Event::listen(function (SocialiteWasCalled $event): void {
+            $event->extendSocialite('apple', AppleProvider::class);
         });
     }
 }

@@ -1,4 +1,5 @@
 import { useCallback, useRef, type MouseEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   closestCenter,
   DndContext,
@@ -39,6 +40,8 @@ import {
   resolveGridColumnLabel,
 } from '@/lib/grid-column-presets';
 import { cn } from '@/lib/utils';
+import i18n from '@/i18n/i18next';
+import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 
 const ROW_INTERACTIVE_SELECTOR =
   'button, a, input, textarea, select, label, [role="switch"], [role="checkbox"], [data-grid-no-row-select]';
@@ -87,6 +90,17 @@ interface GridTableProps<T> {
   maxBodyHeight?: string;
 }
 
+function getSortTooltip(
+  isActive: boolean,
+  sortDir: SortDirection | undefined,
+  t: (key: string) => string,
+) {
+  if (!isActive) return t('grid.tooltip.sort_inactive');
+  return sortDir === 'asc'
+    ? t('grid.tooltip.sort_asc')
+    : t('grid.tooltip.sort_desc');
+}
+
 function SortableHeaderCell<T>({
   column,
   sort,
@@ -98,6 +112,7 @@ function SortableHeaderCell<T>({
   sortDir?: SortDirection;
   onSort?: (sortKey: string) => void;
 }) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
   });
@@ -127,23 +142,27 @@ function SortableHeaderCell<T>({
         'flex items-center gap-1',
         isGridCenteredColumn(column.id) && 'justify-center',
       )}>
-        <button
-          type="button"
-          className="cursor-grab text-muted-foreground active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="size-3.5" />
-        </button>
-        {column.sortable ? (
+        <ToolbarTooltip content={t('grid.tooltip.drag_column')}>
           <button
             type="button"
-            className="flex items-center gap-1 text-left text-xs font-medium hover:text-foreground"
-            onClick={() => onSort?.(sortKey)}
+            className="cursor-grab text-muted-foreground active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
           >
-            {resolveGridColumnLabel(column.id, column.label)}
-            <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
+            <GripVertical className="size-3.5" />
           </button>
+        </ToolbarTooltip>
+        {column.sortable ? (
+          <ToolbarTooltip content={getSortTooltip(isActive, sortDir, t)}>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-left text-xs font-medium hover:text-foreground"
+              onClick={() => onSort?.(sortKey)}
+            >
+              {resolveGridColumnLabel(column.id, column.label)}
+              <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
+            </button>
+          </ToolbarTooltip>
         ) : (
           <span className="text-xs font-medium">{resolveGridColumnLabel(column.id, column.label)}</span>
         )}
@@ -163,6 +182,7 @@ function PinnedHeaderCell<T>({
   sortDir?: SortDirection;
   onSort?: (sortKey: string) => void;
 }) {
+  const { t } = useTranslation();
   const sortKey = column.sortKey ?? column.id;
   const isActive = sort === sortKey;
   const SortIcon = isActive
@@ -174,17 +194,19 @@ function PinnedHeaderCell<T>({
   return (
     <TableHead className={cn('whitespace-nowrap', getGridColumnCellClassName(column.id, column.className))}>
       {column.sortable ? (
-        <button
-          type="button"
-          className={cn(
-            'flex items-center gap-1 text-xs font-medium hover:text-foreground',
-            isGridCenteredColumn(column.id) ? 'justify-center w-full' : 'text-left',
-          )}
-          onClick={() => onSort?.(sortKey)}
-        >
-          {resolveGridColumnLabel(column.id, column.label)}
-          <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
-        </button>
+        <ToolbarTooltip content={getSortTooltip(isActive, sortDir, t)}>
+          <button
+            type="button"
+            className={cn(
+              'flex items-center gap-1 text-xs font-medium hover:text-foreground',
+              isGridCenteredColumn(column.id) ? 'justify-center w-full' : 'text-left',
+            )}
+            onClick={() => onSort?.(sortKey)}
+          >
+            {resolveGridColumnLabel(column.id, column.label)}
+            <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
+          </button>
+        </ToolbarTooltip>
       ) : (
         <span className={cn(
           'text-xs font-medium',
@@ -203,7 +225,7 @@ export function GridTable<T>({
   data,
   getRowKey,
   loading = false,
-  emptyMessage = 'Nenhum registro encontrado.',
+  emptyMessage = i18n.t('grid.empty'),
   skeletonRows = 5,
   sort,
   sortDir,

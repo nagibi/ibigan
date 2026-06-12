@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useFormState, type Control, type FieldValues } from 'react-hook-form';
-import { RotateCcw } from 'lucide-react';
 import {
-  FORM_TOOLBAR_UNSAVED_MESSAGE,
-  FORM_TOOLBAR_VALIDATION_MESSAGE,
-} from '@/lib/form-toolbar-messages';
-import { Button } from '@/components/ui/button';
+  useFormState,
+  type FieldValues,
+  type UseFormReturn,
+} from 'react-hook-form';
+import { getFormToolbarValidationMessage } from '@/lib/form-toolbar-messages';
 import type { ToolbarAlertConfig } from '@/components/grid/toolbar-alert';
 
-export { FORM_TOOLBAR_UNSAVED_MESSAGE, FORM_TOOLBAR_VALIDATION_MESSAGE };
+export { getFormToolbarValidationMessage };
 
 export function hasNestedFlagFields(fields: object): boolean {
   return Object.values(fields).some(
@@ -36,51 +35,23 @@ function useFormDirtyTrackingEnabled(routeKey: string) {
 export type UseFormToolbarAlertOptions = {
   /** Limpa dirty fantasma (autofill, Select na montagem) sem interação do usuário. */
   resetPhantomDirty?: () => void;
-  /** Exibe o alerta amarelo de alterações não salvas. Padrão: true. */
-  showUnsavedAlert?: boolean;
 };
 
-export function buildUnsavedChangesAlert(
-  onDiscard: () => void,
-  id?: string | number,
-): ToolbarAlertConfig {
-  return {
-    variant: 'warning',
-    title: FORM_TOOLBAR_UNSAVED_MESSAGE,
-    autoDismissMs: false,
-    id: id ?? 'unsaved',
-    actions: (
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        onClick={onDiscard}
-        className="h-8 gap-1.5"
-      >
-        <RotateCcw className="size-3.5 shrink-0" />
-        Descartar
-      </Button>
-    ),
-  };
-}
-
 export function useFormToolbarAlert<T extends FieldValues>(
-  control: Control<T>,
-  onDiscard?: () => void,
+  form: UseFormReturn<T>,
   options?: UseFormToolbarAlertOptions,
 ): ToolbarAlertConfig | null {
   const { key } = useLocation();
   const dirtyTrackingEnabled = useFormDirtyTrackingEnabled(key);
   const phantomDirtyClearedRef = useRef(false);
-  const { errors, dirtyFields, touchedFields, submitCount } = useFormState({ control });
+  const { errors, dirtyFields, touchedFields, submitCount } = useFormState({
+    control: form.control,
+  });
   const errorList = Object.values(errors);
   const hasErrors = errorList.some(Boolean);
   const hasServerErrors = errorList.some((error) => error?.type === 'server');
   const hasDirtyFields = hasNestedFlagFields(dirtyFields);
   const hasTouchedFields = hasNestedFlagFields(touchedFields);
-  const showUnsavedAlert = options?.showUnsavedAlert ?? true;
-  const hasUnsavedChanges =
-    showUnsavedAlert && dirtyTrackingEnabled && hasDirtyFields && hasTouchedFields;
 
   useEffect(() => {
     phantomDirtyClearedRef.current = false;
@@ -110,15 +81,11 @@ export function useFormToolbarAlert<T extends FieldValues>(
     if ((submitCount > 0 || hasServerErrors) && hasErrors) {
       return {
         variant: 'destructive',
-        title: FORM_TOOLBAR_VALIDATION_MESSAGE,
+        title: getFormToolbarValidationMessage(),
         id: hasServerErrors ? `server-${submitCount}` : submitCount,
       };
     }
 
-    if (hasUnsavedChanges && onDiscard) {
-      return buildUnsavedChangesAlert(onDiscard, key);
-    }
-
     return null;
-  }, [hasErrors, hasServerErrors, hasUnsavedChanges, key, onDiscard, submitCount]);
+  }, [hasErrors, hasServerErrors, submitCount]);
 }

@@ -1,53 +1,45 @@
 import { User } from 'lucide-react';
+import i18n from '@/i18n/i18next';
 import { type MenuConfig, type MenuItem } from '@/config/types';
 import { collectMenuPaths } from '@/lib/merge-saas-menu-items';
 
 const ACCOUNT_PATHS = new Set(['/profile', '/notifications']);
 
-function extractSectionByHeading(menu: MenuConfig, heading: string): MenuConfig {
-  const section: MenuConfig = [];
+const ACCOUNT_TRANSLATION_BY_PATH: Record<string, string> = {
+  '/profile': 'menu.profile',
+  '/notifications': 'menu.notifications',
+};
 
-  for (let index = 0; index < menu.length; index += 1) {
-    if (menu[index].heading !== heading) {
-      continue;
-    }
+function isAccountChild(item: MenuItem): boolean {
+  return Boolean(item.path && ACCOUNT_PATHS.has(item.path));
+}
 
-    for (let cursor = index + 1; cursor < menu.length && !menu[cursor].heading; cursor += 1) {
-      section.push(menu[cursor]);
-    }
+function isAccountGroup(item: MenuItem): boolean {
+  return Boolean(item.children?.some(isAccountChild));
+}
 
-    break;
-  }
-
-  return section;
+function localizeAccountItems(items: MenuConfig): MenuConfig {
+  return items.map((item) => ({
+    ...item,
+    title: item.path && ACCOUNT_TRANSLATION_BY_PATH[item.path]
+      ? i18n.t(ACCOUNT_TRANSLATION_BY_PATH[item.path])
+      : item.title,
+  }));
 }
 
 function extractAccountItems(staticMenu: MenuConfig): MenuConfig {
-  const contaGroup = staticMenu.find(
-    (item) => item.title === 'Conta' && item.children?.length,
-  );
+  const accountGroup = staticMenu.find(isAccountGroup);
 
-  if (contaGroup?.children) {
-    return contaGroup.children;
-  }
-
-  return extractSectionByHeading(staticMenu, 'CONTA');
+  return accountGroup?.children ?? [];
 }
 
 function findAccountMenuIndex(menu: MenuConfig): number {
-  return menu.findIndex((item) => {
-    if (!item.children?.length) {
-      return false;
-    }
-
-    return item.title === 'Conta'
-      || item.children.some((child) => child.path && ACCOUNT_PATHS.has(child.path));
-  });
+  return menu.findIndex(isAccountGroup);
 }
 
-function createContaGroup(children: MenuConfig): MenuItem {
+function createAccountGroup(children: MenuConfig): MenuItem {
   return {
-    title: 'Conta',
+    title: i18n.t('menu.account'),
     icon: User,
     children,
   };
@@ -58,6 +50,7 @@ function mergeIntoAccountGroup(menu: MenuConfig, toAdd: MenuConfig): MenuConfig 
     return menu;
   }
 
+  const localizedToAdd = localizeAccountItems(toAdd);
   const accountIndex = findAccountMenuIndex(menu);
 
   if (accountIndex >= 0) {
@@ -66,7 +59,7 @@ function mergeIntoAccountGroup(menu: MenuConfig, toAdd: MenuConfig): MenuConfig 
     const existingPaths = new Set(
       existingChildren.map((child) => child.path).filter((path): path is string => Boolean(path)),
     );
-    const newChildren = toAdd.filter((item) => item.path && !existingPaths.has(item.path));
+    const newChildren = localizedToAdd.filter((item) => item.path && !existingPaths.has(item.path));
 
     if (newChildren.length === 0) {
       return menu;
@@ -82,7 +75,7 @@ function mergeIntoAccountGroup(menu: MenuConfig, toAdd: MenuConfig): MenuConfig 
     return nextMenu;
   }
 
-  return [...menu, createContaGroup(toAdd)];
+  return [...menu, createAccountGroup(localizedToAdd)];
 }
 
 /**

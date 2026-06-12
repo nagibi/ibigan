@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,21 +28,22 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
 } from '@/components/ui/form';
 
-const schema = z.object({
+const schema = (t: (key: string) => string) => z.object({
   name: z
     .string()
-    .min(3, 'Nome é obrigatório.')
+    .min(3, t('permissions.form.validation.name_required'))
     .max(255)
-    .regex(/^[a-z0-9]+-[a-z0-9]+$/, 'Use o formato recurso-ação (ex.: usuario-visualizar).'),
+    .regex(/^[a-z0-9]+-[a-z0-9]+$/, t('permissions.form.validation.name_format')),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof schema>>;
 
 const DEFAULT_VALUES: FormData = {
   name: '',
 };
 
 export function PermissionFormPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,7 +62,8 @@ export function PermissionFormPage() {
 
   const formPage = useFormPage({
     backPath: '/permissions',
-    entityLabel: 'permissão',
+    newPath: '/permissions/new',
+    entityLabel: t('permissions.entity'),
     onDelete: isEditing && canManage
       ? async () => {
           await permissionsService.destroy(Number(id));
@@ -70,8 +73,10 @@ export function PermissionFormPage() {
     notify: apiNotify,
   });
 
+  const formSchema = useMemo(() => schema(t), [t]);
+
   const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(formSchema),
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -98,19 +103,20 @@ export function PermissionFormPage() {
       if (isEditing) {
         queryClient.invalidateQueries({ queryKey: ['permission', id] });
       }
-      apiNotify.showSuccess(isEditing ? 'Permissão atualizada!' : 'Permissão criada!');
+      apiNotify.showSuccess(isEditing ? t('permissions.form.updated') : t('permissions.form.created'));
       if (!isEditing && formPage.saveMode === 'new') {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/permissions',
         newPath: '/permissions/new',
         getEditPath: (recordId) => `/permissions/${recordId}`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -119,7 +125,7 @@ export function PermissionFormPage() {
         return;
       }
       apiNotify.showError(
-        isEditing ? 'Erro ao atualizar permissão.' : 'Erro ao criar permissão.',
+        isEditing ? t('permissions.form.error_update') : t('permissions.form.error_create'),
         error,
       );
     },
@@ -172,7 +178,7 @@ export function PermissionFormPage() {
     handleDiscard();
   }, [handleDiscard]);
 
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard, {
+  const formAlert = useFormToolbarAlert(form, {
     resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
   });
 
@@ -196,9 +202,10 @@ export function PermissionFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={handleClear}
         onDelete={isEditing ? formPage.handleDelete : undefined}
-        entityLabel="permissão"
+        entityLabel={t('permissions.entity')}
         recordLabel={permission ? formatPermissionName(permission.name) : undefined}
       />
     ) : undefined,
@@ -207,9 +214,9 @@ export function PermissionFormPage() {
   if (!canManage) {
     return (
       <PageBody>
-        <FormPanel title="Acesso restrito">
+        <FormPanel title={t('form.restricted_access')}>
           <p className="text-sm text-muted-foreground">
-            Você não tem permissão para gerenciar permissões.
+            {t('permissions.form.no_permission')}
           </p>
         </FormPanel>
       </PageBody>
@@ -230,7 +237,7 @@ export function PermissionFormPage() {
             handlePrimarySave();
           }}
         >
-          <FormPanel title="Identificação">
+          <FormPanel title={t('permissions.form.identification')}>
             <FormFieldGrid>
               {isEditing && id && (
                 <FormFieldGridItem>
@@ -240,12 +247,12 @@ export function PermissionFormPage() {
               <FormFieldGridItem span={isEditing ? 3 : 4}>
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Nome da permissão</FormLabel>
+                    <FormLabel required>{t('permissions.form.name')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="usuario-visualizar" {...field} />
+                      <Input placeholder={t('permissions.form.name_placeholder')} {...field} />
                     </FormControl>
                     <FormDescription>
-                      Formato recurso-ação em minúsculas. Ex.: relatorio-gerenciar
+                      {t('permissions.form.name_help')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

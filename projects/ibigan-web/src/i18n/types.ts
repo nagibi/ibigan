@@ -1,6 +1,6 @@
 import { type MessageFormatElement } from 'react-intl';
 
-export type LanguageCode = 'pt' | 'en' | 'es' | 'fr' | 'ar' | 'zh';
+export type LanguageCode = 'pt' | 'en';
 
 export type LanguageDirection = 'ltr' | 'rtl';
 
@@ -15,6 +15,6 @@ export interface Language {
 export interface I18nProviderProps {
   currenLanguage: Language;
   isRTL: () => boolean;
-
   changeLanguage: (lang: Language) => void;
+  reloadTranslations: () => Promise<void>;
 }

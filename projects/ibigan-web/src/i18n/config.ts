@@ -1,19 +1,11 @@
 import { toAbsoluteUrl } from '@/lib/helpers';
-import arMessages from './messages/ar.json';
 import enMessages from './messages/en.json';
-import esMessages from './messages/es.json';
-import frMessages from './messages/fr.json';
 import ptMessages from './messages/pt.json';
-import zhMessages from './messages/zh.json';
 import { type Language } from './types';
 
 const I18N_MESSAGES = {
   pt: ptMessages,
   en: enMessages,
-  es: esMessages,
-  ar: arMessages,
-  fr: frMessages,
-  zh: zhMessages,
 };
 
 const I18N_CONFIG_KEY = 'i18nConfig';
@@ -32,34 +24,6 @@ const I18N_LANGUAGES: Language[] = [
     direction: 'ltr',
     flag: toAbsoluteUrl('/media/flags/united-states.svg'),
     messages: I18N_MESSAGES.en,
-  },
-  {
-    label: 'Español',
-    code: 'es',
-    direction: 'ltr',
-    flag: toAbsoluteUrl('/media/flags/spain.svg'),
-    messages: I18N_MESSAGES.es,
-  },
-  {
-    label: 'French',
-    code: 'fr',
-    direction: 'ltr',
-    flag: toAbsoluteUrl('/media/flags/france.svg'),
-    messages: I18N_MESSAGES.fr,
-  },
-  {
-    label: 'Arabic (Saudi)',
-    code: 'ar',
-    direction: 'rtl',
-    flag: toAbsoluteUrl('/media/flags/saudi-arabia.svg'),
-    messages: I18N_MESSAGES.ar,
-  },
-  {
-    label: 'Chinese',
-    code: 'zh',
-    direction: 'ltr',
-    flag: toAbsoluteUrl('/media/flags/china.svg'),
-    messages: I18N_MESSAGES.zh,
   },
 ];
 

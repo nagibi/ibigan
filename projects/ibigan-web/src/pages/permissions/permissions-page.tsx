@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
+import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
@@ -39,6 +41,9 @@ import {
 const GRID_COLUMNS_KEY = 'grid-columns:permissions';
 
 export function PermissionsPage() {
+  const { t } = useTranslation();
+  const cols = useGridColumnLabels();
+  const gridToasts = useGridToasts();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useApiToolbarAlert();
@@ -106,16 +111,18 @@ export function PermissionsPage() {
       await Promise.all(grid.deleteIds.map((id) => permissionsService.destroy(id)));
       await queryClient.invalidateQueries({ queryKey: ['permissions'] });
       showSuccess(
-        grid.deleteIds.length === 1 ? 'Permissão removida.' : 'Permissões removidas.',
+        grid.deleteIds.length === 1
+          ? t('permissions.success.deleted_one')
+          : t('permissions.success.deleted_many'),
       );
       grid.clearDeleteRequest();
       grid.clearSelection();
     } catch (error) {
-      showError('Erro ao remover permissões.', error);
+      showError(t('permissions.error.delete'), error);
     } finally {
       setIsDeleting(false);
     }
-  }, [grid, queryClient, showError, showSuccess]);
+  }, [grid, queryClient, showError, showSuccess, t]);
 
   const handleEditPermission = useCallback(
     (permissionId: number) => navigate(`/permissions/${permissionId}`),
@@ -127,7 +134,7 @@ export function PermissionsPage() {
       ...(canManage
         ? [{
             id: 'select',
-            label: '#',
+            label: cols.select,
             pinned: 'start' as const,
             hideable: false,
             className: 'w-[40px]',
@@ -142,26 +149,26 @@ export function PermissionsPage() {
         : []),
       {
         id: 'id',
-        label: 'Id',
+        label: cols.id,
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (permission) => permission.id,
       },
       {
         id: 'actions',
-        label: 'Ações',
+        label: cols.actions,
         hideable: false,
         className: 'w-[72px]',
         render: (permission) => (
           <GridRowActions
             actions={[
               {
-                label: 'Editar',
+                label: cols.edit,
                 icon: Pencil,
                 onClick: () => handleEditPermission(permission.id),
               },
               ...(canManage
                 ? [{
-                    label: 'Remover',
+                    label: cols.remove,
                     icon: Trash2,
                     tone: 'destructive' as const,
                     onClick: () => grid.requestDelete([permission.id]),
@@ -173,7 +180,7 @@ export function PermissionsPage() {
       },
       {
         id: 'name',
-        label: 'Permissão',
+        label: t('permissions.column.name'),
         className: 'min-w-[220px]',
         render: (permission) => (
           <div>
@@ -184,7 +191,7 @@ export function PermissionsPage() {
       },
       {
         id: 'resource',
-        label: 'Recurso',
+        label: t('permissions.column.resource'),
         className: 'w-[140px]',
         render: (permission) => (
           <GridBadge variant="outline">{formatPermissionResource(permission.resource)}</GridBadge>
@@ -192,14 +199,14 @@ export function PermissionsPage() {
       },
       {
         id: 'action',
-        label: 'Ação',
+        label: t('permissions.column.action'),
         className: 'w-[120px]',
         render: (permission) => (
           <GridBadge variant="secondary">{formatPermissionAction(permission.action)}</GridBadge>
         ),
       },
     ],
-    [canManage, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditPermission],
+    [canManage, cols, grid.requestDelete, grid.selected, grid.toggleSelect, handleEditPermission, t],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
@@ -209,18 +216,18 @@ export function PermissionsPage() {
 
     return [{
       id: 'search',
-      label: 'Busca',
+      label: cols.search,
       value: grid.search.trim(),
       onRemove: grid.clearSearch,
     }];
-  }, [grid.clearSearch, grid.search]);
+  }, [cols.search, grid.clearSearch, grid.search]);
 
   const hasActiveFilters = activeFilters.length > 0;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   function handleClearFilters() {
     grid.clearSearch();
-    toast.success('Filtros removidos.');
+    gridToasts.filtersCleared();
   }
 
   function handleResetGrid() {
@@ -228,11 +235,11 @@ export function PermissionsPage() {
     grid.resetSettings();
     grid.clearSearch();
     grid.clearSelection();
-    toast.success('Grid restaurado ao padrão.');
+    gridToasts.gridRestored();
   }
 
   function handleExport() {
-    toast.info('Exportação em breve.');
+    gridToasts.exportSoon();
   }
 
   const toolbarActions = useMemo(
@@ -256,8 +263,8 @@ export function PermissionsPage() {
   );
 
   usePageToolbar({
-    title: 'Permissões',
-    description: 'Catálogo de permissões disponíveis para os papéis da organização.',
+    title: t('permissions.title'),
+    description: t('permissions.description'),
     actions: toolbarActions,
   });
 
@@ -275,7 +282,7 @@ export function PermissionsPage() {
             onExport={handleExport}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder="Buscar permissões..."
+            searchPlaceholder={t('permissions.search_placeholder')}
             filtersControl={(
               <GridFiltersControl
                 filters={activeFilters}
@@ -297,7 +304,7 @@ export function PermissionsPage() {
                 onHideAll={gridColumns.hideAllColumns}
                 onResetDefault={() => {
                   gridColumns.resetColumns();
-                  toast.success('Colunas restauradas ao padrão.');
+                  gridToasts.columnsRestored();
                 }}
               />
             )}
@@ -315,7 +322,7 @@ export function PermissionsPage() {
           data={filteredPermissions}
           getRowKey={(permission) => String(permission.id)}
           loading={isLoading}
-          emptyMessage="Nenhuma permissão encontrada."
+          emptyMessage={t('permissions.empty')}
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
           isRowSelected={(permission) => grid.selected.includes(permission.id)}
           onRowClick={(permission, event) => {
@@ -336,20 +343,22 @@ export function PermissionsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remover {grid.deleteIds.length === 1 ? 'permissão' : `${grid.deleteIds.length} permissões`}
+              {grid.deleteIds.length === 1
+                ? t('permissions.delete.title_one')
+                : t('permissions.delete.title_many', { count: grid.deleteIds.length })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Permissões vinculadas a papéis não podem ser removidas.
+              {t('permissions.delete.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}
               disabled={isDeleting}
             >
-              Remover
+              {t('common.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

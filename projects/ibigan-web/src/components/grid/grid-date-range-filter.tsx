@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 import { CalendarDays, ChevronDown } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
@@ -10,34 +9,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useDateLocale } from '@/lib/date-locale';
+import {
+  formatDateRangeFilterLabel,
+  parseFilterDate,
+  toIsoDate,
+} from '@/lib/grid-date-filter-utils';
 import { cn } from '@/lib/utils';
 
-function parseFilterDate(value: string): Date | undefined {
-  if (!value) return undefined;
-  try {
-    return parseISO(value);
-  } catch {
-    return undefined;
-  }
-}
-
-function formatFilterDate(value: string): string {
-  const date = parseFilterDate(value);
-  if (!date) return value;
-  return format(date, 'dd/MM/yy', { locale: ptBR });
-}
-
-export function formatDateRangeFilterLabel(from: string, to: string): string {
-  if (from && to) return `${formatFilterDate(from)} — ${formatFilterDate(to)}`;
-  if (from) return `De ${formatFilterDate(from)}`;
-  if (to) return `Até ${formatFilterDate(to)}`;
-  return '';
-}
-
-function toIsoDate(date?: Date): string {
-  if (!date) return '';
-  return format(date, 'yyyy-MM-dd');
-}
+export { formatDateRangeFilterLabel } from '@/lib/grid-date-filter-utils';
 
 interface GridDateRangeFilterProps {
   from: string;
@@ -50,13 +30,17 @@ export function GridDateRangeFilter({
   from,
   to,
   onChange,
-  placeholder = 'Período',
+  placeholder,
 }: GridDateRangeFilterProps) {
+  const { t } = useTranslation();
+  const locale = useDateLocale();
   const [open, setOpen] = useState(false);
   const [tempRange, setTempRange] = useState<DateRange | undefined>();
 
   const isActive = Boolean(from || to);
-  const label = isActive ? formatDateRangeFilterLabel(from, to) : placeholder;
+  const label = isActive
+    ? formatDateRangeFilterLabel(from, to, locale)
+    : (placeholder ?? t('grid.date_period'));
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
@@ -105,14 +89,14 @@ export function GridDateRangeFilter({
           selected={tempRange}
           defaultMonth={tempRange?.from ?? parseFilterDate(from)}
           onSelect={setTempRange}
-          locale={ptBR}
+          locale={locale}
         />
         <div className="flex items-center justify-end gap-1.5 border-t border-border p-2">
           <Button type="button" variant="outline" size="sm" onClick={handleClear}>
-            Limpar
+            {t('common.clear')}
           </Button>
           <Button type="button" size="sm" onClick={handleApply}>
-            Aplicar
+            {t('grid.apply')}
           </Button>
         </div>
       </PopoverContent>

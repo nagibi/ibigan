@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronsUpDown } from 'lucide-react';
 import type { Control, FieldPath, FieldValues } from 'react-hook-form';
@@ -38,9 +39,12 @@ interface UserRolesFieldProps<T extends FieldValues> {
   canAssignProtected?: boolean;
 }
 
-function formatSelectedRolesLabel(selected: string[]): string {
+function formatSelectedRolesLabel(
+  selected: string[],
+  emptyLabel: string,
+): string {
   if (selected.length === 0) {
-    return 'Selecione os papéis';
+    return emptyLabel;
   }
 
   const labels = selected.map((role) => formatRoleName(role));
@@ -62,6 +66,7 @@ export function UserRolesField<T extends FieldValues>({
   lockedRoles = [],
   canAssignProtected = false,
 }: UserRolesFieldProps<T>) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -99,12 +104,12 @@ export function UserRolesField<T extends FieldValues>({
 
         return (
           <FormItem>
-            <FormLabel required>Papéis</FormLabel>
+            <FormLabel required>{t('users.form.roles')}</FormLabel>
             {locked.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {locked.map((role) => (
                   <Badge key={role} variant="outline">
-                    {formatRoleName(role)} (sistema)
+                    {formatRoleName(role)} {t('users.form.role_system')}
                   </Badge>
                 ))}
               </div>
@@ -124,7 +129,9 @@ export function UserRolesField<T extends FieldValues>({
                     )}
                   >
                     <span className="truncate">
-                      {isLoading ? 'Carregando papéis...' : formatSelectedRolesLabel(selected)}
+                      {isLoading
+                        ? t('users.form.roles_loading')
+                        : formatSelectedRolesLabel(selected, t('users.form.roles_select'))}
                     </span>
                     <ChevronsUpDown className="size-4 shrink-0 opacity-60" />
                   </Button>
@@ -132,9 +139,9 @@ export function UserRolesField<T extends FieldValues>({
               </PopoverTrigger>
               <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
                 <Command>
-                  <CommandInput placeholder="Buscar papel..." />
+                  <CommandInput placeholder={t('users.form.roles_search')} />
                   <CommandList>
-                    <CommandEmpty>Nenhum papel encontrado.</CommandEmpty>
+                    <CommandEmpty>{t('roles.empty')}</CommandEmpty>
                     <CommandGroup>
                       {assignableRoles.map((role) => {
                         const isSelected = selected.includes(role.name);

@@ -75,6 +75,7 @@ export function MessageTemplateFormPage() {
 
   const formPage = useFormPage({
     backPath: '/message-templates',
+    newPath: '/message-templates/new',
     entityLabel: 'template',
     notify: apiNotify,
     onDelete: isEditing
@@ -142,14 +143,15 @@ export function MessageTemplateFormPage() {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/message-templates',
         newPath: '/message-templates/new',
         getEditPath: (recordId) => `/message-templates/${recordId}`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -185,11 +187,7 @@ export function MessageTemplateFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
-    [form],
-  );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+  const formAlert = useFormToolbarAlert(form);
 
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
@@ -252,6 +250,7 @@ export function MessageTemplateFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
         onToggleActive={isEditing && template
           ? () => formPage.handleToggleActive(isActive)

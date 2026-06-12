@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
@@ -39,6 +40,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface UserDropdownMenuProps {
   trigger?: ReactNode;
@@ -49,6 +56,7 @@ function formatRole(role: string): string {
 }
 
 export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const intl = useIntl();
   const { user, logout, isAuthenticated } = useAuthStore();
@@ -137,16 +145,25 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {trigger ?? (
-          <Avatar className="size-9 cursor-pointer">
-            <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {getInitials(displayName, 2)}
-            </AvatarFallback>
-          </Avatar>
-        )}
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            {trigger ?? (
+              <span className="inline-flex cursor-pointer rounded-full outline-none">
+                <Avatar className="size-9">
+                  <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {getInitials(displayName, 2)}
+                  </AvatarFallback>
+                </Avatar>
+              </span>
+            )}
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" variant="light">
+          {t('header.tooltip.profile')}
+        </TooltipContent>
+      </Tooltip>
 
       <DropdownMenuContent align="end" side="bottom" className="w-64">
         <div className="flex items-center justify-between gap-2 p-3">
@@ -263,17 +280,23 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
           <Moon className="size-4" />
           <div className="flex grow items-center justify-between gap-2">
             {intl.formatMessage({ id: 'USER.MENU.DARK_MODE' })}
-            <span
-              className="inline-flex"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => event.stopPropagation()}
+            <ToolbarTooltip
+              content={isDarkMode
+                ? t('header.tooltip.dark_mode_off')
+                : t('header.tooltip.dark_mode_on')}
             >
-              <Switch
-                size="sm"
-                checked={isDarkMode}
-                onCheckedChange={handleThemeToggle}
-              />
-            </span>
+              <span
+                className="inline-flex"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <Switch
+                  size="sm"
+                  checked={isDarkMode}
+                  onCheckedChange={handleThemeToggle}
+                />
+              </span>
+            </ToolbarTooltip>
           </div>
         </DropdownMenuItem>
 

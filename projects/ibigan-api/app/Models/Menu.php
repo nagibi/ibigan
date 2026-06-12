@@ -22,6 +22,7 @@ class Menu extends Model
 
     protected $fillable = [
         'title',
+        'translation_key',
         'slug',
         'icon',
         'badge',

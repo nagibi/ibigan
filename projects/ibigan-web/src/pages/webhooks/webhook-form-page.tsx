@@ -66,6 +66,7 @@ export function WebhookFormPage() {
 
   const formPage = useFormPage({
     backPath: '/webhooks',
+    newPath: '/webhooks/new',
     entityLabel: 'webhook',
     notify: apiNotify,
     onDelete: isEditing
@@ -128,14 +129,15 @@ export function WebhookFormPage() {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/webhooks',
         newPath: '/webhooks/new',
         getEditPath: (recordId) => `/webhooks/${recordId}`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -171,11 +173,7 @@ export function WebhookFormPage() {
     isSubmitting: saveMutation.isPending,
   });
 
-  const handleDiscard = useCallback(
-    () => form.reset(undefined, { keepDirty: false, keepErrors: false }),
-    [form],
-  );
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard);
+  const formAlert = useFormToolbarAlert(form);
 
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
@@ -209,6 +207,7 @@ export function WebhookFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
         onToggleActive={isEditing && webhook
           ? () => formPage.handleToggleActive(isActive)

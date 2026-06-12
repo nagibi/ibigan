@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/auth.store';
 import { authService } from '@/services/auth.service';
 
 export function CallbackPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setAuth, logout } = useAuthStore();
@@ -46,7 +48,7 @@ export function CallbackPage() {
     <div className="fixed inset-0 flex items-center justify-center">
       <div className="text-center space-y-3">
         <LoaderCircle className="size-8 animate-spin text-primary mx-auto" />
-        <p className="text-sm text-muted-foreground">Autenticando com Google...</p>
+        <p className="text-sm text-muted-foreground">{t('auth.login.submitting')}</p>
       </div>
     </div>
   );

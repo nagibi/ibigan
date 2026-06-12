@@ -8,6 +8,7 @@ use App\Actions\Auth\ForgotPasswordAction;
 use App\Actions\Auth\RegisterAction;
 use App\Actions\Auth\ResetPasswordAction;
 use App\Http\Controllers\Controller;
+use App\Support\ApiResponse;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
@@ -19,8 +20,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-
 final class AuthController extends Controller
 {
     /**
@@ -40,9 +39,11 @@ final class AuthController extends Controller
         $tenant = Tenant::find($request->tenant_id);
 
         if (! $tenant) {
-            throw ValidationException::withMessages([
-                'tenant_id' => ['Organização não encontrada.'],
-            ]);
+            return ApiResponse::error(
+                'auth.login.tenant_not_found',
+                errors: [['field' => 'tenant_id', 'message_code' => 'auth.login.tenant_not_found']],
+                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
         }
 
         tenancy()->initialize($tenant);
@@ -50,9 +51,11 @@ final class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['As credenciais informadas estão incorretas.'],
-            ]);
+            return ApiResponse::error(
+                'auth.login.invalid_credentials',
+                errors: [['field' => 'email', 'message_code' => 'auth.login.invalid_credentials']],
+                httpStatus: Response::HTTP_UNAUTHORIZED,
+            );
         }
 
         if ($user->two_factor_confirmed_at !== null) {
@@ -63,26 +66,22 @@ final class AuthController extends Controller
                 'tenant_id' => $tenant->id,
             ], now()->addMinutes(5));
 
-            return response()->json([
-                'status' => 1,
-                'message' => 'MSG000067',
-                'description' => 'Autenticação em duas etapas necessária.',
-                'result' => [
+            return ApiResponse::success(
+                [
                     'requires_2fa' => true,
                     'two_factor_token' => $twoFactorToken,
                     'tenant_id' => $tenant->id,
                 ],
-            ]);
+                'auth.login.two_factor_required',
+                severity: 'info',
+            );
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
         $request->setUserResolver(fn () => $user);
 
-        return response()->json([
-            'status' => 1,
-            'message' => 'MSG000067',
-            'description' => 'Login efetuado com sucesso!',
-            'result' => [
+        return ApiResponse::success(
+            [
                 'token' => $token,
                 'tenant_id' => $tenant->id,
                 'user' => [
@@ -93,7 +92,9 @@ final class AuthController extends Controller
                     'permissions' => $user->getAllPermissions()->pluck('name'),
                 ],
             ],
-        ]);
+            'auth.login.success',
+            severity: 'success',
+        );
     }
 
     /**
@@ -103,16 +104,12 @@ final class AuthController extends Controller
     {
         $user = $request->user();
 
-        return response()->json([
-            'status' => 1,
-            'message' => 'MSG000067',
-            'result' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'roles' => $user->getRoleNames(),
-                'permissions' => $user->getAllPermissions()->pluck('name'),
-            ],
+        return ApiResponse::success([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getAllPermissions()->pluck('name'),
         ]);
     }
 
@@ -123,12 +120,7 @@ final class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'status' => 1,
-            'message' => 'MSG000416',
-            'description' => 'Logout efetuado com sucesso!',
-            'result' => null,
-        ]);
+        return ApiResponse::success(null, 'auth.logout.success', severity: 'success');
     }
 
     /**

@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import api from '@/lib/axios';
+import { loadTenantTranslationOverrides } from '@/lib/load-translations';
+import { resolveApiMessage } from '@/lib/resolve-api-message';
 import { toAbsoluteUrl } from '@/lib/helpers';
+import { useLanguage } from '@/providers/i18n-provider';
 import { authService } from '@/services/auth.service';
-import { Icons } from '@/components/layouts/layout-1/shared/common/icons';
+import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
 import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,63 +25,68 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { AuthLanguageSwitcher } from '@/components/auth/auth-language-switcher';
 
-const schema = z.object({
-  tenant_id: z.string().min(1, 'ID da organização é obrigatório.'),
-  email: z.string().email('E-mail inválido.').min(1, 'E-mail é obrigatório.'),
-  password: z.string().min(1, 'Senha é obrigatória.'),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = {
+  tenant_id: string;
+  email: string;
+  password: string;
+};
 
 export function LoginPage() {
+  const { t } = useTranslation();
+  const { currenLanguage } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setAuth, setRequires2FA } = useAuthStore();
   const centralLogout = useCentralAuthStore((s) => s.centralLogout);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const schema = useMemo(
+    () => z.object({
+      tenant_id: z.string().min(1, t('validation.required')),
+      email: z.string().email(t('validation.email')).min(1, t('validation.required')),
+      password: z.string().min(1, t('validation.required')),
+    }),
+    [t],
+  );
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { tenant_id: '', email: '', password: '' },
   });
 
+  const tenantId = form.watch('tenant_id');
+
+  useEffect(() => {
+    if (tenantId.trim().length > 0) {
+      void loadTenantTranslationOverrides(currenLanguage.code, tenantId.trim());
+    }
+  }, [tenantId, currenLanguage.code]);
+
   useEffect(() => {
     const authError = searchParams.get('error');
-    if (authError === 'auth_failed') {
-      setError('Falha na autenticação com Google. Tente novamente.');
+    if (authError === 'oauth_failed' || authError === 'auth_failed') {
+      setError(t('auth.login.oauth_failed'));
+    } else if (authError === 'email_not_provided') {
+      setError(t('auth.login.email_not_provided'));
+    } else if (authError === 'user_not_found') {
+      setError(t('auth.login.invalid_credentials'));
+    } else if (authError === 'tenant_not_found') {
+      setError(t('auth.login.tenant_not_found'));
     } else if (authError) {
-      setError('Erro ao autenticar. Tente novamente.');
+      setError(t('auth.login.generic_error'));
     }
-  }, [searchParams]);
-
-  async function handleGoogleLogin() {
-    const tenantId = form.getValues('tenant_id');
-    if (!tenantId) {
-      form.setError('tenant_id', { message: 'ID da organização é obrigatório.' });
-      return;
-    }
-
-    try {
-      setIsGoogleLoading(true);
-      setError(null);
-      const { data } = await api.get<{ result: { url: string } }>(
-        `/v1/auth/google?tenant_id=${tenantId}`,
-      );
-      window.location.href = data.result.url;
-    } catch {
-      setError('Erro ao iniciar login com Google.');
-      setIsGoogleLoading(false);
-    }
-  }
+  }, [searchParams, t]);
 
   async function onSubmit(values: FormData) {
     try {
       setIsLoading(true);
       setError(null);
+
+      await loadTenantTranslationOverrides(currenLanguage.code, values.tenant_id);
 
       const { data } = await authService.login(values);
 
@@ -99,10 +107,13 @@ export function LoginPage() {
       setAuth(token, tenant_id, user);
       navigate('/auth/select-tenant');
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? 'Credenciais inválidas. Tente novamente.';
-      setError(message);
+      const payload = (err as { response?: { data?: { message_code?: string; errors?: Array<{ message_code?: string }> } } })
+        ?.response?.data;
+      const fieldErrorCode = payload?.errors?.[0]?.message_code;
+      setError(resolveApiMessage(
+        fieldErrorCode ? { message_code: fieldErrorCode } : payload,
+        'auth.login.invalid_credentials',
+      ));
     } finally {
       setIsLoading(false);
     }
@@ -130,13 +141,12 @@ export function LoginPage() {
           </Link>
         </div>
 
-        <Card className="w-full max-w-[420px] mx-4">
-          <CardContent className="p-8">
-            <div className="text-center space-y-1 pb-5">
-              <h1 className="text-2xl font-semibold tracking-tight">Entrar</h1>
-              <p className="text-sm text-muted-foreground">
-                Acesse sua conta no Ibigan
-              </p>
+        <Card className="relative w-full max-w-[420px] mx-4">
+          <AuthLanguageSwitcher className="absolute top-4 right-4" />
+          <CardContent className="p-8 pt-14">
+            <div className="space-y-1 pb-5 text-center">
+              <h1 className="text-2xl font-semibold tracking-tight">{t('auth.login.title')}</h1>
+              <p className="text-sm text-muted-foreground">{t('auth.login.subtitle')}</p>
             </div>
 
             {error && (
@@ -163,7 +173,7 @@ export function LoginPage() {
                   name="tenant_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ID da Organização</FormLabel>
+                      <FormLabel>{t('auth.login.tenant_id')}</FormLabel>
                       <FormControl>
                         <Input placeholder="ex: minha-empresa" {...field} />
                       </FormControl>
@@ -177,7 +187,7 @@ export function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>E-mail</FormLabel>
+                      <FormLabel>{t('auth.login.email')}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -196,12 +206,12 @@ export function LoginPage() {
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Senha</FormLabel>
+                        <FormLabel>{t('auth.login.password')}</FormLabel>
                         <Link
                           to="/auth/forgot-password"
                           className="text-xs text-muted-foreground hover:text-primary"
                         >
-                          Esqueceu a senha?
+                          {t('auth.login.forgot_password')}
                         </Link>
                       </div>
                       <div className="relative">
@@ -235,20 +245,20 @@ export function LoginPage() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <LoaderCircle className="size-4 animate-spin" />
-                      Entrando...
+                      {t('auth.login.submitting')}
                     </span>
                   ) : (
-                    'Entrar'
+                    t('auth.login.submit')
                   )}
                 </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
-                  Não tem conta?{' '}
+                  {t('auth.login.no_account')}{' '}
                   <Link
                     to="/auth/register"
                     className="font-semibold text-foreground hover:text-primary"
                   >
-                    Criar conta
+                    {t('auth.login.create_account')}
                   </Link>
                 </p>
               </form>
@@ -259,24 +269,18 @@ export function LoginPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">ou</span>
+                <span className="bg-background px-2 text-muted-foreground">{t('auth.login.or')}</span>
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleLogin}
-              disabled={isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <LoaderCircle className="size-4 mr-2 animate-spin" />
-              ) : (
-                <Icons.googleColorful className="size-4 mr-2" />
-              )}
-              Continuar com Google
-            </Button>
+            <SocialLoginButtons
+              scope="tenant"
+              tenantId={tenantId}
+              onError={setError}
+              onTenantIdRequired={() => {
+                form.setError('tenant_id', { message: t('validation.required') });
+              }}
+            />
           </CardContent>
         </Card>
       </div>

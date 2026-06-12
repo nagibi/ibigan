@@ -51,6 +51,7 @@ it('realiza login com credenciais válidas', function (): void {
     ])
         ->assertOk()
         ->assertJsonPath('status', 1)
+        ->assertJsonPath('message_code', 'auth.login.success')
         ->assertJsonStructure([
             'result' => [
                 'token',
@@ -65,7 +66,9 @@ it('nega login com senha incorreta', function (): void {
         'email' => 'admin@test.com',
         'password' => 'senha-errada',
         'tenant_id' => $this->tenant->id,
-    ])->assertUnprocessable();
+    ])
+        ->assertUnauthorized()
+        ->assertJsonPath('message_code', 'auth.login.invalid_credentials');
 });
 
 it('nega login com tenant inexistente', function (): void {
@@ -73,7 +76,9 @@ it('nega login com tenant inexistente', function (): void {
         'email' => 'admin@test.com',
         'password' => 'password123',
         'tenant_id' => 'tenant-inexistente',
-    ])->assertUnprocessable();
+    ])
+        ->assertUnprocessable()
+        ->assertJsonPath('message_code', 'auth.login.tenant_not_found');
 });
 
 it('nega login com email inexistente', function (): void {
@@ -81,13 +86,18 @@ it('nega login com email inexistente', function (): void {
         'email' => 'naoexiste@test.com',
         'password' => 'password123',
         'tenant_id' => $this->tenant->id,
-    ])->assertUnprocessable();
+    ])
+        ->assertUnauthorized()
+        ->assertJsonPath('message_code', 'auth.login.invalid_credentials');
 });
 
 it('nega login sem campos obrigatórios', function (): void {
     $this->postJson('/api/v1/auth/login', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['email', 'password', 'tenant_id']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.message_code', 'validation.required')
+        ->assertJsonPath('errors.1.message_code', 'validation.required')
+        ->assertJsonPath('errors.2.message_code', 'validation.required');
 });
 
 // --- Me ---
@@ -116,7 +126,8 @@ it('realiza logout e invalida o token', function (): void {
 
     $this->postJson('/api/v1/auth/logout', [], ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()
-        ->assertJsonPath('status', 1);
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('message_code', 'auth.logout.success');
 });
 
 it('nega logout sem autenticação', function (): void {

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { menusService } from '@/services/menus.service';
 import { mapApiMenusToConfig } from '@/lib/menu-mapper';
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 export function useDynamicMenu(): MenuConfig {
+  const { t } = useTranslation();
   const tenantId = useAuthStore((state) => state.tenantId);
   const isTenantSuperAdmin = useAuthStore((state) => state.hasRole(SUPER_ADMIN_ROLE));
   const isCentralSuperAdmin = useCentralAuthStore((state) => state.centralUser?.is_super_admin);
@@ -30,12 +32,15 @@ export function useDynamicMenu(): MenuConfig {
       ? MENU_SIDEBAR
       : mergeDevToolsMenuItems(
         mergeAccountMenuItems(
-          mergeSaasMenuItems(mapApiMenusToConfig(data.data.result), MENU_SIDEBAR),
+          mergeSaasMenuItems(
+            mapApiMenusToConfig(data.data.result, (key, fallback) => t(key, fallback)),
+            MENU_SIDEBAR,
+          ),
           MENU_SIDEBAR,
         ),
         MENU_SIDEBAR,
       );
 
     return filterMenuForUser(baseMenu, isSuperAdmin);
-  }, [data, isSuperAdmin]);
+  }, [data, isSuperAdmin, t]);
 }

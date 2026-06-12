@@ -68,7 +68,7 @@ const GRID_COLUMNS_KEY = 'grid-columns:invites';
 
 const schema = z.object({
   email: z.string().email('E-mail inválido.'),
-  role: z.string().min(1, 'Selecione um papel.'),
+  role: z.string().min(1, 'Selecione uma função.'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -308,10 +308,10 @@ export function InvitesPage() {
       },
       {
         id: 'role',
-        label: 'Papel',
+        label: 'Função',
         sortable: true,
         sortKey: 'role',
-        filter: { type: 'text', filterKey: 'role', placeholder: 'Papel' },
+        filter: { type: 'text', filterKey: 'role', placeholder: 'Função' },
         className: 'min-w-[120px]',
         render: (invite) => (
           <GridBadge variant="outline" className="text-xs">
@@ -567,7 +567,7 @@ export function InvitesPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Papel</FormLabel>
+                    <FormLabel>Função</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}

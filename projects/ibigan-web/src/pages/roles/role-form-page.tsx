@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,16 +31,16 @@ import {
 } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
 
-const schema = z.object({
+const schema = (t: (key: string) => string) => z.object({
   name: z
     .string()
-    .min(2, 'Nome é obrigatório.')
+    .min(2, t('roles.form.validation.name_required'))
     .max(255)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use letras minúsculas, números e hífens (ex.: suporte-nivel-1).'),
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, t('roles.form.validation.name_format')),
   permissions: z.array(z.string()),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof schema>>;
 
 const DEFAULT_VALUES: FormData = {
   name: '',
@@ -47,6 +48,7 @@ const DEFAULT_VALUES: FormData = {
 };
 
 export function RoleFormPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,7 +73,8 @@ export function RoleFormPage() {
 
   const formPage = useFormPage({
     backPath: '/roles',
-    entityLabel: 'papel',
+    newPath: '/roles/new',
+    entityLabel: t('roles.entity'),
     onDelete: isEditing && role && !role.is_system && canManage
       ? async () => {
           await rolesService.destroy(Number(id));
@@ -81,8 +84,10 @@ export function RoleFormPage() {
     notify: apiNotify,
   });
 
+  const formSchema = useMemo(() => schema(t), [t]);
+
   const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(formSchema),
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -143,19 +148,20 @@ export function RoleFormPage() {
       if (isEditing) {
         queryClient.invalidateQueries({ queryKey: ['role', id] });
       }
-      apiNotify.showSuccess(isEditing ? 'Papel atualizado!' : 'Papel criado!');
+      apiNotify.showSuccess(isEditing ? t('roles.form.updated') : t('roles.form.created'));
       if (!isEditing && formPage.saveMode === 'new') {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
-      navigate(resolveFormSavePath({
+      const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/roles',
         newPath: '/roles/new',
         getEditPath: (recordId) => `/roles/${recordId}`,
         isEditing,
         createdId,
-      }));
+      });
+      if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
       const handled = applyApiFormErrors(form, error);
@@ -164,7 +170,7 @@ export function RoleFormPage() {
         return;
       }
       apiNotify.showError(
-        isEditing ? 'Erro ao atualizar papel.' : 'Erro ao criar papel.',
+        isEditing ? t('roles.form.error_update') : t('roles.form.error_create'),
         error,
       );
     },
@@ -217,7 +223,7 @@ export function RoleFormPage() {
     handleDiscard();
   }, [handleDiscard]);
 
-  const formAlert = useFormToolbarAlert(form.control, handleDiscard, {
+  const formAlert = useFormToolbarAlert(form, {
     resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
   });
 
@@ -244,9 +250,10 @@ export function RoleFormPage() {
         onSaveAndNew={handleSaveAndNew}
         onSaveAndEdit={handleSaveAndEdit}
         onBack={formPage.handleBack}
+        onNew={isEditing ? formPage.handleNew : undefined}
         onClear={handleClear}
         onDelete={isEditing && role && !role.is_system ? formPage.handleDelete : undefined}
-        entityLabel="papel"
+        entityLabel={t('roles.entity')}
         recordLabel={role ? formatRoleName(role.name) : undefined}
         createdAt={role?.created_at}
         updatedAt={role?.updated_at}
@@ -257,9 +264,9 @@ export function RoleFormPage() {
   if (!canManage) {
     return (
       <PageBody>
-        <FormPanel title="Acesso restrito">
+        <FormPanel title={t('form.restricted_access')}>
           <p className="text-sm text-muted-foreground">
-            Você não tem permissão para gerenciar papéis.
+            {t('roles.form.no_permission')}
           </p>
         </FormPanel>
       </PageBody>
@@ -287,12 +294,12 @@ export function RoleFormPage() {
             handlePrimarySave();
           }}
         >
-          <FormPanel title="Identificação">
+          <FormPanel title={t('roles.form.identification')}>
             {role && (
               <div className="mb-4 flex flex-wrap gap-2">
-                {role.is_system && <Badge variant="outline">Sistema</Badge>}
-                {role.permissions_locked && <Badge variant="secondary">Permissões bloqueadas</Badge>}
-                <Badge variant="outline">{role.users_count} usuário(s)</Badge>
+                {role.is_system && <Badge variant="outline">{t('roles.type.system')}</Badge>}
+                {role.permissions_locked && <Badge variant="secondary">{t('roles.form.permissions_locked')}</Badge>}
+                <Badge variant="outline">{t('roles.form.users_count', { count: role.users_count })}</Badge>
               </div>
             )}
             <FormFieldGrid>
@@ -304,16 +311,16 @@ export function RoleFormPage() {
               <FormFieldGridItem span={isEditing ? 3 : 4}>
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Nome do papel</FormLabel>
+                    <FormLabel required>{t('roles.form.name')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="suporte-nivel-1"
+                        placeholder={t('roles.form.name_placeholder')}
                         disabled={nameDisabled}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Identificador em minúsculas. Ex.: suporte-nivel-1
+                      {t('roles.form.name_help')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -322,7 +329,7 @@ export function RoleFormPage() {
             </FormFieldGrid>
           </FormPanel>
 
-          <FormPanel title="Permissões">
+          <FormPanel title={t('roles.form.permissions_panel')}>
             <FormField
               control={form.control}
               name="permissions"

@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 export interface ApiMenu {
   id: number;
   title: string;
+  translation_key: string | null;
   slug: string;
   icon: string | null;
   path: string | null;
