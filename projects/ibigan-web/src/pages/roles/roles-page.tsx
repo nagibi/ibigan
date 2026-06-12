@@ -318,7 +318,6 @@ export function RolesPage() {
     () => (canManage ? (
       <StandardGridToolbar
         onNew={() => navigate('/roles/new')}
-        newLabel="Novo papel"
         onEdit={handleEditSelected}
         onDelete={handleDeleteSelected}
         hasSelection={deletableSelectedIds.length > 0}

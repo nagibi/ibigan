@@ -85,6 +85,18 @@ class MenuSeeder extends Seeder
             'roles' => ['admin', 'manager', 'super-admin'],
         ]);
 
+        Menu::create([
+            'title' => 'Templates de Mensagem',
+            'slug' => 'templates-mensagem',
+            'icon' => 'MessageSquare',
+            'path' => '/message-templates',
+            'parent_id' => $gestao->id,
+            'order' => 4,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+        ]);
+
         // ── Relatórios ────────────────────────────────────────────
         $relatorios = Menu::create([
             'title' => 'Relatórios',
@@ -98,15 +110,15 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Relatórios',
-            'slug' => 'relatorios',
+            'title' => 'Templates de Relatório',
+            'slug' => 'templates-relatorio',
             'icon' => 'BarChart2',
             'path' => '/reports',
             'parent_id' => $relatorios->id,
             'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
 
         Menu::create([
@@ -158,8 +170,8 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Papéis',
-            'slug' => 'papeis',
+            'title' => 'Funções',
+            'slug' => 'funcoes',
             'icon' => 'ShieldCheck',
             'path' => '/roles',
             'parent_id' => $administracao->id,

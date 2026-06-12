@@ -239,7 +239,6 @@ export function PermissionsPage() {
     () => (canManage ? (
       <StandardGridToolbar
         onNew={() => navigate('/permissions/new')}
-        newLabel="Nova permissão"
         onEdit={handleEditSelected}
         onDelete={handleDeleteSelected}
         hasSelection={grid.hasSelection}

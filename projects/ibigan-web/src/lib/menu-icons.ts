@@ -63,7 +63,7 @@ lookup.byTitle.set('Empresas', Icons.Building2);
 lookup.byTitle.set('Notificações', Icons.Bell);
 lookup.byTitle.set('Lista', Icons.Inbox);
 lookup.byTitle.set('Preferências', Icons.Settings2);
-lookup.byTitle.set('Papéis', Icons.ShieldCheck);
+lookup.byTitle.set('Funções', Icons.ShieldCheck);
 lookup.byTitle.set('Permissões', Icons.Shield);
 lookup.byTitle.set('Meu perfil', Icons.User);
 lookup.bySlug.set('gestao', Icons.Users);
@@ -82,13 +82,18 @@ lookup.byPath.set('/permissions', Icons.Shield);
 lookup.byPath.set('/notification-preferences', Icons.Settings2);
 lookup.byPath.set('/notifications', Icons.Inbox);
 lookup.bySlug.set('notificacoes', Icons.Bell);
-lookup.bySlug.set('papeis', Icons.ShieldCheck);
+lookup.bySlug.set('funcoes', Icons.ShieldCheck);
 lookup.bySlug.set('permissoes', Icons.Shield);
 lookup.byPath.set('/profile', Icons.User);
 lookup.byPath.set('/security', Icons.Shield);
 lookup.bySlug.set('seguranca', Icons.Shield);
 lookup.byPath.set('/user-approvals', Icons.UserCheck);
+lookup.byPath.set('/message-templates', Icons.MessageSquare);
+lookup.byTitle.set('Templates de Mensagem', Icons.MessageSquare);
+lookup.bySlug.set('templates-mensagem', Icons.MessageSquare);
 lookup.byPath.set('/reports', Icons.BarChart2);
+lookup.byTitle.set('Templates de Relatório', Icons.BarChart2);
+lookup.bySlug.set('templates-relatorio', Icons.BarChart2);
 lookup.byPath.set('/reports/executions', Icons.FileBarChart);
 
 function resolveFromLucideName(name: string): LucideIcon | null {

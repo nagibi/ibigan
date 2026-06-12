@@ -159,7 +159,7 @@ export function FormToolbar({
                 type="button"
                 variant={primarySaveVariant}
                 size="sm"
-                disabled={isSubmitting || !primarySaveAction}
+                disabled={isSubmitting || !primarySaveAction || (isEditing && !isDirty)}
                 onClick={primarySaveAction}
                 className={cn('h-8 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
               >

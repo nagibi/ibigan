@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,11 +17,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
-import {
-  buildUnsavedChangesAlert,
-  hasNestedFlagFields,
-  useFormToolbarAlert,
-} from '@/hooks/use-form-toolbar-alert';
+import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { focusFirstFormError, validateFormWithFocus } from '@/lib/focus-first-form-error';
 import { authService } from '@/services/auth.service';
 import { profileService } from '@/services/profile.service';
@@ -117,8 +113,18 @@ export function ProfilePage() {
 
   const profileForm = useForm<UserProfileFormData>({
     resolver: zodResolver(userProfileSchema),
-    values: profile ? mapUserProfileToFormValues(profile) : USER_PROFILE_FALLBACK,
+    defaultValues: USER_PROFILE_FALLBACK,
   });
+
+  useEffect(() => {
+    if (!profile) return;
+
+    profileForm.reset(mapUserProfileToFormValues(profile), {
+      keepDirty: false,
+      keepErrors: false,
+      keepTouched: false,
+    });
+  }, [profile, profileForm]);
 
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
@@ -196,17 +202,14 @@ export function ProfilePage() {
     },
   });
 
-  const { dirtyFields: profileDirtyFields, touchedFields: profileTouchedFields } = useFormState({
-    control: profileForm.control,
-  });
-  const { dirtyFields: passwordDirtyFields, touchedFields: passwordTouchedFields } = useFormState({
-    control: passwordForm.control,
-  });
-
-  const profileHasUnsavedChanges =
-    hasNestedFlagFields(profileDirtyFields) && hasNestedFlagFields(profileTouchedFields);
-  const passwordHasUnsavedChanges =
-    hasNestedFlagFields(passwordDirtyFields) && hasNestedFlagFields(passwordTouchedFields);
+  const { isDirty: profileIsDirty } = useFormState({ control: profileForm.control });
+  const passwordValues = passwordForm.watch();
+  const passwordHasUnsavedChanges = Boolean(
+    passwordValues.current_password?.trim()
+    || passwordValues.password?.trim()
+    || passwordValues.password_confirmation?.trim(),
+  );
+  const profileHasUnsavedChanges = profileIsDirty;
 
   const resetProfilePhantomDirty = useCallback(() => {
     if (!profile) return;
@@ -271,21 +274,14 @@ export function ProfilePage() {
 
   const profileAlert = useFormToolbarAlert(profileForm.control, handleDiscard, {
     resetPhantomDirty: resetProfilePhantomDirty,
+    showUnsavedAlert: false,
   });
   const passwordAlert = useFormToolbarAlert(passwordForm.control, handleDiscard, {
     resetPhantomDirty: resetPasswordPhantomDirty,
+    showUnsavedAlert: false,
   });
 
-  const alert = useMemo(() => {
-    if (profileAlert) return profileAlert;
-    if (passwordAlert) return passwordAlert;
-
-    if (appearance.hasChanges) {
-      return buildUnsavedChangesAlert(handleDiscard, 'appearance-unsaved');
-    }
-
-    return null;
-  }, [appearance.hasChanges, handleDiscard, passwordAlert, profileAlert]);
+  const alert = profileAlert ?? passwordAlert ?? null;
 
   const isDirty =
     profileHasUnsavedChanges

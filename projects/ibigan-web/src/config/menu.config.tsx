@@ -12,6 +12,7 @@ import {
   Mailbox,
   Megaphone,
   Menu,
+  MessageSquare,
   Shield,
   ShieldCheck,
   User,
@@ -53,10 +54,15 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/campaigns',
   },
   {
+    title: 'Templates de Mensagem',
+    icon: MessageSquare,
+    path: '/message-templates',
+  },
+  {
     heading: 'RELATÓRIOS',
   },
   {
-    title: 'Relatórios',
+    title: 'Templates de Relatório',
     icon: BarChart2,
     path: '/reports',
   },
@@ -80,7 +86,7 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/menus',
   },
   {
-    title: 'Papéis',
+    title: 'Funções',
     icon: ShieldCheck,
     path: '/roles',
   },

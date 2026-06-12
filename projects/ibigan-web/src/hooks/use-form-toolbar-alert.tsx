@@ -36,6 +36,8 @@ function useFormDirtyTrackingEnabled(routeKey: string) {
 export type UseFormToolbarAlertOptions = {
   /** Limpa dirty fantasma (autofill, Select na montagem) sem interação do usuário. */
   resetPhantomDirty?: () => void;
+  /** Exibe o alerta amarelo de alterações não salvas. Padrão: true. */
+  showUnsavedAlert?: boolean;
 };
 
 export function buildUnsavedChangesAlert(
@@ -76,7 +78,9 @@ export function useFormToolbarAlert<T extends FieldValues>(
   const hasServerErrors = errorList.some((error) => error?.type === 'server');
   const hasDirtyFields = hasNestedFlagFields(dirtyFields);
   const hasTouchedFields = hasNestedFlagFields(touchedFields);
-  const hasUnsavedChanges = dirtyTrackingEnabled && hasDirtyFields && hasTouchedFields;
+  const showUnsavedAlert = options?.showUnsavedAlert ?? true;
+  const hasUnsavedChanges =
+    showUnsavedAlert && dirtyTrackingEnabled && hasDirtyFields && hasTouchedFields;
 
   useEffect(() => {
     phantomDirtyClearedRef.current = false;

@@ -51,7 +51,7 @@ export function mapUserProfileToFormValues(profile: {
     email: profile.email,
     cpf: profile.cpf ?? '',
     phone: profile.phone ?? '',
-    birth_date: profile.birth_date ?? '',
+    birth_date: profile.birth_date?.slice(0, 10) ?? '',
     gender: (profile.gender ?? '') as UserProfileFormData['gender'],
     bio: profile.bio ?? '',
   };
