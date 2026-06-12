@@ -9,7 +9,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { loadTenantTranslationOverrides } from '@/lib/load-translations';
 import { resolveApiMessage } from '@/lib/resolve-api-message';
-import { toAbsoluteUrl } from '@/lib/helpers';
 import { useLanguage } from '@/providers/i18n-provider';
 import { authService } from '@/services/auth.service';
 import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
@@ -26,6 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { AuthLanguageSwitcher } from '@/components/auth/auth-language-switcher';
+import { AuthPageShell } from '@/components/auth/auth-page-shell';
 
 type FormData = {
   tenant_id: string;
@@ -120,33 +120,13 @@ export function LoginPage() {
   }
 
   return (
-    <>
-      <style>{`
-        .auth-bg {
-          background-image: url('${toAbsoluteUrl('/media/images/2600x1200/bg-10.png')}');
-        }
-        .dark .auth-bg {
-          background-image: url('${toAbsoluteUrl('/media/images/2600x1200/bg-10-dark.png')}');
-        }
-      `}</style>
-
-      <div className="flex flex-col items-center justify-center w-screen min-h-screen bg-center bg-no-repeat bg-cover auth-bg">
-        <div className="mb-5">
-          <Link to="/">
-            <img
-              src={toAbsoluteUrl('/media/app/mini-logo.svg')}
-              className="h-[35px] max-w-none"
-              alt="Ibigan"
-            />
-          </Link>
-        </div>
-
-        <Card className="relative w-full max-w-[420px] mx-4">
-          <AuthLanguageSwitcher className="absolute top-4 right-4" />
-          <CardContent className="p-8 pt-14">
-            <div className="space-y-1 pb-5 text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">{t('auth.login.title')}</h1>
-              <p className="text-sm text-muted-foreground">{t('auth.login.subtitle')}</p>
+    <AuthPageShell>
+      <Card className="relative w-full">
+        <AuthLanguageSwitcher className="absolute top-4 right-4" />
+        <CardContent className="p-8 pt-14 max-xl:p-4 max-xl:pt-10">
+            <div className="space-y-1 pb-5 text-center max-xl:pb-2">
+              <h1 className="text-2xl font-semibold tracking-tight max-xl:text-lg">{t('auth.login.title')}</h1>
+              <p className="text-sm text-muted-foreground max-xl:hidden">{t('auth.login.subtitle')}</p>
             </div>
 
             {error && (
@@ -166,7 +146,7 @@ export function LoginPage() {
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
+                className="space-y-4 max-xl:space-y-3"
               >
                 <FormField
                   control={form.control}
@@ -264,7 +244,7 @@ export function LoginPage() {
               </form>
             </Form>
 
-            <div className="relative py-2">
+            <div className="relative py-2 max-xl:py-1">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
@@ -273,17 +253,18 @@ export function LoginPage() {
               </div>
             </div>
 
-            <SocialLoginButtons
-              scope="tenant"
-              tenantId={tenantId}
-              onError={setError}
-              onTenantIdRequired={() => {
-                form.setError('tenant_id', { message: t('validation.required') });
-              }}
-            />
+            <div className="max-xl:[&_button]:h-9 max-xl:[&_button]:text-sm">
+              <SocialLoginButtons
+                scope="tenant"
+                tenantId={tenantId}
+                onError={setError}
+                onTenantIdRequired={() => {
+                  form.setError('tenant_id', { message: t('validation.required') });
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
-      </div>
-    </>
+    </AuthPageShell>
   );
 }

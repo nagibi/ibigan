@@ -3,10 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { resolveApiMessage } from '@/lib/resolve-api-message';
-import { toAbsoluteUrl } from '@/lib/helpers';
 import { centralAuthService } from '@/services/central-auth.service';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
@@ -23,6 +22,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { AuthLanguageSwitcher } from '@/components/auth/auth-language-switcher';
+import { AuthPageShell } from '@/components/auth/auth-page-shell';
 
 type FormData = {
   email: string;
@@ -91,44 +91,24 @@ export function CentralLoginPage() {
   }
 
   return (
-    <>
-      <style>{`
-        .auth-bg {
-          background-image: url('${toAbsoluteUrl('/media/images/2600x1200/bg-10.png')}');
-        }
-        .dark .auth-bg {
-          background-image: url('${toAbsoluteUrl('/media/images/2600x1200/bg-10-dark.png')}');
-        }
-      `}</style>
-
-      <div className="flex min-h-screen w-screen flex-col items-center justify-center bg-cover bg-center bg-no-repeat auth-bg">
-        <div className="mb-5">
-          <Link to="/">
-            <img
-              src={toAbsoluteUrl('/media/app/mini-logo.svg')}
-              className="h-[35px] max-w-none"
-              alt="Ibigan"
-            />
-          </Link>
-        </div>
-
-        <Card className="relative w-full max-w-md mx-4">
-          <AuthLanguageSwitcher className="absolute top-4 right-4" />
-          <CardContent className="p-6 pt-14">
-            <div className="mb-6 text-center">
-              <h1 className="text-xl font-semibold">{t('auth.central.title')}</h1>
-              <p className="text-sm text-muted-foreground">{t('auth.central.subtitle')}</p>
+    <AuthPageShell>
+      <Card className="relative w-full">
+        <AuthLanguageSwitcher className="absolute top-4 right-4" />
+        <CardContent className="p-6 pt-14 max-xl:p-4 max-xl:pt-10">
+            <div className="mb-6 text-center max-xl:mb-2">
+              <h1 className="text-xl font-semibold max-xl:text-lg">{t('auth.central.title')}</h1>
+              <p className="text-sm text-muted-foreground max-xl:hidden">{t('auth.central.subtitle')}</p>
             </div>
 
             {error ? (
-              <Alert variant="destructive" className="mb-4">
+              <Alert variant="destructive" className="mb-4 max-xl:mb-3 max-xl:py-2">
                 <AlertIcon><AlertCircle /></AlertIcon>
                 <AlertTitle>{error}</AlertTitle>
               </Alert>
             ) : null}
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 max-xl:space-y-3">
                 <FormField
                   control={form.control}
                   name="email"
@@ -189,7 +169,7 @@ export function CentralLoginPage() {
               </form>
             </Form>
 
-            <div className="relative py-2">
+            <div className="relative py-1.5 max-xl:py-1">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
@@ -198,10 +178,11 @@ export function CentralLoginPage() {
               </div>
             </div>
 
-            <SocialLoginButtons scope="central" onError={setError} />
+            <div className="max-xl:[&_button]:h-9 max-xl:[&_button]:text-sm">
+              <SocialLoginButtons scope="central" onError={setError} />
+            </div>
           </CardContent>
         </Card>
-      </div>
-    </>
+    </AuthPageShell>
   );
 }

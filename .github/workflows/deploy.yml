@@ -23,7 +23,16 @@ jobs:
         working-directory: projects/ibigan-web
 
       - name: Build frontend
-        run: npm run build
+        run: |
+          cat > .env.production << 'EOF'
+          VITE_API_URL=https://nagibi.com.br/api
+          VITE_APP_NAME=Ibigan
+          VITE_REVERB_APP_KEY=xu6y2ryaemtltwri5ulq
+          VITE_REVERB_HOST=nagibi.com.br
+          VITE_REVERB_PORT=443
+          VITE_REVERB_SCHEME=https
+          EOF
+          npm run build
         working-directory: projects/ibigan-web
 
       - name: Setup SSH
