@@ -156,10 +156,10 @@ class DemoSeeder extends Seeder
                 $this->seedWebhooks($tenantData['id']);
 
                 // Report Templates
-                $this->seedReportTemplates();
+                $this->seedReportTemplates($superAdmin);
 
                 // Campaigns
-                $this->seedCampaigns($tenantData['id']);
+                $this->seedCampaigns($superAdmin);
 
                 $this->command->info("  ✓ Tenant {$tenantData['id']} populado com sucesso");
             });
@@ -170,40 +170,45 @@ class DemoSeeder extends Seeder
     {
         $templates = [
             [
-                'name'    => 'Boas-vindas',
-                'subject' => 'Bem-vindo(a) ao sistema!',
-                'body'    => '<h1>Olá, {{name}}!</h1><p>Seja bem-vindo(a) ao nosso sistema. Estamos felizes em tê-lo(a) conosco.</p>',
-                'type'    => 'email',
+                'name'       => 'Boas-vindas',
+                'slug'       => 'boas-vindas',
+                'subject'    => 'Bem-vindo(a) ao sistema!',
+                'body'       => '<h1>Olá, {{name}}!</h1><p>Seja bem-vindo(a) ao nosso sistema. Estamos felizes em tê-lo(a) conosco.</p>',
+                'merge_tags' => ['{{name}}'],
             ],
             [
-                'name'    => 'Redefinição de senha',
-                'subject' => 'Redefinição de senha solicitada',
-                'body'    => '<p>Olá, {{name}}!</p><p>Você solicitou a redefinição de sua senha. Clique no link abaixo:</p><p><a href="{{link}}">Redefinir senha</a></p>',
-                'type'    => 'email',
+                'name'       => 'Redefinição de senha',
+                'slug'       => 'redefinicao-de-senha',
+                'subject'    => 'Redefinição de senha solicitada',
+                'body'       => '<p>Olá, {{name}}!</p><p>Você solicitou a redefinição de sua senha. Clique no link abaixo:</p><p><a href="{{link}}">Redefinir senha</a></p>',
+                'merge_tags' => ['{{name}}', '{{link}}'],
             ],
             [
-                'name'    => 'Notificação de acesso',
-                'subject' => 'Novo acesso detectado',
-                'body'    => '<p>Olá, {{name}}!</p><p>Um novo acesso foi detectado em sua conta em {{date}} às {{time}}.</p>',
-                'type'    => 'email',
+                'name'       => 'Notificação de acesso',
+                'slug'       => 'notificacao-de-acesso',
+                'subject'    => 'Novo acesso detectado',
+                'body'       => '<p>Olá, {{name}}!</p><p>Um novo acesso foi detectado em sua conta em {{date}} às {{time}}.</p>',
+                'merge_tags' => ['{{name}}', '{{date}}', '{{time}}'],
             ],
             [
-                'name'    => 'Convite para colaboração',
-                'subject' => 'Você foi convidado(a)!',
-                'body'    => '<h2>Convite especial</h2><p>{{inviter}} convidou você para colaborar. Acesse: <a href="{{link}}">Aceitar convite</a></p>',
-                'type'    => 'email',
+                'name'       => 'Convite para colaboração',
+                'slug'       => 'convite-para-colaboracao',
+                'subject'    => 'Você foi convidado(a)!',
+                'body'       => '<h2>Convite especial</h2><p>{{inviter}} convidou você para colaborar. Acesse: <a href="{{link}}">Aceitar convite</a></p>',
+                'merge_tags' => ['{{inviter}}', '{{link}}'],
             ],
             [
-                'name'    => 'Relatório semanal',
-                'subject' => 'Seu relatório semanal está pronto',
-                'body'    => '<p>Olá, {{name}}!</p><p>Seu relatório semanal de {{period}} está disponível para download.</p>',
-                'type'    => 'email',
+                'name'       => 'Relatório semanal',
+                'slug'       => 'relatorio-semanal',
+                'subject'    => 'Seu relatório semanal está pronto',
+                'body'       => '<p>Olá, {{name}}!</p><p>Seu relatório semanal de {{period}} está disponível para download.</p>',
+                'merge_tags' => ['{{name}}', '{{period}}'],
             ],
         ];
 
         foreach ($templates as $template) {
             MessageTemplate::firstOrCreate(
-                ['name' => $template['name']],
+                ['slug' => $template['slug']],
                 $template
             );
         }
@@ -213,56 +218,71 @@ class DemoSeeder extends Seeder
     {
         $webhooks = [
             [
-                'name'       => 'Notificação de novo usuário',
-                'url'        => 'https://hooks.example.com/' . $tenantId . '/new-user',
-                'events'     => ['user.created', 'user.updated'],
-                'is_active'  => true,
-                'secret'     => Str::random(32),
+                'description' => 'Notificação de novo usuário',
+                'url'         => 'https://hooks.example.com/' . $tenantId . '/new-user',
+                'events'      => ['user.created', 'user.updated'],
+                'is_active'   => true,
+                'secret'      => Str::random(32),
             ],
             [
-                'name'       => 'Alerta de campanha',
-                'url'        => 'https://hooks.example.com/' . $tenantId . '/campaign',
-                'events'     => ['campaign.started', 'campaign.finished'],
-                'is_active'  => true,
-                'secret'     => Str::random(32),
+                'description' => 'Alerta de campanha',
+                'url'         => 'https://hooks.example.com/' . $tenantId . '/campaign',
+                'events'      => ['user.created', 'user.updated'],
+                'is_active'   => true,
+                'secret'      => Str::random(32),
             ],
             [
-                'name'       => 'Integração ERP',
-                'url'        => 'https://erp.example.com/webhook/' . $tenantId,
-                'events'     => ['user.created', 'campaign.finished'],
-                'is_active'  => false,
-                'secret'     => Str::random(32),
+                'description' => 'Integração ERP',
+                'url'         => 'https://erp.example.com/webhook/' . $tenantId,
+                'events'      => ['user.created'],
+                'is_active'   => false,
+                'secret'      => Str::random(32),
             ],
         ];
 
         foreach ($webhooks as $webhook) {
             Webhook::firstOrCreate(
-                ['name' => $webhook['name']],
+                ['url' => $webhook['url']],
                 $webhook
             );
         }
     }
 
-    private function seedReportTemplates(): void
+    private function seedReportTemplates(User $createdBy): void
     {
         $reports = [
             [
                 'name'        => 'Usuários ativos por mês',
                 'description' => 'Lista todos os usuários ativos agrupados por mês de cadastro',
                 'query'       => 'SELECT DATE_FORMAT(created_at, "%Y-%m") as mes, COUNT(*) as total FROM users WHERE status = "active" GROUP BY mes ORDER BY mes DESC',
+                'columns'     => [
+                    ['key' => 'mes', 'label' => 'Mês', 'format' => 'text'],
+                    ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
+                ],
                 'is_active'   => true,
+                'created_by'  => $createdBy->id,
             ],
             [
                 'name'        => 'Campanhas por status',
                 'description' => 'Resumo das campanhas agrupadas por status',
                 'query'       => 'SELECT status, COUNT(*) as total FROM campaigns GROUP BY status',
+                'columns'     => [
+                    ['key' => 'status', 'label' => 'Status', 'format' => 'text'],
+                    ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
+                ],
                 'is_active'   => true,
+                'created_by'  => $createdBy->id,
             ],
             [
                 'name'        => 'Entregas de campanha',
                 'description' => 'Total de entregas por campanha',
                 'query'       => 'SELECT c.name, COUNT(cd.id) as entregas FROM campaigns c LEFT JOIN campaign_deliveries cd ON cd.campaign_id = c.id GROUP BY c.id, c.name ORDER BY entregas DESC',
+                'columns'     => [
+                    ['key' => 'name', 'label' => 'Campanha', 'format' => 'text'],
+                    ['key' => 'entregas', 'label' => 'Entregas', 'format' => 'number'],
+                ],
                 'is_active'   => true,
+                'created_by'  => $createdBy->id,
             ],
         ];
 
@@ -274,32 +294,48 @@ class DemoSeeder extends Seeder
         }
     }
 
-    private function seedCampaigns(string $tenantId): void
+    private function seedCampaigns(User $createdBy): void
     {
+        $welcomeTemplate = MessageTemplate::query()->where('slug', 'boas-vindas')->first();
+
         $campaigns = [
             [
                 'name'        => 'Campanha de Boas-vindas',
                 'description' => 'Enviada automaticamente para novos usuários',
-                'status'      => 'active',
-                'type'        => 'email',
+                'template_id' => $welcomeTemplate?->id,
+                'channels'    => ['email'],
+                'status'      => 'sent',
+                'type'        => 'automated',
+                'created_by'  => $createdBy->id,
+                'started_at'  => now()->subDays(7),
+                'finished_at' => now()->subDays(6),
             ],
             [
                 'name'        => 'Promoção de Aniversário',
                 'description' => 'Campanha especial para usuários aniversariantes',
+                'channels'    => ['email', 'notification'],
                 'status'      => 'draft',
-                'type'        => 'email',
+                'type'        => 'manual',
+                'created_by'  => $createdBy->id,
             ],
             [
                 'name'        => 'Reengajamento Q2 2026',
                 'description' => 'Campanha para reengajar usuários inativos',
-                'status'      => 'finished',
-                'type'        => 'email',
+                'channels'    => ['email'],
+                'status'      => 'sent',
+                'type'        => 'manual',
+                'created_by'  => $createdBy->id,
+                'started_at'  => now()->subMonths(2),
+                'finished_at' => now()->subMonths(2)->addDays(3),
             ],
             [
                 'name'        => 'Newsletter Mensal',
                 'description' => 'Newsletter enviada todo primeiro dia do mês',
-                'status'      => 'active',
-                'type'        => 'email',
+                'channels'    => ['email'],
+                'status'      => 'scheduled',
+                'type'        => 'automated',
+                'created_by'  => $createdBy->id,
+                'scheduled_at' => now()->addMonth()->startOfMonth(),
             ],
         ];
 
