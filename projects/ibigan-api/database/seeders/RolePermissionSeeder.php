@@ -74,6 +74,17 @@ class RolePermissionSeeder extends Seeder
             'log-visualizar',
         ]);
 
+        // OPERATOR — operacional: campanhas/templates/notificações, sem gestão de usuários
+        $operator = Role::firstOrCreate(['name' => 'operator', 'guard_name' => 'sanctum']);
+        $operator->syncPermissions([
+            'usuario-visualizar',
+            'campanha-visualizar', 'campanha-gerenciar',
+            'template-visualizar', 'template-gerenciar',
+            'relatorio-visualizar',
+            'notificacao-visualizar', 'notificacao-gerenciar',
+            'empresa-visualizar',
+        ]);
+
         // VIEWER — só visualizar
         $viewer = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'sanctum']);
         $viewer->syncPermissions([
