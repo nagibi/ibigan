@@ -30,19 +30,26 @@ function DrawerOverlay({ className, ...props }: React.ComponentProps<typeof Draw
   );
 }
 
-function DrawerContent({ className, children, ...props }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+interface DrawerContentProps extends React.ComponentProps<typeof DrawerPrimitive.Content> {
+  hideHandle?: boolean;
+}
+
+function DrawerContent({ className, children, hideHandle = false, ...props }: DrawerContentProps) {
   return (
     <DrawerPortal>
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         className={cn(
-          'bg-background fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border',
+          'bg-background fixed inset-x-0 bottom-0 z-50 flex h-auto flex-col rounded-t-[10px] border',
+          hideHandle ? 'mt-0' : 'mt-24',
           className,
         )}
         {...props}
       >
-        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+        {!hideHandle && (
+          <div className="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted" />
+        )}
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>

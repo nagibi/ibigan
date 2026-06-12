@@ -75,21 +75,27 @@ class DemoSeeder extends Seeder
         ['name' => 'Thiago Nascimento',    'email' => 'thiago@{tenant}.com',      'cpf' => '01234567890', 'role' => 'operator', 'gender' => 'male'],
     ];
 
+    private array $centralSuperAdmins = [
+        ['name' => 'Nagibi Emanuel', 'email' => 'nagibi@gmail.com'],
+        ['name' => 'Jean Schletz',   'email' => 'jeanschletz@gmail.com'],
+    ];
+
     public function run(): void
     {
-        // Super admin central
-        DB::table('central_users')->updateOrInsert(
-            ['email' => 'nagibi@gmail.com'],
-            [
-                'name'           => 'Nagibi Emanuel',
-                'password'       => Hash::make('A12345'),
-                'is_super_admin' => 1,
-                'is_active'      => 1,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]
-        );
-        $this->command->info('Super admin central criado: nagibi@gmail.com');
+        foreach ($this->centralSuperAdmins as $admin) {
+            DB::table('central_users')->updateOrInsert(
+                ['email' => $admin['email']],
+                [
+                    'name'           => $admin['name'],
+                    'password'       => Hash::make('A12345'),
+                    'is_super_admin' => 1,
+                    'is_active'      => 1,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]
+            );
+            $this->command->info("Super admin central criado: {$admin['email']}");
+        }
 
         foreach ($this->tenants as $tenantData) {
             $this->command->info("Criando tenant: {$tenantData['name']}");

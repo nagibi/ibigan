@@ -176,3 +176,43 @@ body {
 
 /* Metronic Configs */
 @import './config.metronic.css';
+
+/* Mobile grid filters — top-aligned panel with scrollable body */
+@media (max-width: 1279px) {
+  .grid-filters-mobile-panel {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    box-sizing: border-box !important;
+    top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    width: calc(100vw - 2rem) !important;
+    max-width: 28rem !important;
+    height: min(
+      85dvh,
+      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)
+    ) !important;
+    max-height: min(
+      85dvh,
+      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)
+    ) !important;
+    translate: -50% 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  .grid-filters-mobile-scroll {
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .grid-filters-mobile-footer {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}

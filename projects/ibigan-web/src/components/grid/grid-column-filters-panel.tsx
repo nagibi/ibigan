@@ -8,8 +8,7 @@ import {
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import { GridFilterBadge } from '@/components/grid/grid-badge';
 import { GridColumnFilter } from '@/components/grid/grid-column-filter';
-import { Button } from '@/components/ui/button';
-import type { GridActiveFilter } from '@/components/grid/grid-filters-control';
+import { ClearFiltersButton, type GridActiveFilter } from '@/components/grid/grid-filters-control';
 
 export interface GridColumnFiltersConfig<T = unknown> {
   columns: GridColumnDef<T>[];
@@ -69,15 +68,7 @@ export function GridColumnFiltersPanel<T>({
             ))}
           </div>
           {showAppliedClearAll && onClearAll && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 w-full"
-              onClick={onClearAll}
-            >
-              {t('grid.clear_filters')}
-            </Button>
+            <ClearFiltersButton onClick={onClearAll} className="h-8 w-full" />
           )}
         </section>
       )}

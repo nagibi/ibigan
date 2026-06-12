@@ -1,4 +1,4 @@
-import { Filter, Search, X } from 'lucide-react';
+import { Check, Filter, FilterX, Search, X } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,15 +12,15 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Sheet,
-  SheetBody,
-  SheetClose,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 import {
@@ -36,6 +36,29 @@ export interface GridActiveFilter {
 }
 
 export type { GridColumnFiltersConfig };
+
+export function ClearFiltersButton({
+  onClick,
+  className,
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Button
+      type="button"
+      variant="destructive"
+      size="sm"
+      className={cn('gap-1.5', className)}
+      onClick={onClick}
+    >
+      <FilterX className="size-3.5 shrink-0" />
+      {t('grid.clear_filters')}
+    </Button>
+  );
+}
 
 export interface GridFiltersControlProps {
   filters: GridActiveFilter[];
@@ -155,15 +178,7 @@ function AppliedFiltersSection({
         ))}
       </div>
       {showClearAll && onClearAll && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 w-full"
-          onClick={onClearAll}
-        >
-          {t('grid.clear_filters')}
-        </Button>
+        <ClearFiltersButton onClick={onClearAll} className="h-8 w-full" />
       )}
     </section>
   );
@@ -207,15 +222,10 @@ function AppliedFiltersPopoverContent({
               content={t('grid.tooltip.clear_filters')}
               className="mt-1 flex w-full"
             >
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 w-full justify-center px-2"
+              <ClearFiltersButton
                 onClick={onClearAll}
-              >
-                {t('grid.clear_filters')}
-              </Button>
+                className="h-8 w-full justify-center px-2"
+              />
             </ToolbarTooltip>
           )}
         </div>
@@ -244,10 +254,9 @@ function MobileFiltersSheetContent({
   searchPlaceholder?: string;
 }) {
   const { t } = useTranslation();
-  const hasAnyFilters = filters.length > 0 || Boolean(search?.trim());
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 px-4 py-4">
       {onSearch && (
         <section className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -276,17 +285,7 @@ function MobileFiltersSheetContent({
         />
       )}
 
-      {hasAnyFilters && onClearAll && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 w-full"
-          onClick={onClearAll}
-        >
-          {t('grid.clear_filters')}
-        </Button>
-      )}
+      <div className="h-2 shrink-0" aria-hidden />
     </div>
   );
 }
@@ -316,24 +315,26 @@ export function GridFiltersControl({
 
   if (showMobileSheet) {
     return (
-      <Sheet>
+      <Dialog>
         <ToolbarTooltip content={t('grid.tooltip.filters')}>
-          <SheetTrigger asChild>
+          <DialogTrigger asChild>
             <FiltersTriggerButton
               hasFilters={hasAnyFilters}
               isMobile={isMobile}
               label={t('grid.filters')}
             />
-          </SheetTrigger>
+          </DialogTrigger>
         </ToolbarTooltip>
-        <SheetContent
-          side="bottom"
-          className="grid-filters-sheet rounded-t-2xl border-t"
+        <DialogContent
+          showCloseButton
+          className={cn(
+            'grid-filters-mobile-panel w-[calc(100vw-2rem)] max-w-md gap-0 overflow-hidden rounded-xl border p-0',
+          )}
         >
-          <SheetHeader className="grid-filters-sheet-header border-b border-border px-4 py-3 pe-12 text-start">
-            <SheetTitle>{t('grid.filters')}</SheetTitle>
-          </SheetHeader>
-          <SheetBody className="grid-filters-sheet-body px-4 py-4">
+          <DialogHeader className="mb-0 shrink-0 space-y-0 border-b border-border px-4 py-3 pe-12 text-start">
+            <DialogTitle className="text-base">{t('grid.filters')}</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="grid-filters-mobile-scroll mb-0 min-h-0 overflow-y-auto overscroll-contain p-0 [-webkit-overflow-scrolling:touch]">
             <MobileFiltersSheetContent
               filters={filters}
               onClearAll={onClearAll}
@@ -343,16 +344,20 @@ export function GridFiltersControl({
               onSearch={onSearch}
               searchPlaceholder={searchPlaceholder}
             />
-          </SheetBody>
-          <SheetFooter className="grid-filters-sheet-footer border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <SheetClose asChild>
-              <Button type="button" variant="primary" className="w-full">
+          </DialogBody>
+          <DialogFooter className="grid-filters-mobile-footer shrink-0 flex-col gap-2 border-t border-border bg-background px-4 pt-3 sm:flex-col sm:space-x-0">
+            {hasAnyFilters && onClearAll && (
+              <ClearFiltersButton onClick={onClearAll} className="h-9 w-full" />
+            )}
+            <DialogClose asChild>
+              <Button type="button" variant="primary" className="h-9 w-full gap-1.5">
+                <Check className="size-3.5 shrink-0" />
                 {t('grid.apply')}
               </Button>
-            </SheetClose>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 
