@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface GridTableScrollProps {
@@ -11,9 +12,10 @@ interface GridTableScrollProps {
 export function GridTableScroll({
   children,
   className,
-  maxHeight = 'calc(100vh - 18rem - var(--impersonation-banner-height, 0px))',
-  minHeight = 'var(--grid-body-min-height, 20rem)',
+  maxHeight = 'var(--grid-body-max-height, calc(100dvh - 18rem - var(--impersonation-banner-height, 0px)))',
+  minHeight = 'var(--grid-body-min-height, 8rem)',
 }: GridTableScrollProps) {
+  const isMobile = useIsMobile();
   const bodyRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,33 @@ export function GridTableScroll({
     resizeObserver.observe(content);
 
     return () => resizeObserver.disconnect();
-  }, [children]);
+  }, [children, isMobile]);
+
+  if (isMobile) {
+    return (
+      <div className={cn('grid-table-scroll-mobile flex w-full min-w-0 flex-col', className)}>
+        {hasHorizontalOverflow && (
+          <div
+            ref={topRef}
+            className="grid-table-scroll grid-table-scroll-top shrink-0 overflow-x-auto overflow-y-hidden border-b border-border"
+            onScroll={() => syncScrollLeft('top')}
+            aria-hidden
+          >
+            <div style={{ width: scrollWidth, height: 1 }} />
+          </div>
+        )}
+        <div
+          ref={bodyRef}
+          className="grid-table-scroll w-full min-w-0 overflow-x-auto"
+          onScroll={() => syncScrollLeft('body')}
+        >
+          <div ref={contentRef} className="w-max min-w-full">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', className)}>
@@ -71,7 +99,7 @@ export function GridTableScroll({
       )}
       <div
         ref={bodyRef}
-        className="grid-table-scroll w-full min-w-0 flex-1"
+        className="grid-table-scroll min-h-0 w-full min-w-0 flex-1"
         style={{ maxHeight, minHeight }}
         onScroll={() => syncScrollLeft('body')}
       >

@@ -13,10 +13,42 @@
     --header-height: 70px;
     --toolbar-height: 48px;
     --impersonation-banner-height: 0px;
-    --grid-body-min-height: max(
-      20rem,
-      calc(100vh - 26rem - var(--impersonation-banner-height, 0px))
+    --grid-layout-offset: calc(
+      var(--header-height) + var(--toolbar-height) + var(--impersonation-banner-height, 0px) + 6.5rem
     );
+    --grid-body-max-height: max(6rem, calc(100dvh - var(--grid-layout-offset)));
+    --grid-body-min-height: clamp(
+      8rem,
+      calc(100dvh - var(--grid-layout-offset) - 2rem),
+      var(--grid-body-max-height)
+    );
+  }
+
+  @media (max-width: 64rem) {
+    .demo1 .wrapper {
+      height: auto;
+      min-height: 100dvh;
+      overflow-y: auto !important;
+    }
+
+    .demo1 main,
+    .demo1 .page-content-scroll {
+      overflow: visible !important;
+      flex: 1 0 auto;
+      min-height: auto;
+    }
+
+    .demo1 .page-content-scroll .container-fluid {
+      flex: 1 0 auto;
+      min-height: auto;
+    }
+  }
+
+  @media (max-width: 64rem) {
+    .demo1 .grid-table-scroll-mobile .grid-table-scroll {
+      contain: none;
+      overflow-y: visible;
+    }
   }
 
   .demo1.impersonation-banner-visible {

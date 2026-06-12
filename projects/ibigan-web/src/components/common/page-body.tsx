@@ -9,7 +9,7 @@ export function PageBody({
   className?: string;
 }) {
   return (
-    <div className={cn('container-fluid !max-w-full flex min-h-0 min-w-0 flex-1 flex-col pb-6', className)}>
+    <div className={cn('container-fluid !max-w-full flex min-h-0 min-w-0 flex-1 flex-col pb-6 max-lg:flex-none', className)}>
       {children}
     </div>
   );
