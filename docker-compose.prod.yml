@@ -34,8 +34,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./projects/ibigan-api:/var/www:ro
-      - ./projects/ibigan-web/dist:/var/www/spa:ro
+      - ./projects/ibigan-api:/var/www
+      - ./projects/ibigan-web/dist:/var/www/spa
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
     networks:
       - ibigan_network
