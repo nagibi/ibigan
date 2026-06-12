@@ -24,13 +24,13 @@ function Demo1LayoutContent() {
   useClearPageToolbarAlertOnNavigate();
 
   return (
-    <div className="wrapper flex h-dvh min-w-0 grow flex-col overflow-x-clip overflow-y-hidden">
+    <div className="wrapper flex min-h-dvh min-w-0 grow flex-col overflow-y-hidden">
       <Header />
       <PageToolbarBar />
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
         <PageContentHeader />
-        <div className="page-content-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="page-content-scroll flex min-h-0 min-w-0 flex-1 flex-col">
           <Outlet />
         </div>
       </main>

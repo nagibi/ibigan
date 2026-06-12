@@ -158,6 +158,7 @@ function HorizontalMenuItem({
   const { pathname } = useLocation();
   const { isActive, hasActiveChild, isItemActive } = useMenu(pathname);
   const { open: openPreferences, isOpen: preferencesOpen } = useNotificationPreferencesSheet();
+  const { open, setOpen, hoverProps } = useHoverOpen();
   const isActiveWithPreferences = (path: string | undefined) =>
     isActive(path) || (preferencesOpen && isNotificationPreferencesPath(path));
 
@@ -167,7 +168,6 @@ function HorizontalMenuItem({
 
   const active = isItemActive(item);
   const children = item.children?.filter((child) => !child.heading && !child.disabled);
-  const { open, setOpen, hoverProps } = useHoverOpen();
 
   if (children?.length) {
     return (

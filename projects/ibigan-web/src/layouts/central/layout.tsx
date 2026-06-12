@@ -22,7 +22,7 @@ function CentralLayoutContent() {
   useClearPageToolbarAlertOnNavigate();
 
   return (
-    <div className="wrapper flex h-dvh min-w-0 grow flex-col overflow-y-hidden">
+    <div className="wrapper flex min-h-dvh min-w-0 grow flex-col overflow-y-hidden">
       <CentralHeader />
       <PageToolbarBar />
 
@@ -31,7 +31,7 @@ function CentralLayoutContent() {
           menuSource="central"
           fallbackMenu={CENTRAL_MENU_SIDEBAR}
         />
-        <div className="page-content-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="page-content-scroll flex min-h-0 min-w-0 flex-1 flex-col">
           <Outlet />
         </div>
       </main>

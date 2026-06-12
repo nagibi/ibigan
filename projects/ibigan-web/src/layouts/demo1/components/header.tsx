@@ -57,12 +57,12 @@ export function Header() {
   return (
     <header
       className={cn(
-        'header fixed top-0 z-10 start-0 flex items-stretch shrink-0 border-b border-border bg-background end-0 pe-[var(--removed-body-scroll-bar-size,0px)]',
+        'header fixed inset-x-0 top-0 z-10 flex w-full shrink-0 items-stretch border-b border-border bg-background',
       )}
     >
-      <Container className="flex w-full grow items-stretch justify-between gap-4">
-        <div className="flex min-w-0 items-stretch gap-5">
-          <div className="flex items-center gap-2.5 lg:hidden">
+      <Container className="flex h-full w-full items-center gap-x-2 lg:gap-x-4">
+        <div className="flex min-w-0 flex-1 items-stretch gap-2 overflow-hidden sm:gap-5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 lg:hidden">
             <Link to="/" className="shrink-0">
               <img
                 src={toAbsoluteUrl('/media/app/mini-logo.svg')}
@@ -136,7 +136,7 @@ export function Header() {
           )}
         </div>
 
-        <div className="relative z-20 flex shrink-0 items-center gap-3">
+        <div className="ms-auto flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-3">
           {pathname.startsWith('/store-client') ? (
             <StoreClientTopbar />
           ) : (
@@ -150,10 +150,10 @@ export function Header() {
                   variant="ghost"
                   mode="icon"
                   shape="circle"
-                  className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                  className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
                   onClick={() => setIsCommandPaletteOpen(true)}
                 >
-                  <Search className="size-4.5!" />
+                  <Search className="size-4 sm:size-4.5!" />
                 </Button>
               </ToolbarTooltip>
               <NotificationsSheet
@@ -163,17 +163,17 @@ export function Header() {
                       variant="ghost"
                       mode="icon"
                       shape="circle"
-                      className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                      className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
                     >
-                      <Bell className="size-4.5!" />
+                      <Bell className="size-4 sm:size-4.5!" />
                     </Button>
                   </ToolbarTooltip>
                 }
               />
-              <div className="flex items-center gap-2">
+              <div className="hidden shrink-0 items-center lg:flex">
                 <TenantSwitcher />
-                <UserDropdownMenu />
               </div>
+              <UserDropdownMenu />
             </>
           )}
         </div>

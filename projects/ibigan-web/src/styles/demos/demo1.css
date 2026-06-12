@@ -1,7 +1,7 @@
 @layer components {
   /* Variables */
   body.demo1 {
-    overflow-x: clip;
+    overflow: auto;
   }
 
   .demo1 {
@@ -22,7 +22,7 @@
   .demo1 .wrapper {
     width: 100%;
     max-width: 100%;
-    overflow-x: clip;
+    overflow-x: auto;
   }
 
   @media (max-width: theme(--breakpoint-lg)) {
@@ -231,7 +231,7 @@
   @media (min-width: theme(--breakpoint-lg)) {
     .demo1 .container,
     .demo1 .container-fluid {
-      padding-inline: 1.5rem !important;
+      padding-inline: 1.25rem !important;
     }
   }
 }

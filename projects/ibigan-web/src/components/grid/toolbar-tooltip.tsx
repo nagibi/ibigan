@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface ToolbarTooltipProps {
@@ -19,7 +20,9 @@ export function ToolbarTooltip({
   side = 'bottom',
   className,
 }: ToolbarTooltipProps) {
-  if (!content) {
+  const isMobile = useIsMobile();
+
+  if (!content || isMobile) {
     return <>{children}</>;
   }
 

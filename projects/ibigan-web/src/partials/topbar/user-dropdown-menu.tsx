@@ -41,6 +41,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Tooltip,
   TooltipContent,
@@ -65,6 +66,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const { currenLanguage, changeLanguage } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
   const { storeOption } = useSettings();
+  const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -143,27 +145,31 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     storeOption('layouts.demo1.sidebarTheme', nextTheme);
   }
 
+  const avatarTrigger = trigger ?? (
+    <span className="inline-flex shrink-0 cursor-pointer rounded-full outline-none">
+      <Avatar className="size-8 sm:size-9">
+        <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+        <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+          {getInitials(displayName, 2)}
+        </AvatarFallback>
+      </Avatar>
+    </span>
+  );
+
   return (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            {trigger ?? (
-              <span className="inline-flex cursor-pointer rounded-full outline-none">
-                <Avatar className="size-9">
-                  <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {getInitials(displayName, 2)}
-                  </AvatarFallback>
-                </Avatar>
-              </span>
-            )}
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" variant="light">
-          {t('header.tooltip.profile')}
-        </TooltipContent>
-      </Tooltip>
+    <DropdownMenu modal={false}>
+      {isMobile ? (
+        <DropdownMenuTrigger asChild>{avatarTrigger}</DropdownMenuTrigger>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>{avatarTrigger}</DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" variant="light">
+            {t('header.tooltip.profile')}
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       <DropdownMenuContent align="end" side="bottom" className="w-64">
         <div className="flex items-center justify-between gap-2 p-3">

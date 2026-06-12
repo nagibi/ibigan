@@ -55,7 +55,7 @@
   "grid.search_placeholder": "Buscar...",
   "grid.refresh": "Atualizar",
   "grid.export": "Exportar",
-  "grid.select_all": "Selecionar todos",
+  "grid.select_all": "Todos",
   "grid.clear_selection": "Limpar seleção",
   "grid.selected_one": "1 registro selecionado",
   "grid.selected_many": "{{count}} registros selecionados",

@@ -100,10 +100,10 @@
   }
 
   .page-content-scroll {
+    overflow-x: auto;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--color-input) var(--color-muted);
-    scrollbar-gutter: stable;
   }
 
   .page-content-scroll::-webkit-scrollbar {
