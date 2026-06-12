@@ -1,20 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { DatePicker } from 'antd';
+import type { Dayjs } from 'dayjs';
+import { GridAntdConfigProvider } from '@/components/grid/grid-antd-config-provider';
+import { useGridAntdConfig } from '@/lib/antd-locale';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { useDateLocale } from '@/lib/date-locale';
-import {
-  formatFilterDate,
-  parseFilterDate,
-  toIsoDate,
+  dayjsToIso,
+  parseFilterDayjs,
 } from '@/lib/grid-date-filter-utils';
 import { cn } from '@/lib/utils';
+import {
+  getGridDatePickerActiveStyle,
+  GRID_DATE_PICKER_ACTIVE_CLASS,
+} from '@/lib/grid-date-picker-styles';
+
+const gridDatePickerActiveClassName = GRID_DATE_PICKER_ACTIVE_CLASS;
 
 interface GridDateFilterProps {
   value: string;
@@ -28,61 +28,55 @@ export function GridDateFilter({
   placeholder,
 }: GridDateFilterProps) {
   const { t } = useTranslation();
-  const locale = useDateLocale();
+  const { dateFormatMask } = useGridAntdConfig();
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Dayjs | null>(() => parseFilterDayjs(value));
+  const hasCommittedValue = Boolean(value?.trim());
+  const hasDraftValue = Boolean(draft);
+  const isActive = hasCommittedValue || hasDraftValue;
 
-  const isActive = Boolean(value);
-  const selected = parseFilterDate(value);
-  const label = isActive
-    ? formatFilterDate(value, locale)
-    : (placeholder ?? t('grid.date_period'));
-
-  function handleSelect(date?: Date) {
-    if (!date) return;
-    onChange(toIsoDate(date));
-    setOpen(false);
-  }
-
-  function handleClear() {
-    onChange('');
-    setOpen(false);
-  }
+  useEffect(() => {
+    if (!open) {
+      setDraft(parseFilterDayjs(value));
+    }
+  }, [value, open]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            'h-7 w-full min-w-[72px] justify-between gap-1 px-2 text-xs font-normal',
-            isActive && 'border-primary/60 bg-primary/5',
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-1">
-            <CalendarDays className="size-3 shrink-0 text-muted-foreground" />
-            <span className="truncate">{label}</span>
-          </span>
-          <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={selected}
-          onSelect={handleSelect}
-          locale={locale}
-        />
-        {isActive && (
-          <div className="flex items-center justify-end border-t border-border p-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleClear}>
-              {t('common.clear')}
-            </Button>
-          </div>
+    <GridAntdConfigProvider>
+      <div
+        className={cn(
+          'grid-antd-picker-single-wrap w-full min-w-0',
+          isActive && 'grid-antd-picker-wrap-active',
         )}
-      </PopoverContent>
-    </Popover>
+      >
+        <DatePicker
+          size="middle"
+          allowClear
+          inputReadOnly={false}
+          format={dateFormatMask}
+          value={draft}
+          open={open}
+          placeholder={placeholder ?? t('grid.date_period')}
+          className={cn(
+            'grid-antd-picker grid-antd-picker-single',
+            isActive && gridDatePickerActiveClassName,
+          )}
+          style={getGridDatePickerActiveStyle(isActive)}
+          getPopupContainer={() => document.body}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              onChange(dayjsToIso(draft));
+            }
+            setOpen(nextOpen);
+          }}
+          onChange={(date) => {
+            setDraft(date);
+            if (!date || date.isValid()) {
+              onChange(dayjsToIso(date));
+            }
+          }}
+        />
+      </div>
+    </GridAntdConfigProvider>
   );
 }

@@ -1,58 +1,42 @@
+import { useTranslation } from 'react-i18next';
 import { generalSettings } from '@/config/general.config';
 import { Container } from '@/components/common/container';
 
 export function Footer() {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="footer">
       <Container>
-        <div className="flex flex-col md:flex-row justify-center md:justify-between items-center gap-3 py-5">
-          <div className="flex order-2 md:order-1  gap-2 font-normal text-sm">
-            <span className="text-muted-foreground">{currentYear} &copy;</span>
-            <a
-              href="https://keenthemes.com"
-              target="_blank"
-              className="text-secondary-foreground hover:text-primary"
-            >
-              Keenthemes Inc.
-            </a>
+        <div className="flex flex-col items-center justify-center gap-3 py-5 md:flex-row md:justify-between">
+          <div className="order-2 flex gap-2 text-sm font-normal md:order-1">
+            <span className="text-muted-foreground">
+              {t('footer.copyright', { year: currentYear, app: generalSettings.appName })}
+            </span>
           </div>
-          <nav className="flex order-1 md:order-2 gap-4 font-normal text-sm text-muted-foreground">
+          <nav className="order-1 flex gap-4 text-sm font-normal text-muted-foreground md:order-2">
+            <a
+              href={generalSettings.siteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary"
+            >
+              {generalSettings.appName}
+            </a>
             <a
               href={generalSettings.docsLink}
               target="_blank"
+              rel="noopener noreferrer"
               className="hover:text-primary"
             >
-              Docs
+              {t('footer.docs')}
             </a>
             <a
-              href={generalSettings.purchaseLink}
-              target="_blank"
+              href={`mailto:${generalSettings.supportEmail}`}
               className="hover:text-primary"
             >
-              Purchase
-            </a>
-            <a
-              href={generalSettings.faqLink}
-              target="_blank"
-              className="hover:text-primary"
-            >
-              FAQ
-            </a>
-            <a
-              href="https://devs.keenthemes.com"
-              target="_blank"
-              className="hover:text-primary"
-            >
-              Support
-            </a>
-            <a
-              href={generalSettings.licenseLink}
-              target="_blank"
-              className="hover:text-primary"
-            >
-              License
+              {t('footer.support')}
             </a>
           </nav>
         </div>

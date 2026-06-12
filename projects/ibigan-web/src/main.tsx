@@ -1,4 +1,5 @@
 import './styles/globals.css';
+import './styles/grid-antd.css';
 import '@/i18n/i18next';
 import * as Sentry from '@sentry/react';
 import { StrictMode } from 'react';

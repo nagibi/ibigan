@@ -13,6 +13,8 @@ export function dateRangeFilterToKey(key: string) {
 
 export type GridColumnFilterInputMode = 'text' | 'numeric';
 
+export type GridColumnFilterMask = 'cpf' | 'phone' | 'cnpj';
+
 export interface GridColumnFilterOption {
   label: string;
   value: string;
@@ -24,6 +26,7 @@ export interface GridColumnFilterDef {
   placeholder?: string;
   options?: GridColumnFilterOption[];
   inputMode?: GridColumnFilterInputMode;
+  mask?: GridColumnFilterMask;
 }
 
 export function useGridFilters(

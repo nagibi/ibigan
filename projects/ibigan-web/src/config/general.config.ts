@@ -1,10 +1,8 @@
 const generalSettings = {
-  purchaseLink: 'https://1.envato.market/Vm7VRE',
-  docsLink: '',
-  licenseLink: '',
-  devsLink: 'https://devs.keenthemes.com',
-  faqLink: 'https://keenthemes.com/metronic',
-  aboutLink: 'https://keenthemes.com/metronic',
+  appName: 'Ibigan',
+  siteUrl: 'https://ibigan.com.br',
+  supportEmail: 'suporte@ibigan.com.br',
+  docsLink: import.meta.env.VITE_DEV_API_DOCS_URL || '/docs/api',
 };
 
 export { generalSettings };

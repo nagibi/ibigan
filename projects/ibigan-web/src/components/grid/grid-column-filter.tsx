@@ -6,6 +6,7 @@ import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter
 import { GridDateFilter } from '@/components/grid/grid-date-filter';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
 import { GridMultiValueFilter } from '@/components/grid/grid-multi-value-filter';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -102,6 +103,17 @@ export function GridColumnFilter({
         value={value}
         onChange={onChange}
         placeholder={filter.placeholder ?? t('grid.date_period')}
+      />
+    );
+  } else if (filter.mask) {
+    control = (
+      <MaskedInput
+        mask={filter.mask}
+        value={value}
+        onChange={onChange}
+        placeholder={filter.placeholder ?? 'Filtrar...'}
+        variant="sm"
+        className={inputClassName}
       />
     );
   } else {

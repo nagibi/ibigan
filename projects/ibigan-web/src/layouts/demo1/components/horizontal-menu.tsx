@@ -3,6 +3,7 @@ import { ChevronDown, LayoutGrid } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { type MenuItem } from '@/config/types';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
+import { useHoverOpen } from '@/hooks/use-hover-open';
 import { useMenu } from '@/hooks/use-menu';
 import { MenuBadge } from '@/lib/menu-badge';
 import { isExternalMenuPath, resolveMenuLinkTarget } from '@/lib/menu-link';
@@ -166,11 +167,12 @@ function HorizontalMenuItem({
 
   const active = isItemActive(item);
   const children = item.children?.filter((child) => !child.heading && !child.disabled);
+  const { open, setOpen, hoverProps } = useHoverOpen();
 
   if (children?.length) {
     return (
-      <DropdownMenu key={index}>
-        <DropdownMenuTrigger asChild>
+      <DropdownMenu key={index} open={open} onOpenChange={setOpen} modal={false}>
+        <DropdownMenuTrigger asChild {...hoverProps}>
           <Button variant="ghost" className={triggerClass(active)}>
             <MenuIcon icon={item.icon} />
             {item.title}
@@ -178,7 +180,12 @@ function HorizontalMenuItem({
             <ChevronDown className="size-3.5 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={8} className="min-w-52 p-2">
+        <DropdownMenuContent
+          align="start"
+          sideOffset={8}
+          className="min-w-52 p-2"
+          {...hoverProps}
+        >
           <DropdownChildItems
             items={children}
             isActive={isActiveWithPreferences}

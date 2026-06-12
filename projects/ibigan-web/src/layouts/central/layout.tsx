@@ -12,6 +12,7 @@ import {
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
 import { Footer } from '@/layouts/demo1/components/footer';
+import { ScrollToTopButton } from '@/components/common/scroll-to-top-button';
 import { PageContentHeader } from '@/layouts/demo1/components/page-content-header';
 import { PageToolbarBar } from '@/layouts/demo1/components/page-toolbar-bar';
 import { CentralHeader } from './components/header';
@@ -36,6 +37,7 @@ function CentralLayoutContent() {
       </main>
 
       <Footer />
+      <ScrollToTopButton />
     </div>
   );
 }

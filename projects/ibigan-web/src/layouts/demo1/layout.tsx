@@ -14,6 +14,7 @@ import {
 } from '@/providers/page-toolbar-provider';
 import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
 import { Footer } from './components/footer';
+import { ScrollToTopButton } from '@/components/common/scroll-to-top-button';
 import { Header } from './components/header';
 import { PageContentHeader } from './components/page-content-header';
 import { PageToolbarBar } from './components/page-toolbar-bar';
@@ -35,6 +36,7 @@ function Demo1LayoutContent() {
       </main>
 
       <Footer />
+      <ScrollToTopButton />
     </div>
   );
 }
