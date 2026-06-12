@@ -134,7 +134,6 @@ final class CampaignService
                 CampaignRecipientType::All => User::query()->get(),
                 CampaignRecipientType::Role => User::role($recipient->value)->get(),
                 CampaignRecipientType::Permission => User::permission($recipient->value)->get(),
-                CampaignRecipientType::Organization => collect(),
                 CampaignRecipientType::User => User::query()
                     ->where('id', $recipient->value)
                     ->get(),

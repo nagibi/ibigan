@@ -1,4 +1,5 @@
-import { Filter, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
+import { GridFilterBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -46,30 +47,22 @@ export function GridFiltersControl({ filters, onClearAll }: GridFiltersControlPr
 
         {hasFilters ? (
           <div className="flex flex-col gap-2">
-            {filters.map((filter) => (
-              <div
-                key={filter.id}
-                className="flex items-start justify-between gap-2 rounded-md border border-border px-2.5 py-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{filter.label}</p>
-                  <p className="truncate font-medium">{filter.value}</p>
-                </div>
-                {filter.onRemove && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    mode="icon"
-                    className="size-7 shrink-0"
-                    onClick={filter.onRemove}
-                    title={`Remover filtro ${filter.label}`}
-                  >
-                    <X className="size-3.5" />
-                  </Button>
-                )}
-              </div>
-            ))}
+            <div className="flex flex-wrap gap-2">
+              {filters.map((filter) => (
+                <GridFilterBadge
+                  key={filter.id}
+                  variant="primary"
+                  removeLabel={`Remover filtro ${filter.label}`}
+                  onRemove={filter.onRemove}
+                  className="max-w-full"
+                >
+                  <span className="truncate">
+                    <span className="text-muted-foreground">{filter.label}:</span>{' '}
+                    {filter.value}
+                  </span>
+                </GridFilterBadge>
+              ))}
+            </div>
 
             {onClearAll && (
               <Button type="button" variant="outline" size="sm" className="mt-1 w-full" onClick={onClearAll}>

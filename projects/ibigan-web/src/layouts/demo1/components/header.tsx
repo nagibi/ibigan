@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { StoreClientTopbar } from '@/pages/store-client/components/common/topbar';
-import { SearchDialog } from '@/partials/dialogs/search/search-dialog';
+import { CommandPalette } from '@/components/search/command-palette';
 import { AppsDropdownMenu } from '@/partials/topbar/apps-dropdown-menu';
 import { ChatSheet } from '@/partials/topbar/chat-sheet';
 import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
+import { TenantSwitcher } from '@/partials/topbar/tenant-switcher';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
 import {
   Bell,
@@ -15,13 +16,11 @@ import {
 } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
-import { getInitials, toAbsoluteUrl } from '@/lib/helpers';
+import { toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/auth.store';
 import { type MenuMode } from '@/config/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -40,12 +39,12 @@ import { SidebarMenu } from './sidebar-menu';
 export function Header() {
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const { pathname } = useLocation();
-  const { user } = useAuthStore();
   const { settings } = useSettings();
   const mobileMode = useIsMobile();
-  const menuMode = (settings.layouts.demo1.menuMode ?? 'sidebar') as MenuMode;
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
   const isHorizontalMenu = menuMode === 'horizontal';
 
   useEffect(() => {
@@ -143,20 +142,20 @@ export function Header() {
             <StoreClientTopbar />
           ) : (
             <>
-              {!mobileMode && (
-                <SearchDialog
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      mode="icon"
-                      shape="circle"
-                      className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
-                    >
-                      <Search className="size-4.5!" />
-                    </Button>
-                  }
-                />
-              )}
+              <CommandPalette
+                open={isCommandPaletteOpen}
+                onOpenChange={setIsCommandPaletteOpen}
+              />
+              <Button
+                variant="ghost"
+                mode="icon"
+                shape="circle"
+                className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                onClick={() => setIsCommandPaletteOpen(true)}
+                title="Buscar (⌘K)"
+              >
+                <Search className="size-4.5!" />
+              </Button>
               <NotificationsSheet
                 trigger={
                   <Button
@@ -193,15 +192,10 @@ export function Header() {
                   </Button>
                 }
               />
-              <UserDropdownMenu
-                trigger={
-                  <Avatar className="size-9 cursor-pointer border-2 border-green-500">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                      {getInitials(user?.name ?? 'U', 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                }
-              />
+              <div className="flex items-center gap-2">
+                <TenantSwitcher />
+                <UserDropdownMenu />
+              </div>
             </>
           )}
         </div>

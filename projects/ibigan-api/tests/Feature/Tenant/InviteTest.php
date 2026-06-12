@@ -70,11 +70,11 @@ it('lista convites paginados para admin', function (): void {
         ]);
 });
 
-it('viewer pode listar convites', function (): void {
+it('nega listagem de convites para viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
     $this->getJson('/api/v1/invites', ['X-Tenant-ID' => $this->tenant->id])
-        ->assertOk();
+        ->assertForbidden();
 });
 
 // --- Store ---

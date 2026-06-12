@@ -1,0 +1,34 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: mysql
+    static_configs:
+      - targets: ['mysql_exporter:9104']
+
+  - job_name: redis
+    static_configs:
+      - targets: ['redis_exporter:9121']
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # laravel — habilitar quando o endpoint /metrics existir (passo futuro)
+  # - job_name: laravel
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets: ['nginx:80']
+
+  - job_name: meilisearch
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials: masterKey
+    static_configs:
+      - targets: ['meilisearch:7700']

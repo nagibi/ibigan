@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
+import type { UserProfileFormData } from '@/lib/user-profile-fields';
 
 export interface Profile {
   id: number;
   name: string;
   email: string;
+  cpf?: string | null;
+  phone?: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  bio?: string | null;
   avatar_url: string | null;
   roles: string[];
   created_at: string;
@@ -13,7 +19,7 @@ export const profileService = {
   show: () =>
     api.get<{ status: number; result: Profile }>('/v1/profile'),
 
-  update: (payload: { name: string; email: string }) =>
+  update: (payload: UserProfileFormData) =>
     api.put<{ status: number; result: Profile }>('/v1/profile', payload),
 
   updatePassword: (payload: {

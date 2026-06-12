@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Middleware\InitializeTenancyByHeader;
+use App\Http\Middleware\SentryTenantContext;
 use App\Http\Middleware\UpdateLastLogin;
+use App\Http\Middleware\VerifyMetricsToken;
 use App\Providers\RateLimitServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
@@ -24,7 +27,16 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Tenancy deve rodar ANTES do Sanctum auth
         $middleware->prependToGroup('api', InitializeTenancyByHeader::class);
+
+        // Contexto Sentry por tenant — após InitializeTenancyByHeader nas rotas que usam o grupo
+        $middleware->appendToGroup('tenant', [
+            SentryTenantContext::class,
+        ]);
+
+        $middleware->alias([
+            'metrics.token' => VerifyMetricsToken::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        Integration::handles($exceptions);
     })->create();

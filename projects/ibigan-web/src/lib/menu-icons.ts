@@ -50,9 +50,46 @@ buildLookup(MENU_SIDEBAR, lookup);
 
 // Grupos vindos da API (sem heading, como accordion pai)
 lookup.byTitle.set('Gestão', Icons.Users);
+lookup.byTitle.set('Relatórios', Icons.BarChart2);
+lookup.byTitle.set('Administração', Icons.Settings);
+lookup.byTitle.set('Conta', Icons.User);
+lookup.byTitle.set('Ferramentas', Icons.Wrench);
+lookup.byTitle.set('Documentação API', Icons.BookOpen);
+lookup.byTitle.set('Horizon', Icons.Gauge);
+lookup.byTitle.set('phpMyAdmin', Icons.Database);
+lookup.byTitle.set('Mailpit', Icons.Mailbox);
 lookup.byTitle.set('Configurações', Icons.Settings);
+lookup.byTitle.set('Empresas', Icons.Building2);
+lookup.byTitle.set('Notificações', Icons.Bell);
+lookup.byTitle.set('Lista', Icons.Inbox);
+lookup.byTitle.set('Preferências', Icons.Settings2);
+lookup.byTitle.set('Papéis', Icons.ShieldCheck);
+lookup.byTitle.set('Permissões', Icons.Shield);
+lookup.byTitle.set('Meu perfil', Icons.User);
 lookup.bySlug.set('gestao', Icons.Users);
-lookup.bySlug.set('configuracoes', Icons.Settings);
+lookup.bySlug.set('relatorios-grupo', Icons.BarChart2);
+lookup.bySlug.set('administracao', Icons.Settings);
+lookup.bySlug.set('conta', Icons.User);
+lookup.bySlug.set('ferramentas', Icons.Wrench);
+lookup.bySlug.set('documentacao-api', Icons.BookOpen);
+lookup.bySlug.set('horizon', Icons.Gauge);
+lookup.bySlug.set('phpmyadmin', Icons.Database);
+lookup.bySlug.set('mailpit', Icons.Mailbox);
+lookup.bySlug.set('empresas', Icons.Building2);
+lookup.byPath.set('/admin/tenants', Icons.Building2);
+lookup.byPath.set('/roles', Icons.ShieldCheck);
+lookup.byPath.set('/permissions', Icons.Shield);
+lookup.byPath.set('/notification-preferences', Icons.Settings2);
+lookup.byPath.set('/notifications', Icons.Inbox);
+lookup.bySlug.set('notificacoes', Icons.Bell);
+lookup.bySlug.set('papeis', Icons.ShieldCheck);
+lookup.bySlug.set('permissoes', Icons.Shield);
+lookup.byPath.set('/profile', Icons.User);
+lookup.byPath.set('/security', Icons.Shield);
+lookup.bySlug.set('seguranca', Icons.Shield);
+lookup.byPath.set('/user-approvals', Icons.UserCheck);
+lookup.byPath.set('/reports', Icons.BarChart2);
+lookup.byPath.set('/reports/executions', Icons.FileBarChart);
 
 function resolveFromLucideName(name: string): LucideIcon | null {
   const candidates = [

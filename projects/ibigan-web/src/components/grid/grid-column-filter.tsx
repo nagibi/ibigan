@@ -1,6 +1,10 @@
+import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
 import type { GridColumnFilterDef } from '@/hooks/use-grid-filters';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
 import { GridMultiValueFilter } from '@/components/grid/grid-multi-value-filter';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -18,6 +22,24 @@ interface GridColumnFilterProps {
   dateRangeFrom?: string;
   dateRangeTo?: string;
   onDateRangeChange?: (from: string, to: string) => void;
+  onClear?: () => void;
+}
+
+function isFilterActive(
+  filter: GridColumnFilterDef,
+  value: string,
+  dateRangeFrom: string,
+  dateRangeTo: string,
+) {
+  if (filter.type === 'dateRange') {
+    return Boolean(dateRangeFrom.trim() || dateRangeTo.trim());
+  }
+
+  if (filter.type === 'multi') {
+    return parseMultiFilterValue(value).length > 0;
+  }
+
+  return value.trim().length > 0;
 }
 
 export function GridColumnFilter({
@@ -27,15 +49,18 @@ export function GridColumnFilter({
   dateRangeFrom = '',
   dateRangeTo = '',
   onDateRangeChange,
+  onClear,
 }: GridColumnFilterProps) {
-  const isActive = value.trim().length > 0;
+  const isActive = isFilterActive(filter, value, dateRangeFrom, dateRangeTo);
   const inputClassName = cn(
     'h-7 w-full min-w-[72px] text-xs',
     isActive && 'border-primary/60 bg-primary/5',
   );
 
+  let control: ReactNode;
+
   if (filter.type === 'select') {
-    return (
+    control = (
       <Select value={value || '__all__'} onValueChange={(v) => onChange(v === '__all__' ? '' : v)}>
         <SelectTrigger className={inputClassName}>
           <SelectValue placeholder={filter.placeholder ?? 'Todos'} />
@@ -50,10 +75,8 @@ export function GridColumnFilter({
         </SelectContent>
       </Select>
     );
-  }
-
-  if (filter.type === 'multi') {
-    return (
+  } else if (filter.type === 'multi') {
+    control = (
       <GridMultiValueFilter
         value={value}
         onChange={onChange}
@@ -61,10 +84,8 @@ export function GridColumnFilter({
         inputMode={filter.inputMode}
       />
     );
-  }
-
-  if (filter.type === 'dateRange') {
-    return (
+  } else if (filter.type === 'dateRange') {
+    control = (
       <GridDateRangeFilter
         from={dateRangeFrom}
         to={dateRangeTo}
@@ -72,10 +93,8 @@ export function GridColumnFilter({
         placeholder={filter.placeholder ?? 'Período'}
       />
     );
-  }
-
-  if (filter.type === 'date') {
-    return (
+  } else if (filter.type === 'date') {
+    control = (
       <Input
         type="date"
         value={value}
@@ -83,14 +102,33 @@ export function GridColumnFilter({
         className={inputClassName}
       />
     );
+  } else {
+    control = (
+      <Input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={filter.placeholder ?? 'Filtrar...'}
+        className={inputClassName}
+      />
+    );
   }
 
   return (
-    <Input
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={filter.placeholder ?? 'Filtrar...'}
-      className={inputClassName}
-    />
+    <div className="flex items-center gap-0.5">
+      <div className="min-w-0 flex-1">{control}</div>
+      {isActive && onClear && (
+        <Button
+          type="button"
+          variant="ghost"
+          mode="icon"
+          size="sm"
+          className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={onClear}
+          title="Limpar filtro"
+        >
+          <X className="size-3" />
+        </Button>
+      )}
+    </div>
   );
 }

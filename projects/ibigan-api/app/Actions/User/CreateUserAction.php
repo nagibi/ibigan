@@ -7,6 +7,7 @@ namespace App\Actions\User;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Support\UserRoleAssignment;
 
 final class CreateUserAction
 {
@@ -31,7 +32,12 @@ final class CreateUserAction
             'updated_by' => $actorId,
         ]);
 
-        $user->assignRole($request->input('role', 'viewer'));
+        $roles = UserRoleAssignment::assignableFromRequest($request);
+        UserRoleAssignment::sync(
+            $user,
+            $roles !== [] ? $roles : ['viewer'],
+            $request->user()?->hasRole('super-admin') ?? false,
+        );
 
         return $user->load(['roles', 'creator', 'updater']);
     }

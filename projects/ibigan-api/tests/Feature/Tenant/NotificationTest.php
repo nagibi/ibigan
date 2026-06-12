@@ -104,6 +104,43 @@ it('retorna 404 ao marcar notificação inexistente como lida', function (): voi
         ->assertNotFound();
 });
 
+// --- Mark as unread ---
+
+it('marca uma notificação como não lida', function (): void {
+    $notificationId = null;
+
+    $this->tenant->run(function () use (&$notificationId): void {
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $notificationId = $this->admin->notifications()->first()->id;
+        $this->admin->notifications()->first()->markAsRead();
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->patchJson("/api/v1/notifications/{$notificationId}/unread", [], ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.read_at', null);
+
+    $this->tenant->run(function (): void {
+        expect($this->admin->unreadNotifications()->count())->toBe(1);
+    });
+});
+
+it('retorna contagem de não lidas no meta da listagem', function (): void {
+    $this->tenant->run(function (): void {
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $this->admin->notifications()->first()->markAsRead();
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/notifications', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.unread', 1);
+});
+
 // --- Mark all as read ---
 
 it('marca todas as notificações como lidas', function (): void {
@@ -144,6 +181,46 @@ it('deleta uma notificação', function (): void {
     });
 });
 
+// --- Filtros ---
+
+it('filtra notificações por status de leitura', function (): void {
+    $this->tenant->run(function (): void {
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $this->admin->notifications()->first()->markAsRead();
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/notifications?filter_read_status=unread', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1);
+
+    $this->getJson('/api/v1/notifications?filter_read_status=read', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1);
+});
+
+it('filtra notificações por id e título', function (): void {
+    $notificationId = null;
+
+    $this->tenant->run(function () use (&$notificationId): void {
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $notificationId = $this->admin->notifications()->first()->id;
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson("/api/v1/notifications?filter_id={$notificationId}", ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1)
+        ->assertJsonPath('result.data.0.id', $notificationId);
+
+    $this->getJson('/api/v1/notifications?filter_title='.$this->admin->name, ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1);
+});
+
 // --- Disparo automático ---
 
 it('dispara notificação ao criar usuário', function (): void {
@@ -162,16 +239,3 @@ it('dispara notificação ao criar usuário', function (): void {
     });
 });
 
-it('dispara notificação ao criar organização', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
-
-    $this->postJson('/api/v1/organizations', [
-        'name' => 'Nova Org',
-        'slug' => 'nova-org',
-        'status' => 'active',
-    ], ['X-Tenant-ID' => $this->tenant->id])->assertCreated();
-
-    $this->tenant->run(function (): void {
-        expect($this->admin->notifications()->count())->toBeGreaterThan(0);
-    });
-});

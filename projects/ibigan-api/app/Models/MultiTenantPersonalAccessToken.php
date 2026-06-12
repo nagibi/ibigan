@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Central\CentralUser;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
 
@@ -11,58 +12,24 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
 {
     protected $table = 'personal_access_tokens';
 
-    /**
-     * Busca o token no banco do tenant atual ou no banco central.
-     */
     public static function findToken($token)
     {
-        $token = (string) $token;
-
-        // Tentar no banco atual (tenant ou central)
+        // Banco atual (tenant inicializado pelo middleware)
         $instance = parent::findToken($token);
-
         if ($instance) {
             return $instance;
         }
 
-        // Se não encontrou, tentar no banco central
-        $instance = self::findTokenOnConnection('central', $token);
-
-        if ($instance) {
-            return $instance;
-        }
-
-        // Sem contexto de tenant, buscar nos bancos dos tenants
-        if (tenant()) {
-            return null;
-        }
-
-        foreach (Tenant::query()->cursor() as $tenant) {
-            tenancy()->initialize($tenant);
-
-            $instance = parent::findToken($token);
-
-            if ($instance) {
-                return $instance;
-            }
-
-            tenancy()->end();
-        }
-
-        return null;
-    }
-
-    private static function findTokenOnConnection(string $connection, string $token): ?self
-    {
+        // Banco central (CentralUser tokens)
         try {
-            $id    = explode('|', $token, 2)[0] ?? null;
-            $plain = explode('|', $token, 2)[1] ?? null;
-
+            $parts = explode('|', $token, 2);
+            $id    = $parts[0] ?? null;
+            $plain = $parts[1] ?? null;
             if (! $id || ! $plain) {
                 return null;
             }
 
-            $record = DB::connection($connection)
+            $record = DB::connection('central')
                 ->table('personal_access_tokens')
                 ->where('id', $id)
                 ->first();
@@ -70,17 +37,25 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
             if (! $record) {
                 return null;
             }
-
             if (! hash_equals(hash('sha256', $plain), $record->token)) {
                 return null;
             }
+            if ($record->tokenable_type !== 'App\\Models\\Central\\CentralUser') {
+                return null;
+            }
 
-            $model = new self();
-            $model->setRawAttributes((array) $record);
-            $model->setConnection($connection);
+            $model = CentralUser::find($record->tokenable_id);
+            if (! $model) {
+                return null;
+            }
 
-            return $model;
+            $instance = new self();
+            $instance->setRawAttributes((array) $record, true);
+            $instance->exists = true;
+            $instance->setConnection('central');
+            $instance->setRelation('tokenable', $model);
 
+            return $instance;
         } catch (\Exception) {
             return null;
         }

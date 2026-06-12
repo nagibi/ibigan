@@ -50,13 +50,51 @@ export interface MyReportExecution {
   parameters: Record<string, string> | null;
 }
 
+export interface ReportsPaginatedResponse {
+  status: number;
+  result: {
+    data: ReportTemplate[];
+    meta: {
+      current_page: number;
+      last_page: number;
+      per_page: number;
+      total: number;
+    };
+  };
+}
+
 export type StoreReportPayload = Omit<ReportTemplate, 'id' | 'created_at'>;
 
 export const reportsService = {
-  list: (page = 1) =>
-    api.get<{ status: number; result: { data: ReportTemplate[]; meta: { total: number; current_page: number; last_page: number } } }>(
-      '/v1/reports', { params: { page } },
-    ),
+  list: (
+    page = 1,
+    perPage = 15,
+    search?: string,
+    sort?: string | null,
+    direction?: 'asc' | 'desc',
+    columnFilters?: Record<string, string>,
+  ) => {
+    const params: Record<string, string | number> = { page, per_page: perPage };
+
+    if (search?.trim()) params.search = search.trim();
+    if (sort) {
+      params.sort = sort;
+      params.direction = direction ?? 'asc';
+    }
+
+    for (const [key, value] of Object.entries(columnFilters ?? {})) {
+      if (!value.trim()) continue;
+
+      if (key === 'status') {
+        params.is_active = value === 'active' ? '1' : '0';
+        continue;
+      }
+
+      params[`filter_${key}`] = value;
+    }
+
+    return api.get<ReportsPaginatedResponse>('/v1/reports', { params });
+  },
 
   show: (id: number) =>
     api.get<{ status: number; result: ReportTemplate }>(`/v1/reports/${id}`),
@@ -86,9 +124,10 @@ export const reportsService = {
       `/v1/reports/${id}/executions`,
     ),
 
-  myExecutions: () =>
-    api.get<{ status: number; result: { data: MyReportExecution[]; meta: { total: number; current_page: number; last_page: number } } }>(
+  myExecutions: (page = 1, perPage = 15) =>
+    api.get<{ status: number; result: { data: MyReportExecution[]; meta: { total: number; current_page: number; last_page: number; per_page: number } } }>(
       '/v1/reports/executions/my',
+      { params: { page, per_page: perPage } },
     ),
 
   executionStatus: (reportId: number, executionId: number) =>

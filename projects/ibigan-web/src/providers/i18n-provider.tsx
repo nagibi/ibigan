@@ -67,6 +67,7 @@ const I18nProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     document.documentElement.setAttribute('dir', currenLanguage.direction);
+    document.documentElement.setAttribute('lang', currenLanguage.code);
   }, [currenLanguage]);
 
   return (

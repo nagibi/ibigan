@@ -7,7 +7,6 @@ namespace App\Providers;
 use App\Models\Campaign;
 use App\Models\Menu;
 use App\Models\MessageTemplate;
-use App\Models\Organization;
 use App\Models\User;
 use App\Models\Webhook;
 use Illuminate\Contracts\Http\Kernel;
@@ -34,7 +33,6 @@ class TenancyServiceProvider extends ServiceProvider
     private const ACTIVITY_LOG_MODELS = [
         User::class,
         Menu::class,
-        Organization::class,
         MessageTemplate::class,
         Webhook::class,
         Campaign::class,

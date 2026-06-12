@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Invite;
 
+use App\Rules\AssignableRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -21,7 +22,7 @@ final class StoreInviteRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email:rfc', 'max:255', Rule::unique('users', 'email')],
-            'role' => ['required', 'string', Rule::in(['viewer', 'manager', 'admin'])],
+            'role' => ['required', 'string', new AssignableRole],
         ];
     }
 }

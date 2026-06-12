@@ -6,6 +6,7 @@ export type SortDirection = 'asc' | 'desc';
 export interface UseGridOptions {
   defaultPage?: number;
   defaultPerPage?: number;
+  defaultSearch?: string;
   defaultSort?: string | null;
   defaultSortDir?: SortDirection;
   onActivate?: (selectedIds: number[]) => void | Promise<void>;
@@ -15,6 +16,7 @@ export interface UseGridOptions {
 export function useGrid({
   defaultPage = 1,
   defaultPerPage = 15,
+  defaultSearch = '',
   defaultSort = null,
   defaultSortDir = 'asc',
   onActivate,
@@ -22,7 +24,7 @@ export function useGrid({
 }: UseGridOptions = {}) {
   const [page, setPage] = useState(defaultPage);
   const [perPage, setPerPageState] = useState(defaultPerPage);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(defaultSearch);
   const [sort, setSort] = useState<string | null>(defaultSort);
   const [sortDir, setSortDir] = useState<SortDirection>(defaultSortDir);
   const [selected, setSelected] = useState<number[]>([]);

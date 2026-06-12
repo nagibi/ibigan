@@ -90,11 +90,11 @@ it('lista campanhas paginadas para admin', function (): void {
         ]);
 });
 
-it('nega listagem para viewer', function (): void {
+it('viewer pode listar campanhas', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
     $this->getJson('/api/v1/campaigns', campaignHeaders($this->tenant->id))
-        ->assertForbidden();
+        ->assertOk();
 });
 
 // --- Store ---

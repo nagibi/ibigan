@@ -1,7 +1,8 @@
+import type { VariantProps } from 'class-variance-authority';
 import type { ReactNode } from 'react';
 import {
-  CheckSquare2,
   Download,
+  LoaderCircle,
   Pencil,
   Plus,
   Power,
@@ -11,11 +12,15 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { Alert, AlertContent, AlertIcon, AlertTitle, AlertToolbar } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import {
+  formatToolbarSelectedCount,
+  ToolbarAlertHost,
+  type ToolbarAlertConfig,
+} from './toolbar-alert';
 
 export function GridToolbarRoot({
   children,
@@ -33,10 +38,6 @@ export function GridToolbarRoot({
 
 export function GridToolbarGroup({ children }: { children: ReactNode }) {
   return <div className="flex items-center gap-0.5">{children}</div>;
-}
-
-export function GridToolbarDivider() {
-  return <div className="mx-1 h-5 w-px shrink-0 bg-border" />;
 }
 
 export function GridToolbarSpacer() {
@@ -126,22 +127,28 @@ export function GridToolbarPrimary({
   onClick,
   disabled,
   loading,
+  variant = 'primary',
 }: {
   label: string;
   icon?: React.ElementType;
   onClick: () => void;
   disabled?: boolean;
   loading?: boolean;
+  variant?: VariantProps<typeof buttonVariants>['variant'];
 }) {
   return (
     <Button
       type="button"
+      variant={variant}
       size="sm"
       disabled={disabled || loading}
       onClick={onClick}
       className="h-8 gap-1.5"
     >
-      {Icon && <Icon className="size-4 shrink-0" />}
+      {loading
+        ? <LoaderCircle className="size-4 shrink-0 animate-spin" />
+        : Icon && <Icon className="size-4 shrink-0" />
+      }
       {label}
     </Button>
   );
@@ -183,9 +190,35 @@ export function GridToolbarSearch({
   );
 }
 
-function formatSelectedCount(count: number) {
-  if (count === 1) return '1 registro selecionado';
-  return `${count} registros selecionados`;
+export function buildSelectionAlert(
+  selectedCount: number,
+  onClearSelection?: () => void,
+): ToolbarAlertConfig | null {
+  if (selectedCount <= 0) return null;
+
+  return {
+    variant: 'info',
+    title: formatToolbarSelectedCount(selectedCount),
+    autoDismissMs: false,
+    id: selectedCount,
+    onClose: onClearSelection,
+    icon: (
+      <Checkbox
+        checked
+        onCheckedChange={(checked) => {
+          if (checked === false) onClearSelection?.();
+        }}
+        aria-label="Limpar seleção"
+      />
+    ),
+    actions: onClearSelection ? (
+      <GridToolbarIconButton
+        label="Limpar seleção"
+        icon={X}
+        onClick={onClearSelection}
+      />
+    ) : undefined,
+  };
 }
 
 export interface GridPanelToolbarProps {
@@ -207,6 +240,7 @@ export interface GridPanelToolbarProps {
   columnsControl?: ReactNode;
   filtersControl?: ReactNode;
   resetControl?: ReactNode;
+  quickFiltersControl?: ReactNode;
 }
 
 export function GridPanelToolbar({
@@ -225,16 +259,15 @@ export function GridPanelToolbar({
   columnsControl,
   filtersControl,
   resetControl,
+  quickFiltersControl,
 }: GridPanelToolbarProps) {
-  const hasSelection = selectedCount > 0;
+  const selectionAlert = buildSelectionAlert(selectedCount, onClearSelection);
 
   return (
-    <div className="relative border-b border-border">
-      <div
-        className={cn(
-          'flex items-center gap-3 px-4 py-2.5',
-          hasSelection && 'pointer-events-none invisible',
-        )}
+    <div className="border-b border-border">
+      <ToolbarAlertHost
+        alert={selectionAlert}
+        contentClassName="flex items-center gap-3 px-4 py-2.5"
       >
         <GridToolbarGroup>
           {onSelectAll && (
@@ -266,40 +299,17 @@ export function GridPanelToolbar({
 
         <GridToolbarSpacer />
 
-        {onSearch && (
-          <GridToolbarSearch
-            value={search ?? ''}
-            onChange={onSearch}
-            placeholder={searchPlaceholder}
-            className="ms-auto shrink-0"
-          />
-        )}
-      </div>
-
-      {hasSelection && (
-        <Alert
-          variant="info"
-          appearance="light"
-          size="sm"
-          className="absolute inset-0 h-full w-full items-center rounded-none border-0 px-4 [&_[data-slot=alert-close]]:mt-0 [&_[data-slot=alert-icon]]:mt-0"
-        >
-          <AlertIcon>
-            <CheckSquare2 />
-          </AlertIcon>
-          <AlertContent className="flex-1">
-            <AlertTitle>{formatSelectedCount(selectedCount)}</AlertTitle>
-          </AlertContent>
-          {onClearSelection && (
-            <AlertToolbar>
-              <GridToolbarIconButton
-                label="Limpar seleção"
-                icon={X}
-                onClick={onClearSelection}
-              />
-            </AlertToolbar>
+        <div className="ms-auto flex shrink-0 items-center gap-2">
+          {quickFiltersControl}
+          {onSearch && (
+            <GridToolbarSearch
+              value={search ?? ''}
+              onChange={onSearch}
+              placeholder={searchPlaceholder}
+            />
           )}
-        </Alert>
-      )}
+        </div>
+      </ToolbarAlertHost>
     </div>
   );
 }
@@ -307,6 +317,7 @@ export function GridPanelToolbar({
 export interface StandardGridToolbarProps {
   onNew?: () => void;
   newLabel?: string;
+  newVariant?: VariantProps<typeof buttonVariants>['variant'];
 
   onEdit?: () => void;
   onDelete?: () => void;
@@ -330,6 +341,7 @@ export interface StandardGridToolbarProps {
 export function StandardGridToolbar({
   onNew,
   newLabel = 'Novo',
+  newVariant = 'primary',
   onEdit,
   onDelete,
   onActivate,
@@ -347,7 +359,14 @@ export function StandardGridToolbar({
 }: StandardGridToolbarProps) {
   return (
     <GridToolbarRoot>
-      {onNew && <GridToolbarPrimary label={newLabel} icon={Plus} onClick={onNew} />}
+      {onNew && (
+        <GridToolbarPrimary
+          label={newLabel}
+          icon={Plus}
+          onClick={onNew}
+          variant={newVariant}
+        />
+      )}
       {onEdit && (
         <GridToolbarButton
           label="Editar"

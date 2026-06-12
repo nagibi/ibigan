@@ -86,7 +86,7 @@ it('super-admin tem todas as permissões', function (): void {
     $headers = ['X-Tenant-ID' => $this->tenant->id];
 
     $this->getJson('/api/v1/users', $headers)->assertOk();
-    $this->getJson('/api/v1/organizations', $headers)->assertOk();
+    $this->getJson('/api/v1/menus', $headers)->assertOk();
 });
 
 // --- Admin ---
@@ -107,20 +107,6 @@ it('admin pode gerenciar usuários', function (): void {
     $this->postJson('/api/v1/users', $payload, $headers)->assertCreated();
 });
 
-it('admin pode gerenciar organizações', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
-    $headers = ['X-Tenant-ID' => $this->tenant->id];
-
-    $this->getJson('/api/v1/organizations', $headers)->assertOk();
-
-    $payload = [
-        'name' => 'Nova Org',
-        'slug' => 'nova-org',
-        'status' => 'active',
-    ];
-    $this->postJson('/api/v1/organizations', $payload, $headers)->assertCreated();
-});
-
 // --- Manager ---
 
 it('manager pode gerenciar usuários', function (): void {
@@ -128,13 +114,6 @@ it('manager pode gerenciar usuários', function (): void {
     $headers = ['X-Tenant-ID' => $this->tenant->id];
 
     $this->getJson('/api/v1/users', $headers)->assertOk();
-});
-
-it('manager pode gerenciar organizações', function (): void {
-    Sanctum::actingAs($this->manager, ['*'], 'sanctum');
-    $headers = ['X-Tenant-ID' => $this->tenant->id];
-
-    $this->getJson('/api/v1/organizations', $headers)->assertOk();
 });
 
 // --- Viewer ---
@@ -151,19 +130,6 @@ it('viewer pode listar mas não criar usuários', function (): void {
         'password' => 'senha123',
         'password_confirmation' => 'senha123',
         'role' => 'viewer',
-    ], $headers)->assertForbidden();
-});
-
-it('viewer pode listar mas não criar organizações', function (): void {
-    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
-    $headers = ['X-Tenant-ID' => $this->tenant->id];
-
-    $this->getJson('/api/v1/organizations', $headers)->assertOk();
-
-    $this->postJson('/api/v1/organizations', [
-        'name' => 'Org Teste',
-        'slug' => 'org-teste',
-        'status' => 'active',
     ], $headers)->assertForbidden();
 });
 

@@ -30,11 +30,11 @@ final class InviteController extends Controller
     /**
      * Listar convites paginados.
      *
-     * Requer permissão `usuario-visualizar`.
+     * Requer permissão `convite-visualizar`.
      */
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-visualizar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('convite-visualizar'), Response::HTTP_FORBIDDEN);
 
         $invites = $this->inviteRepository->paginate(
             perPage: $request->integer('per_page', 15),
@@ -59,11 +59,11 @@ final class InviteController extends Controller
     /**
      * Criar convite e enfileirar e-mail de convite.
      *
-     * Requer permissão `usuario-gerenciar`.
+     * Requer permissão `convite-gerenciar`.
      */
     public function store(StoreInviteRequest $request): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('convite-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $invite = $this->createInviteAction->execute($request, $request->user());
 
@@ -78,11 +78,11 @@ final class InviteController extends Controller
     /**
      * Cancelar convite pendente.
      *
-     * Requer permissão `usuario-gerenciar`.
+     * Requer permissão `convite-gerenciar`.
      */
     public function destroy(Request $request, Invite $invite): JsonResponse
     {
-        abort_unless($request->user()->can('usuario-gerenciar'), Response::HTTP_FORBIDDEN);
+        abort_unless($request->user()->can('convite-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $this->inviteRepository->delete($invite);
 

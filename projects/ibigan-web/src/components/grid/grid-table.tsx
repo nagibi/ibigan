@@ -21,21 +21,43 @@ import { GridColumnFilter } from '@/components/grid/grid-column-filter';
 import {
   dateRangeFilterFromKey,
   dateRangeFilterToKey,
+  type GridColumnFilterDef,
 } from '@/hooks/use-grid-filters';
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import type { SortDirection } from '@/hooks/use-grid';
+import { GridTableScroll } from '@/components/grid/grid-table-scroll';
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  getGridColumnCellClassName,
+  isGridCenteredColumn,
+  resolveGridColumnLabel,
+} from '@/lib/grid-column-presets';
 import { cn } from '@/lib/utils';
 
 const ROW_INTERACTIVE_SELECTOR =
   'button, a, input, textarea, select, label, [role="switch"], [role="checkbox"], [data-grid-no-row-select]';
+
+export function getGridRowClassName(options?: {
+  selected?: boolean;
+  interactive?: boolean;
+  extra?: string;
+}) {
+  const { selected = false, interactive = false, extra } = options ?? {};
+
+  return cn(
+    extra,
+    interactive && 'cursor-pointer',
+    selected
+      ? 'bg-primary/10 [&:has(td):hover]:bg-primary/15 data-[state=selected]:bg-primary/10'
+      : interactive && '[&:has(td):hover]:bg-muted/40',
+  );
+}
 
 const ROW_DOUBLE_CLICK_MS = 400;
 
@@ -55,11 +77,14 @@ interface GridTableProps<T> {
   onSort?: (sortKey: string) => void;
   onColumnOrderChange?: (order: string[]) => void;
   getRowClassName?: (row: T) => string;
+  isRowSelected?: (row: T) => boolean;
   columnFilters?: Record<string, string>;
   onColumnFilterChange?: (filterKey: string, value: string) => void;
   onDateRangeFilterChange?: (filterKey: string, from: string, to: string) => void;
+  onColumnFilterClear?: (filter: GridColumnFilterDef) => void;
   onRowClick?: (row: T, event: MouseEvent<HTMLTableRowElement>) => void;
   onRowDoubleClick?: (row: T, event: MouseEvent<HTMLTableRowElement>) => void;
+  maxBodyHeight?: string;
 }
 
 function SortableHeaderCell<T>({
@@ -92,9 +117,16 @@ function SortableHeaderCell<T>({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={cn(column.className, isDragging && 'opacity-60')}
+      className={cn(
+        'whitespace-nowrap',
+        getGridColumnCellClassName(column.id, column.className),
+        isDragging && 'opacity-60',
+      )}
     >
-      <div className="flex items-center gap-1">
+      <div className={cn(
+        'flex items-center gap-1',
+        isGridCenteredColumn(column.id) && 'justify-center',
+      )}>
         <button
           type="button"
           className="cursor-grab text-muted-foreground active:cursor-grabbing"
@@ -109,11 +141,11 @@ function SortableHeaderCell<T>({
             className="flex items-center gap-1 text-left text-xs font-medium hover:text-foreground"
             onClick={() => onSort?.(sortKey)}
           >
-            {column.label}
+            {resolveGridColumnLabel(column.id, column.label)}
             <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
           </button>
         ) : (
-          <span className="text-xs font-medium">{column.label}</span>
+          <span className="text-xs font-medium">{resolveGridColumnLabel(column.id, column.label)}</span>
         )}
       </div>
     </TableHead>
@@ -140,18 +172,27 @@ function PinnedHeaderCell<T>({
     : ArrowUpDown;
 
   return (
-    <TableHead className={column.className}>
+    <TableHead className={cn('whitespace-nowrap', getGridColumnCellClassName(column.id, column.className))}>
       {column.sortable ? (
         <button
           type="button"
-          className="flex items-center gap-1 text-left text-xs font-medium hover:text-foreground"
+          className={cn(
+            'flex items-center gap-1 text-xs font-medium hover:text-foreground',
+            isGridCenteredColumn(column.id) ? 'justify-center w-full' : 'text-left',
+          )}
           onClick={() => onSort?.(sortKey)}
         >
-          {column.label}
+          {resolveGridColumnLabel(column.id, column.label)}
           <SortIcon className={cn('size-3.5', isActive ? 'text-foreground' : 'text-muted-foreground')} />
         </button>
       ) : (
-        <span className="text-xs font-medium">{column.label}</span>
+        <span className={cn(
+          'text-xs font-medium',
+          isGridCenteredColumn(column.id) && 'flex justify-center',
+        )}
+        >
+          {resolveGridColumnLabel(column.id, column.label)}
+        </span>
       )}
     </TableHead>
   );
@@ -169,11 +210,14 @@ export function GridTable<T>({
   onSort,
   onColumnOrderChange,
   getRowClassName,
+  isRowSelected,
   columnFilters = {},
   onColumnFilterChange,
   onDateRangeFilterChange,
+  onColumnFilterClear,
   onRowClick,
   onRowDoubleClick,
+  maxBodyHeight,
 }: GridTableProps<T>) {
   const isRowInteractive = Boolean(onRowClick || onRowDoubleClick);
   const lastClickRef = useRef<{ rowKey: string | number; time: number } | null>(null);
@@ -232,7 +276,7 @@ export function GridTable<T>({
     body = Array.from({ length: skeletonRows }).map((_, rowIndex) => (
       <TableRow key={`skeleton-${rowIndex}`}>
         {columns.map((column) => (
-          <TableCell key={column.id} className={column.className}>
+          <TableCell key={column.id} className={getGridColumnCellClassName(column.id, column.className)}>
             <div className="h-4 animate-pulse rounded bg-muted" />
           </TableCell>
         ))}
@@ -247,30 +291,55 @@ export function GridTable<T>({
       </TableRow>
     );
   } else {
-    body = data.map((row) => (
+    body = data.map((row) => {
+      const selected = isRowSelected?.(row) ?? false;
+
+      return (
       <TableRow
         key={getRowKey(row)}
-        className={cn(
-          getRowClassName?.(row),
-          isRowInteractive && 'cursor-pointer hover:bg-muted/40',
-        )}
+        data-state={selected ? 'selected' : undefined}
+        className={getGridRowClassName({
+          selected,
+          interactive: isRowInteractive,
+          extra: getRowClassName?.(row),
+        })}
         onClick={(event) => handleRowClick(row, event)}
       >
         {columns.map((column) => (
-          <TableCell key={column.id} className={column.className}>
-            {column.render(row)}
+          <TableCell
+            key={column.id}
+            className={cn('whitespace-nowrap', getGridColumnCellClassName(column.id, column.className))}
+          >
+            {isGridCenteredColumn(column.id) ? (
+              <div className="flex justify-center">{column.render(row)}</div>
+            ) : (
+              column.render(row)
+            )}
           </TableCell>
         ))}
       </TableRow>
-    ));
+      );
+    });
   }
 
   return (
-    <div className="overflow-x-auto">
+    <GridTableScroll maxHeight={maxBodyHeight}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <Table>
-          <TableHeader>
-            <TableRow>
+        <table className="min-w-full w-max caption-bottom text-sm text-foreground">
+          <colgroup>
+            {columns.map((column) => (
+              <col key={column.id} className={column.className} />
+            ))}
+          </colgroup>
+          <TableHeader
+            className={cn(
+              'sticky top-0 z-10',
+              hasFilterRow
+                ? '[&_tr]:border-0 [&_tr:last-child]:border-b'
+                : 'shadow-[inset_0_-1px_0_0_hsl(var(--border))]',
+            )}
+          >
+            <TableRow className="border-0 bg-card hover:bg-card [&_th]:bg-card">
               <SortableContext items={draggableIds} strategy={horizontalListSortingStrategy}>
                 {columns.map((column) =>
                   column.pinned ? (
@@ -294,9 +363,9 @@ export function GridTable<T>({
               </SortableContext>
             </TableRow>
             {hasFilterRow && (
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableRow className="bg-muted hover:bg-muted [&_th]:bg-muted [&_th]:align-middle">
                 {columns.map((column) => (
-                  <TableHead key={`filter-${column.id}`} className="px-2 py-1 align-top">
+                  <TableHead key={`filter-${column.id}`} className="bg-muted px-2 py-1.5">
                     {column.filter && (onColumnFilterChange || onDateRangeFilterChange) ? (
                       <GridColumnFilter
                         filter={column.filter}
@@ -307,6 +376,7 @@ export function GridTable<T>({
                         onDateRangeChange={(from, to) =>
                           onDateRangeFilterChange?.(column.filter!.filterKey, from, to)
                         }
+                        onClear={() => onColumnFilterClear?.(column.filter!)}
                       />
                     ) : null}
                   </TableHead>
@@ -315,8 +385,8 @@ export function GridTable<T>({
             )}
           </TableHeader>
           <TableBody>{body}</TableBody>
-        </Table>
+        </table>
       </DndContext>
-    </div>
+    </GridTableScroll>
   );
 }

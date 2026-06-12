@@ -16,7 +16,7 @@ export function Breadcrumb() {
   }
 
   return (
-    <div className="flex items-center gap-1.25 text-xs lg:text-sm font-medium mb-2.5 lg:mb-0">
+    <div className="flex items-center gap-1.25 text-[0.6875rem] lg:text-xs font-medium mb-2.5 lg:mb-0">
       {items.map((item, index) => {
         const last = index === items.length - 1;
         const active = item.path ? isActive(item.path) : false;
@@ -31,7 +31,7 @@ export function Breadcrumb() {
             </span>
             {!last && (
               <ChevronRight
-                className="size-3.5 text-muted-foreground"
+                className="size-3 text-muted-foreground"
                 key={`separator-${index}`}
               />
             )}

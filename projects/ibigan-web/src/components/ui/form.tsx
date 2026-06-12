@@ -71,7 +71,14 @@ function FormItem({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
   );
 }
 
-function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function FormLabel({
+  className,
+  required,
+  children,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root> & {
+  required?: boolean;
+}) {
   const { formItemId } = useFormField();
 
   return (
@@ -80,7 +87,14 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPri
       className={cn('font-medium text-foreground', className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {required ? (
+        <span className="ms-0.5 text-destructive" aria-hidden="true">
+          *
+        </span>
+      ) : null}
+    </Label>
   );
 }
 

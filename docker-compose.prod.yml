@@ -2,6 +2,7 @@ name: ibigan
 
 services:
 
+  # ── PHP-FPM — Laravel 12 / PHP 8.4 ───────────────────────────
   app:
     build:
       context: ./docker/php
@@ -24,6 +25,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # ── Nginx ─────────────────────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
     container_name: ibigan_nginx
@@ -32,8 +34,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./projects/ibigan-api:/var/www
-      - ./projects/ibigan-web/dist:/var/www/spa
+      - ./projects/ibigan-api:/var/www:ro
+      - ./projects/ibigan-web/dist:/var/www/spa:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
     networks:
       - ibigan_network
@@ -42,6 +44,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # ── MySQL 8.4 ─────────────────────────────────────────────────
   mysql:
     image: mysql:8.4
     container_name: ibigan_mysql
@@ -63,6 +66,7 @@ services:
       retries: 5
       start_period: 30s
 
+  # ── Redis 7 ───────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: ibigan_redis
@@ -78,6 +82,7 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── Horizon ───────────────────────────────────────────────────
   horizon:
     build:
       context: ./docker/php
@@ -99,6 +104,7 @@ services:
         condition: service_healthy
     command: php artisan horizon
 
+  # ── Scheduler ─────────────────────────────────────────────────
   scheduler:
     build:
       context: ./docker/php
@@ -120,6 +126,7 @@ services:
         condition: service_healthy
     command: php artisan schedule:work
 
+  # ── Reverb (WebSockets) ───────────────────────────────────────
   reverb:
     build:
       context: ./docker/php

@@ -29,6 +29,7 @@ final class MenuData extends Data
         public ?array $roles,
         public array $children,
         public string $created_at,
+        public string $updated_at,
     ) {}
 
     public static function fromModel(Menu $menu, ?array $children = null): self
@@ -54,6 +55,7 @@ final class MenuData extends Data
             roles: $menu->roles,
             children: $children,
             created_at: $menu->created_at->toIso8601String(),
+            updated_at: $menu->updated_at->toIso8601String(),
         );
     }
 
@@ -74,5 +76,71 @@ final class MenuData extends Data
                 );
             })
             ->all();
+    }
+
+    /**
+     * @param  array<int, string>  $userRoles
+     */
+    public static function visibleForUserRoles(Collection $menus, array $userRoles): Collection
+    {
+        return $menus->filter(
+            fn (Menu $menu): bool => self::isVisibleForRoles($menu->roles, $userRoles),
+        );
+    }
+
+    /**
+     * @param  array<int, string>|null  $menuRoles
+     * @param  array<int, string>  $userRoles
+     */
+    public static function isVisibleForRoles(?array $menuRoles, array $userRoles): bool
+    {
+        if (in_array('super-admin', $userRoles, true)) {
+            return true;
+        }
+
+        if ($menuRoles === null || $menuRoles === []) {
+            return true;
+        }
+
+        return count(array_intersect($menuRoles, $userRoles)) > 0;
+    }
+
+    /**
+     * Remove grupos vazios (sem path e sem filhos visíveis).
+     *
+     * @param  list<self>  $tree
+     * @return list<self>
+     */
+    public static function pruneEmptyGroups(array $tree): array
+    {
+        $pruned = [];
+
+        foreach ($tree as $item) {
+            $children = self::pruneEmptyGroups($item->children);
+
+            if ($item->path === null && $children === []) {
+                continue;
+            }
+
+            $pruned[] = new self(
+                id: $item->id,
+                title: $item->title,
+                slug: $item->slug,
+                icon: $item->icon,
+                badge: $item->badge,
+                path: $item->path,
+                target: $item->target,
+                parent_id: $item->parent_id,
+                order: $item->order,
+                is_active: $item->is_active,
+                requires_auth: $item->requires_auth,
+                roles: $item->roles,
+                children: $children,
+                created_at: $item->created_at,
+                updated_at: $item->updated_at,
+            );
+        }
+
+        return $pruned;
     }
 }

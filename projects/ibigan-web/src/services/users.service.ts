@@ -9,7 +9,16 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  cpf?: string | null;
+  phone?: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  bio?: string | null;
   status: string;
+  is_active: boolean;
+  last_login_at?: string | null;
+  last_login_ip?: string | null;
+  last_login_device?: string | null;
   roles: string[];
   created_at: string;
   updated_at?: string | null;
@@ -33,19 +42,32 @@ export interface UsersPaginatedResponse {
   };
 }
 
-export interface StoreUserPayload {
+export interface UserProfilePayload {
+  cpf?: string | null;
+  phone?: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  bio?: string | null;
+}
+
+export interface StoreUserPayload extends UserProfilePayload {
   name: string;
   email: string;
   password: string;
   password_confirmation: string;
-  role?: string;
+  roles: string[];
 }
 
-export interface UpdateUserPayload {
+export interface UpdateUserPayload extends UserProfilePayload {
   name?: string;
   email?: string;
-  role?: string;
+  roles?: string[];
   status?: string;
+}
+
+export function isUserActive(user: Pick<User, 'is_active' | 'status'>): boolean {
+  if (typeof user.is_active === 'boolean') return user.is_active;
+  return user.status === 'active';
 }
 
 export const usersService = {

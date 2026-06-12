@@ -22,21 +22,56 @@ export interface WebhookDelivery {
   created_at: string;
 }
 
+export interface WebhooksPaginatedResponse {
+  status: number;
+  result: {
+    data: Webhook[];
+    meta: {
+      current_page: number;
+      last_page: number;
+      per_page: number;
+      total: number;
+    };
+  };
+}
+
 export const WEBHOOK_EVENTS = [
   { value: 'user.created', label: 'Usuário criado' },
   { value: 'user.updated', label: 'Usuário atualizado' },
   { value: 'user.deleted', label: 'Usuário removido' },
-  { value: 'organization.created', label: 'Organização criada' },
-  { value: 'organization.updated', label: 'Organização atualizada' },
-  { value: 'organization.deleted', label: 'Organização removida' },
   { value: 'invite.accepted', label: 'Convite aceito' },
 ];
 
 export const webhooksService = {
-  list: (page = 1) =>
-    api.get<{ status: number; result: { data: Webhook[]; meta: { total: number; current_page: number; last_page: number } } }>(
-      '/v1/webhooks', { params: { page } },
-    ),
+  list: (
+    page = 1,
+    perPage = 15,
+    search?: string,
+    sort?: string | null,
+    direction?: 'asc' | 'desc',
+    columnFilters?: Record<string, string>,
+  ) => {
+    const params: Record<string, string | number> = { page, per_page: perPage };
+
+    if (search?.trim()) params.search = search.trim();
+    if (sort) {
+      params.sort = sort;
+      params.direction = direction ?? 'asc';
+    }
+
+    for (const [key, value] of Object.entries(columnFilters ?? {})) {
+      if (!value.trim()) continue;
+
+      if (key === 'status') {
+        params.filter_is_active = value === 'active' ? '1' : '0';
+        continue;
+      }
+
+      params[`filter_${key}`] = value;
+    }
+
+    return api.get<WebhooksPaginatedResponse>('/v1/webhooks', { params });
+  },
 
   show: (id: number) =>
     api.get<{ status: number; result: Webhook }>(`/v1/webhooks/${id}`),

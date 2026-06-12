@@ -22,7 +22,6 @@ export const descriptionLabel: Record<string, string> = {
 export function getSubjectLabel(type: string): string {
   const map: Record<string, string> = {
     'App\\Models\\User': 'Usuário',
-    'App\\Models\\Organization': 'Organização',
     'App\\Models\\Menu': 'Menu',
     'App\\Models\\MessageTemplate': 'Template',
     'App\\Models\\Webhook': 'Webhook',

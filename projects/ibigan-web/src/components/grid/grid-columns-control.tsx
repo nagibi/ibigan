@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   closestCenter,
   DndContext,
@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Columns3, GripVertical, RotateCcw } from 'lucide-react';
+import { Columns3, GripVertical, Lock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -31,25 +31,77 @@ interface GridColumnsControlProps<T> {
   columns: GridColumnDef<T>[];
   order: string[];
   hidden: string[];
+  visibleCount?: number;
+  totalCount?: number;
   isCustomized?: boolean;
   onOrderChange: (order: string[]) => void;
-  onToggleVisibility: (columnId: string) => void;
+  onSetVisibility: (columnId: string, visible: boolean) => void;
+  canHideColumn?: (columnId: string) => boolean;
+  onShowAll?: () => void;
+  onHideAll?: () => void;
   onResetDefault?: () => void;
+}
+
+function ColumnItem({
+  label,
+  visible,
+  locked,
+  dragHandle,
+  onSetVisibility,
+}: {
+  label: string;
+  visible: boolean;
+  locked?: boolean;
+  dragHandle?: ReactNode;
+  onSetVisibility: (visible: boolean) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5',
+        locked && 'bg-muted/30',
+      )}
+    >
+      {locked ? (
+        <span className="flex size-7 items-center justify-center text-muted-foreground">
+          <Lock className="size-3.5" />
+        </span>
+      ) : (
+        dragHandle
+      )}
+      <label
+        className={cn(
+          'flex flex-1 items-center gap-2 text-sm',
+          locked ? 'cursor-default text-muted-foreground' : 'cursor-pointer',
+        )}
+      >
+        <Checkbox
+          checked={visible}
+          disabled={locked}
+          onCheckedChange={(checked) => onSetVisibility(checked === true)}
+        />
+        <span>{label || '(sem título)'}</span>
+      </label>
+    </div>
+  );
 }
 
 function SortableColumnItem({
   id,
   label,
   visible,
-  onToggle,
+  locked,
+  onSetVisibility,
 }: {
   id: string;
   label: string;
   visible: boolean;
-  onToggle: () => void;
+  locked?: boolean;
+  onSetVisibility: (visible: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
+    disabled: locked,
   });
 
   return (
@@ -59,23 +111,24 @@ function SortableColumnItem({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={cn(
-        'flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5',
-        isDragging && 'opacity-60',
-      )}
+      className={cn(isDragging && 'opacity-60')}
     >
-      <button
-        type="button"
-        className="cursor-grab text-muted-foreground active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="size-4" />
-      </button>
-      <label className="flex flex-1 cursor-pointer items-center gap-2 text-sm">
-        <Checkbox checked={visible} onCheckedChange={onToggle} />
-        <span>{label}</span>
-      </label>
+      <ColumnItem
+        label={label}
+        visible={visible}
+        locked={locked}
+        onSetVisibility={onSetVisibility}
+        dragHandle={
+          <button
+            type="button"
+            className="flex size-7 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -84,17 +137,29 @@ export function GridColumnsControl<T>({
   columns,
   order,
   hidden,
+  visibleCount,
+  totalCount,
   isCustomized = false,
   onOrderChange,
-  onToggleVisibility,
+  onSetVisibility,
+  canHideColumn,
+  onShowAll,
+  onHideAll,
   onResetDefault,
 }: GridColumnsControlProps<T>) {
-  const manageableIds = useMemo(
-    () =>
-      columns
-        .filter((column) => column.pinned !== 'start' && column.hideable !== false)
-        .map((column) => column.id),
+  const pinnedColumns = useMemo(
+    () => columns.filter((column) => column.pinned === 'start'),
     [columns],
+  );
+
+  const manageableColumns = useMemo(
+    () => columns.filter((column) => column.pinned !== 'start'),
+    [columns],
+  );
+
+  const manageableIds = useMemo(
+    () => manageableColumns.map((column) => column.id),
+    [manageableColumns],
   );
 
   const orderedManageableIds = useMemo(() => {
@@ -108,6 +173,10 @@ export function GridColumnsControl<T>({
     () => new Map(columns.map((column) => [column.id, column])),
     [columns],
   );
+
+  const resolvedVisibleCount = visibleCount ?? manageableColumns.filter((c) => !hidden.includes(c.id)).length;
+  const resolvedTotalCount = totalCount ?? manageableColumns.length;
+  const hasHiddenColumns = hidden.length > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -125,6 +194,12 @@ export function GridColumnsControl<T>({
     const reorderedManageable = arrayMove(orderedManageableIds, oldIndex, newIndex);
     const pinned = order.filter((id) => !manageableIds.includes(id));
     onOrderChange([...pinned, ...reorderedManageable]);
+  }
+
+  function isColumnLocked(columnId: string) {
+    if (canHideColumn) return !canHideColumn(columnId);
+    const column = columnMap.get(columnId);
+    return column?.hideable === false || Boolean(column?.pinned);
   }
 
   return (
@@ -146,8 +221,58 @@ export function GridColumnsControl<T>({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-3">
-        <p className="mb-3 text-sm font-medium">Colunas</p>
+      <PopoverContent align="start" className="w-72 p-3">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium">Colunas</p>
+            <p className="text-xs text-muted-foreground">
+              {resolvedVisibleCount} de {resolvedTotalCount} visíveis
+            </p>
+          </div>
+        </div>
+
+        {(onShowAll || onHideAll) && (
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            {onShowAll && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={!hasHiddenColumns}
+                onClick={onShowAll}
+              >
+                Exibir todas
+              </Button>
+            )}
+            {onHideAll && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={resolvedVisibleCount <= 1}
+                onClick={onHideAll}
+              >
+                Ocultar todas
+              </Button>
+            )}
+          </div>
+        )}
+
+        {pinnedColumns.length > 0 && (
+          <div className="mb-3 flex flex-col gap-2">
+            {pinnedColumns.map((column) => (
+              <ColumnItem
+                key={column.id}
+                label={column.label}
+                visible
+                locked
+                onSetVisibility={() => undefined}
+              />
+            ))}
+          </div>
+        )}
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={orderedManageableIds} strategy={verticalListSortingStrategy}>
@@ -162,7 +287,8 @@ export function GridColumnsControl<T>({
                     id={columnId}
                     label={column.label}
                     visible={!hidden.includes(columnId)}
-                    onToggle={() => onToggleVisibility(columnId)}
+                    locked={isColumnLocked(columnId)}
+                    onSetVisibility={(visible) => onSetVisibility(columnId, visible)}
                   />
                 );
               })}

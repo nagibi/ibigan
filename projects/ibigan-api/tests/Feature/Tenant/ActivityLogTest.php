@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Models\Organization;
+use App\Models\Menu;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -87,7 +87,7 @@ it('retorna logs de um recurso específico', function (): void {
     });
 
     $this->tenant->run(function (): void {
-        activity()->performedOn(Organization::factory()->create())->log('log de outra entidade');
+        activity()->performedOn(Menu::factory()->create())->log('log de outra entidade');
     });
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
@@ -127,24 +127,22 @@ it('registra log ao criar usuário', function (): void {
     });
 });
 
-it('registra log ao atualizar organização', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+it('registra log ao atualizar menu', function (): void {
+    $menu = $this->tenant->run(fn () => Menu::factory()->create(['title' => 'Menu Original']));
 
-    $organization = $this->tenant->run(fn () => Organization::factory()->create(['name' => 'Org Original']));
-
-    $this->tenant->run(function () use ($organization): void {
-        $organization->update(['name' => 'Org Atualizada']);
+    $this->tenant->run(function () use ($menu): void {
+        $menu->update(['title' => 'Menu Atualizado']);
     });
 
-    $this->tenant->run(function () use ($organization): void {
+    $this->tenant->run(function () use ($menu): void {
         $activity = Activity::query()
-            ->where('subject_type', Organization::class)
-            ->where('subject_id', $organization->id)
+            ->where('subject_type', Menu::class)
+            ->where('subject_id', $menu->id)
             ->where('event', 'updated')
             ->first();
 
         expect($activity)->not->toBeNull()
-            ->and($activity->attribute_changes?->get('attributes')['name'])->toBe('Org Atualizada');
+            ->and($activity->attribute_changes?->get('attributes')['title'])->toBe('Menu Atualizado');
     });
 });
 

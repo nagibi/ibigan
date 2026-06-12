@@ -23,12 +23,15 @@ final class MenuController extends Controller
     {
         abort_unless($request->user()->can('menu-visualizar'), Response::HTTP_FORBIDDEN);
 
+        $userRoles = $request->user()->getRoleNames()->all();
         $menus = Menu::query()->orderBy('order')->get();
+        $visibleMenus = MenuData::visibleForUserRoles($menus, $userRoles);
+        $tree = MenuData::pruneEmptyGroups(MenuData::treeFromCollection($visibleMenus));
 
         return response()->json([
             'status' => 1,
             'message' => 'MSG000067',
-            'result' => MenuData::treeFromCollection($menus),
+            'result' => $tree,
         ]);
     }
 

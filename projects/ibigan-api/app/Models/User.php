@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Search\TenantSearchable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -20,6 +21,7 @@ class User extends Authenticatable implements HasMedia
     use HasApiTokens;
     use HasFactory;
     use HasRoles;
+    use TenantSearchable;
     use InteractsWithMedia;
     use LogsActivity;
     use Notifiable;
@@ -35,6 +37,7 @@ class User extends Authenticatable implements HasMedia
         'bio',
         'status',
         'is_active',
+        'is_platform_user',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
@@ -59,6 +62,7 @@ class User extends Authenticatable implements HasMedia
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_active' => 'boolean',
+            'is_platform_user' => 'boolean',
             'birth_date' => 'date',
             'last_login_at' => 'datetime',
         ];
@@ -89,4 +93,29 @@ class User extends Authenticatable implements HasMedia
 
     // Sanctum guard para API
     protected $guard_name = 'sanctum';
+
+    protected function defaultSearchableAs(): string
+    {
+        return 'users';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => (string) $this->id,
+            'type' => 'user',
+            'title' => $this->name,
+            'email' => $this->email,
+            'avatar_url' => $this->getFirstMediaUrl('avatar') ?: null,
+            'searchable_by' => 'usuario-visualizar',
+        ];
+    }
+
+    public function shouldBeSearchable(): bool
+    {
+        return ! $this->is_platform_user;
+    }
 }

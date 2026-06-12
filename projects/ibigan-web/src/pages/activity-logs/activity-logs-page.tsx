@@ -1,314 +1,370 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Activity, LoaderCircle } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import { useGrid } from '@/hooks/use-grid';
+import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import {
+  dateRangeFilterFromKey,
+  dateRangeFilterToKey,
+  useGridFilters,
+} from '@/hooks/use-grid-filters';
+import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { activityLogsService, type ActivityLog } from '@/services/activity-logs.service';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  countActivityChanges,
+  descriptionLabel,
+  descriptionVariant,
+  getSubjectLabel,
+} from '@/lib/activity-log-utils';
+import { ActivityLogDetailDialog } from '@/components/activity-logs/activity-log-detail-dialog';
+import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { GridFiltersControl } from '@/components/grid/grid-filters-control';
+import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { PageBody } from '@/components/common/page-body';
+import { GridPanel } from '@/components/grid/grid-panel';
+import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
+import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { GridTable } from '@/components/grid/grid-table';
+import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
+import { GridBadge } from '@/components/grid/grid-badge';
 
-const descriptionVariant: Record<string, 'primary' | 'secondary' | 'destructive' | 'outline'> = {
-  created: 'primary',
-  updated: 'secondary',
-  deleted: 'destructive',
-};
+const GRID_COLUMNS_KEY = 'grid-columns:activity-logs';
 
-const descriptionLabel: Record<string, string> = {
-  created: 'Criado',
-  updated: 'Atualizado',
-  deleted: 'Removido',
-};
-
-function getSubjectLabel(type: string): string {
-  const map: Record<string, string> = {
-    'App\\Models\\User': 'Usuário',
-    'App\\Models\\Organization': 'Organização',
-    'App\\Models\\Menu': 'Menu',
-    'App\\Models\\MessageTemplate': 'Template',
-    'App\\Models\\Webhook': 'Webhook',
-    'App\\Models\\Campaign': 'Campanha',
-    'App\\Models\\Invite': 'Convite',
-  };
-  return map[type] ?? type.split('\\').pop() ?? type;
-}
-
-function hasChanges(props: Record<string, unknown>): boolean {
-  if (!props || Object.keys(props).length === 0) return false;
-  if (props.old && props.attributes) {
-    const old = props.old as Record<string, unknown>;
-    const attrs = props.attributes as Record<string, unknown>;
-    return Object.keys(attrs).some((k) =>
-      !['updated_at', 'id'].includes(k) &&
-      JSON.stringify(old[k]) !== JSON.stringify(attrs[k]),
-    );
-  }
-  return Object.keys(props).length > 0;
-}
-
-function countChanges(props: Record<string, unknown>): number {
-  if (!props?.old || !props?.attributes) return 0;
-  const old = props.old as Record<string, unknown>;
-  const attrs = props.attributes as Record<string, unknown>;
-  return Object.keys(attrs).filter((k) =>
-    !['updated_at', 'id', 'created_at', 'deleted_at'].includes(k) &&
-    JSON.stringify(old[k]) !== JSON.stringify(attrs[k]),
-  ).length;
-}
-
-const SUBJECT_TYPES = [
-  { value: 'all', label: 'Todos os tipos' },
-  { value: 'App\\Models\\User', label: 'Usuário' },
-  { value: 'App\\Models\\Organization', label: 'Organização' },
-  { value: 'App\\Models\\Menu', label: 'Menu' },
-  { value: 'App\\Models\\MessageTemplate', label: 'Template' },
-  { value: 'App\\Models\\Webhook', label: 'Webhook' },
-  { value: 'App\\Models\\Campaign', label: 'Campanha' },
+const STATUS_FILTER_OPTIONS = [
+  { label: 'Criado', value: 'created' },
+  { label: 'Atualizado', value: 'updated' },
+  { label: 'Removido', value: 'deleted' },
 ];
 
-export function ActivityLogsPage() {
-  const [page, setPage] = useState(1);
-  const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
-  const [filters, setFilters] = useState<{
-    subject_type?: string;
-    date_from?: string;
-    date_to?: string;
-  }>({});
+const SUBJECT_TYPE_OPTIONS = [
+  { label: 'Usuário', value: 'App\\Models\\User' },
+  { label: 'Menu', value: 'App\\Models\\Menu' },
+  { label: 'Template', value: 'App\\Models\\MessageTemplate' },
+  { label: 'Webhook', value: 'App\\Models\\Webhook' },
+  { label: 'Campanha', value: 'App\\Models\\Campaign' },
+  { label: 'Convite', value: 'App\\Models\\Invite' },
+];
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['activity-logs', page, filters],
-    queryFn: () => activityLogsService.list(page, filters),
+function hasChanges(props: Record<string, unknown>): boolean {
+  return countActivityChanges(props) > 0;
+}
+
+function matchesColumnFilters(log: ActivityLog, filters: Record<string, string>): boolean {
+  const idFilter = filters.id?.trim();
+  if (idFilter) {
+    const ids = parseMultiFilterValue(idFilter);
+    if (ids.length > 0 && !ids.includes(String(log.id))) return false;
+  }
+
+  const statusFilter = filters.description?.trim();
+  if (statusFilter && log.description !== statusFilter) return false;
+
+  return true;
+}
+
+function downloadActivityLog(log: ActivityLog) {
+  const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `activity-log-${log.id}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export function ActivityLogsPage() {
+  const { showSuccess, showError } = useApiToolbarAlert();
+  const grid = useGrid();
+  const columnFilters = useGridFilters(() => grid.setPage(1));
+
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [meta, setMeta] = useState<GridPaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 15,
+    total: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const filters = columnFilters.activeFilterParams;
+      const res = await activityLogsService.list(grid.page, {
+        subject_type: filters.subject_type || undefined,
+        date_from: filters[dateRangeFilterFromKey('created_at')] || undefined,
+        date_to: filters[dateRangeFilterToKey('created_at')] || undefined,
+      });
+      setLogs(res.data.result.data);
+      setMeta(res.data.result.meta);
+    } catch (error) {
+      showError('Erro ao carregar activity log.', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [columnFilters.activeFilterParams, grid.page, showError]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const columnDefinitions = useMemo<GridColumnDef<ActivityLog>[]>(
+    () => [
+      {
+        id: 'id',
+        label: 'Id',
+        className: 'w-[70px] text-sm text-muted-foreground',
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+        render: (log) => log.id,
+      },
+      {
+        id: 'actions',
+        label: 'Ações',
+        hideable: false,
+        className: 'w-[72px]',
+        render: (log) => (
+          <GridRowActions
+            actions={[
+              {
+                label: 'Download',
+                icon: Download,
+                onClick: () => downloadActivityLog(log),
+              },
+            ]}
+          />
+        ),
+      },
+      {
+        id: 'subject',
+        label: 'Recurso',
+        className: 'min-w-[160px]',
+        filter: {
+          type: 'select',
+          filterKey: 'subject_type',
+          placeholder: 'Tipo',
+          options: SUBJECT_TYPE_OPTIONS,
+        },
+        render: (log) => (
+          <span className="text-sm font-medium">{getSubjectLabel(log.subject_type)}</span>
+        ),
+      },
+      {
+        id: 'description',
+        label: 'Status',
+        className: 'w-[120px]',
+        filter: {
+          type: 'select',
+          filterKey: 'description',
+          placeholder: 'Status',
+          options: STATUS_FILTER_OPTIONS,
+        },
+        render: (log) => (
+          <GridBadge variant={descriptionVariant[log.description] ?? 'outline'}>
+            {descriptionLabel[log.description] ?? log.description}
+          </GridBadge>
+        ),
+      },
+      {
+        id: 'causer',
+        label: 'Realizado por',
+        className: 'min-w-[140px]',
+        render: (log) => (
+          <span className="text-sm">
+            {log.causer_name ?? <span className="text-muted-foreground">Sistema</span>}
+          </span>
+        ),
+      },
+      {
+        id: 'details',
+        label: 'Detalhes',
+        className: 'min-w-[140px]',
+        render: (log) => (
+          <span className="text-xs text-muted-foreground">
+            {hasChanges(log.properties)
+              ? `${countActivityChanges(log.properties)} campo(s) alterado(s)`
+              : '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'created_at',
+        label: 'Data',
+        filter: { type: 'dateRange', filterKey: 'created_at' },
+        className: 'w-[160px] whitespace-nowrap text-sm text-muted-foreground',
+        render: (log) => format(new Date(log.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR }),
+      },
+    ],
+    [],
+  );
+
+  const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+
+  const activeFilters = useMemo(() => {
+    const items = [];
+
+    if (grid.search.trim()) {
+      items.push({
+        id: 'search',
+        label: 'Busca',
+        value: grid.search.trim(),
+        onRemove: grid.clearSearch,
+      });
+    }
+
+    for (const column of columnDefinitions) {
+      if (!column.filter) continue;
+
+      if (column.filter.type === 'dateRange') {
+        const from = columnFilters.filters[dateRangeFilterFromKey(column.filter.filterKey)]?.trim() ?? '';
+        const to = columnFilters.filters[dateRangeFilterToKey(column.filter.filterKey)]?.trim() ?? '';
+        if (!from && !to) continue;
+
+        items.push({
+          id: column.filter.filterKey,
+          label: column.label,
+          value: formatDateRangeFilterLabel(from, to),
+          onRemove: () => columnFilters.clearDateRangeFilter(column.filter!.filterKey),
+        });
+        continue;
+      }
+
+      const value = columnFilters.filters[column.filter.filterKey]?.trim();
+      if (!value) continue;
+
+      const displayValue = column.filter.type === 'select'
+        ? column.filter.options?.find((option) => option.value === value)?.label ?? value
+        : column.filter.type === 'multi'
+          ? parseMultiFilterValue(value).join(', ')
+          : value;
+
+      items.push({
+        id: column.filter.filterKey,
+        label: column.label,
+        value: displayValue,
+        onRemove: () => columnFilters.clearFilter(column.filter!.filterKey),
+      });
+    }
+
+    return items;
+  }, [
+    columnDefinitions,
+    columnFilters.clearDateRangeFilter,
+    columnFilters.clearFilter,
+    columnFilters.filters,
+    grid.clearSearch,
+    grid.search,
+  ]);
+
+  const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
+
+  function handleClearFilters() {
+    grid.clearSearch();
+    columnFilters.clearAllFilters();
+    showSuccess('Filtros removidos.');
+  }
+
+  function handleResetGrid() {
+    gridColumns.resetColumns();
+    grid.clearSearch();
+    columnFilters.clearAllFilters();
+    grid.resetSettings();
+    showSuccess('Grid restaurado ao padrão.');
+  }
+
+  const filteredLogs = useMemo(() => {
+    const q = grid.debouncedSearch.trim().toLowerCase();
+
+    return logs.filter((log) => {
+      if (!matchesColumnFilters(log, columnFilters.debouncedFilters)) return false;
+
+      if (!q) return true;
+
+      return (
+        String(log.id).includes(q)
+        || getSubjectLabel(log.subject_type).toLowerCase().includes(q)
+        || String(log.subject_id).includes(q)
+        || (log.causer_name?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [columnFilters.debouncedFilters, grid.debouncedSearch, logs]);
+
+  usePageToolbar({
+    title: 'Activity Log',
+    description: 'Histórico de atividades do sistema.',
   });
 
-  const logs = data?.data.result.data ?? [];
-  const meta = data?.data.result.meta;
-
   return (
-    <div className="container py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Activity Log</h1>
-        <p className="text-sm text-muted-foreground">Histórico de atividades do sistema.</p>
-      </div>
-
-      <Card className="mb-4">
-        <CardContent className="pt-4">
-          <div className="flex gap-3 flex-wrap">
-            <Select
-              value={filters.subject_type ?? 'all'}
-              onValueChange={(v) => {
-                setPage(1);
-                setFilters((f) => ({ ...f, subject_type: v === 'all' ? undefined : v }));
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Tipo de recurso" />
-              </SelectTrigger>
-              <SelectContent>
-                {SUBJECT_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="date"
-              className="w-[160px]"
-              value={filters.date_from ?? ''}
-              onChange={(e) => {
-                setPage(1);
-                setFilters((f) => ({ ...f, date_from: e.target.value || undefined }));
-              }}
-              placeholder="Data início"
-            />
-            <Input
-              type="date"
-              className="w-[160px]"
-              value={filters.date_to ?? ''}
-              onChange={(e) => {
-                setPage(1);
-                setFilters((f) => ({ ...f, date_to: e.target.value || undefined }));
-              }}
-              placeholder="Data fim"
-            />
-
-            {Object.keys(filters).length > 0 && (
-              <Button variant="outline" size="sm" onClick={() => { setFilters({}); setPage(1); }}>
-                Limpar filtros
-              </Button>
+    <PageBody>
+      <GridPanel
+        toolbar={(
+          <GridPanelToolbar
+            onRefresh={() => void load()}
+            isRefreshing={loading}
+            search={grid.search}
+            onSearch={grid.setSearch}
+            searchPlaceholder="Buscar por recurso ou usuário..."
+            filtersControl={(
+              <GridFiltersControl
+                filters={activeFilters}
+                onClearAll={hasActiveFilters ? handleClearFilters : undefined}
+              />
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Recurso</TableHead>
-              <TableHead>Ação</TableHead>
-              <TableHead>Realizado por</TableHead>
-              <TableHead>Detalhes</TableHead>
-              <TableHead>Data</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <LoaderCircle className="size-5 animate-spin mx-auto text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : logs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  <Activity className="size-8 mx-auto mb-2 opacity-30" />
-                  Nenhuma atividade registrada.
-                </TableCell>
-              </TableRow>
-            ) : (
-              logs.map((log: ActivityLog) => (
-                <TableRow
-                  key={log.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedLog(log)}
-                >
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-sm">{getSubjectLabel(log.subject_type)}</p>
-                      <p className="text-xs text-muted-foreground">#{log.subject_id}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={descriptionVariant[log.description] ?? 'outline'}>
-                      {descriptionLabel[log.description] ?? log.description}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {log.causer_name ?? (
-                      <span className="text-muted-foreground">Sistema</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {hasChanges(log.properties)
-                      ? `${countChanges(log.properties)} campo(s) alterado(s)`
-                      : '—'}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                    {format(new Date(log.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                  </TableCell>
-                </TableRow>
-              ))
+            columnsControl={(
+              <GridColumnsControl
+                columns={columnDefinitions}
+                order={gridColumns.order}
+                hidden={gridColumns.hidden}
+                visibleCount={gridColumns.visibleCount}
+                totalCount={gridColumns.totalCount}
+                isCustomized={gridColumns.isCustomized}
+                onOrderChange={gridColumns.setColumnOrder}
+                onSetVisibility={gridColumns.setColumnVisibility}
+                canHideColumn={gridColumns.canHideColumn}
+                onShowAll={gridColumns.showAllColumns}
+                onHideAll={gridColumns.hideAllColumns}
+                onResetDefault={() => {
+                  gridColumns.resetColumns();
+                  showSuccess('Colunas restauradas ao padrão.');
+                }}
+              />
             )}
-          </TableBody>
-        </Table>
-      </div>
+            resetControl={(
+              <GridResetControl
+                disabled={!hasActiveFilters && !gridColumns.isCustomized && !grid.isCustomized}
+                onReset={handleResetGrid}
+              />
+            )}
+          />
+        )}
+        footer={(
+          <GridPagination
+            meta={meta}
+            onPageChange={grid.setPage}
+            onPerPageChange={grid.setPerPage}
+          />
+        )}
+      >
+        <GridTable
+          columns={gridColumns.visibleColumns}
+          data={filteredLogs}
+          getRowKey={(log) => log.id}
+          loading={loading}
+          emptyMessage="Nenhuma atividade registrada."
+          onColumnOrderChange={gridColumns.reorderDraggableColumns}
+          columnFilters={columnFilters.filters}
+          onColumnFilterChange={columnFilters.setFilter}
+          onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+          onColumnFilterClear={columnFilters.clearColumnFilter}
+          onRowClick={(log) => setSelectedLog(log)}
+        />
+      </GridPanel>
 
-      {meta && meta.last_page > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
-          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
-          <span className="flex items-center text-sm text-muted-foreground">
-            Página {meta.current_page} de {meta.last_page} ({meta.total} registros)
-          </span>
-          <Button variant="outline" size="sm" disabled={page === meta.last_page} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
-        </div>
-      )}
-
-      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Activity className="size-4" />
-              Detalhes da atividade
-            </DialogTitle>
-          </DialogHeader>
-          {selectedLog && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Recurso</p>
-                  <p className="font-medium">{getSubjectLabel(selectedLog.subject_type)} #{selectedLog.subject_id}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Ação</p>
-                  <Badge variant={descriptionVariant[selectedLog.description] ?? 'outline'}>
-                    {descriptionLabel[selectedLog.description] ?? selectedLog.description}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Realizado por</p>
-                  <p className="font-medium">{selectedLog.causer_name ?? 'Sistema'}</p>
-                </div>
-                <div className="col-span-3">
-                  <p className="text-muted-foreground text-xs">Data</p>
-                  <p>{format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}</p>
-                </div>
-              </div>
-
-              {selectedLog.properties?.old && selectedLog.properties?.attributes ? (
-                <div>
-                  <p className="text-sm font-medium mb-2">Campos alterados</p>
-                  <div className="space-y-2">
-                    {Object.entries(selectedLog.properties.attributes as Record<string, unknown>)
-                      .filter(([k, v]) =>
-                        !['updated_at', 'created_at', 'deleted_at', 'id'].includes(k) &&
-                        JSON.stringify((selectedLog.properties.old as Record<string, unknown>)[k]) !== JSON.stringify(v),
-                      )
-                      .map(([key, newVal]) => (
-                        <div key={key} className="grid grid-cols-[140px_1fr_1fr] gap-2 text-sm items-start">
-                          <span className="font-mono text-xs bg-muted px-2 py-1 rounded text-muted-foreground">{key}</span>
-                          <div className="bg-destructive/10 text-destructive px-2 py-1 rounded text-xs font-mono break-all line-through">
-                            {String((selectedLog.properties.old as Record<string, unknown>)[key] ?? '—')}
-                          </div>
-                          <div className="bg-green-500/10 text-green-700 px-2 py-1 rounded text-xs font-mono break-all">
-                            {String(newVal ?? '—')}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ) : selectedLog.properties?.attributes ? (
-                <div>
-                  <p className="text-sm font-medium mb-2">Dados registrados</p>
-                  <div className="space-y-2">
-                    {Object.entries(selectedLog.properties.attributes as Record<string, unknown>)
-                      .filter(([k]) => !['id', 'created_at', 'updated_at', 'deleted_at'].includes(k))
-                      .map(([key, val]) => (
-                        <div key={key} className="grid grid-cols-[140px_1fr] gap-2 text-sm">
-                          <span className="font-mono text-xs bg-muted px-2 py-1 rounded text-muted-foreground">{key}</span>
-                          <span className="text-xs font-mono px-2 py-1 break-all">{String(val ?? '—')}</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sem detalhes adicionais.</p>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+      <ActivityLogDetailDialog log={selectedLog} onClose={() => setSelectedLog(null)} />
+    </PageBody>
   );
 }

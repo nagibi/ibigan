@@ -1,28 +1,50 @@
-import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, LoaderCircle } from 'lucide-react';
-import { usersService } from '@/services/users.service';
-import { Button } from '@/components/ui/button';
+import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { formatFormPageTitle } from '@/lib/format-form-page-title';
+import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
+import {
+  normalizeUserProfilePayload,
+  mapUserProfileToFormValues,
+  userProfileFieldsSchema,
+  USER_PROFILE_DEFAULT_VALUES,
+} from '@/lib/user-profile-fields';
+import { isUserActive, usersService } from '@/services/users.service';
+import { UserProfileFields } from '@/components/profile/user-profile-fields';
+import { splitUserRoles, UserRolesField } from '@/components/users/user-roles-field';
+import { useAuthStore } from '@/stores/auth.store';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import { useFormKeyboard } from '@/hooks/use-form-keyboard';
+import { useFormPage } from '@/hooks/use-form-page';
+import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
+import { FormToolbar } from '@/components/grid/form-toolbar';
+import { PageBody } from '@/components/common/page-body';
+import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
+import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { FormPanel } from '@/components/grid/form-panel';
+import { FormRecordIdField } from '@/components/grid/form-record-identifier';
 import { Input } from '@/components/ui/input';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-
 const createSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
   email: z.string().email('E-mail inválido.'),
-  password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres.'),
+  password: z
+    .string()
+    .min(8, 'Mínimo 8 caracteres.')
+    .regex(/\d/, 'A senha deve conter pelo menos um número.'),
   password_confirmation: z.string(),
-  role: z.string().min(1, 'Selecione um papel.'),
+  roles: z.array(z.string()).min(1, 'Selecione ao menos um papel.'),
+  ...userProfileFieldsSchema,
 }).refine((d) => d.password === d.password_confirmation, {
   message: 'As senhas não coincidem.',
   path: ['password_confirmation'],
@@ -31,223 +53,368 @@ const createSchema = z.object({
 const editSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
   email: z.string().email('E-mail inválido.'),
-  role: z.string().min(1, 'Selecione um papel.'),
+  roles: z.array(z.string()).min(1, 'Selecione ao menos um papel.'),
+  ...userProfileFieldsSchema,
 });
 
-type CreateFormData = z.infer<typeof createSchema>;
-type EditFormData = z.infer<typeof editSchema>;
+type CreateData = z.infer<typeof createSchema>;
+type EditData = z.infer<typeof editSchema>;
+
+const USER_ACTIVITY_LOG_TYPE = 'users';
+
+const CREATE_DEFAULT_VALUES: CreateData = {
+  name: '',
+  email: '',
+  password: '',
+  password_confirmation: '',
+  roles: ['viewer'],
+  ...USER_PROFILE_DEFAULT_VALUES,
+};
+
+function formatLastLoginDate(value?: string | null) {
+  if (!value) return '—';
+  return format(new Date(value), 'dd/MM/yyyy HH:mm', { locale: ptBR });
+}
+
+function getAuditName(
+  name?: string | null,
+  ref?: { name: string } | null,
+): string | null {
+  return ref?.name ?? name ?? null;
+}
 
 export function UserFormPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEditing = Boolean(id);
 
-  const { data: userData, isLoading: isLoadingUser } = useQuery({
+  const { data: userData, isLoading } = useQuery({
     queryKey: ['user', id],
     queryFn: () => usersService.show(Number(id)),
     enabled: isEditing,
   });
 
-  const createForm = useForm<CreateFormData>({
+  const user = userData?.data.result;
+  const isActive = user ? isUserActive(user) : true;
+
+  const currentUser = useAuthStore((s) => s.user);
+  const canAssignProtected = currentUser?.roles?.includes('super-admin') ?? false;
+
+  const apiNotify = useApiToolbarAlert();
+
+  const formPage = useFormPage({
+    backPath: '/users',
+    entityLabel: 'usuário',
+    notify: apiNotify,
+    onDelete: isEditing
+      ? async () => {
+          await usersService.destroy(Number(id));
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+        }
+      : undefined,
+    onToggleActive: isEditing
+      ? async (active) => {
+          await usersService.toggleActive(Number(id), active);
+          queryClient.invalidateQueries({ queryKey: ['user', id] });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+        }
+      : undefined,
+  });
+
+  const createForm = useForm<CreateData>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: '', email: '', password: '', password_confirmation: '', role: 'viewer' },
+    defaultValues: CREATE_DEFAULT_VALUES,
   });
 
-  const editForm = useForm<EditFormData>({
+  const editForm = useForm<EditData>({
     resolver: zodResolver(editSchema),
-    defaultValues: { name: '', email: '', role: 'viewer' },
+    defaultValues: { name: '', email: '', roles: ['viewer'], ...USER_PROFILE_DEFAULT_VALUES },
   });
 
-  useEffect(() => {
-    if (userData?.data.result) {
-      const user = userData.data.result;
-      editForm.reset({
-        name: user.name,
-        email: user.email,
-        role: user.roles?.[0] ?? 'viewer',
+  const form = isEditing ? editForm : createForm;
+
+  useLayoutEffect(() => {
+    if (!isEditing) {
+      createForm.reset(CREATE_DEFAULT_VALUES, {
+        keepDirty: false,
+        keepErrors: false,
+        keepTouched: false,
       });
     }
-  }, [userData, editForm]);
+  }, [isEditing, createForm, location.key]);
 
-  const createMutation = useMutation({
-    mutationFn: (data: CreateFormData) => usersService.store(data),
-    onSuccess: () => {
+  useEffect(() => {
+    if (!isEditing) {
+      createForm.reset(CREATE_DEFAULT_VALUES, {
+        keepDirty: false,
+        keepErrors: false,
+        keepTouched: false,
+      });
+    }
+  }, [isEditing, createForm, location.key]);
+
+  const lockedRoles = useMemo(
+    () => splitUserRoles(user?.roles, canAssignProtected).lockedRoles,
+    [canAssignProtected, user?.roles],
+  );
+
+  useEffect(() => {
+    if (user) {
+      const { assignableRoles } = splitUserRoles(user.roles, canAssignProtected);
+      editForm.reset(
+        {
+          ...mapUserProfileToFormValues(user),
+          roles: assignableRoles.length > 0 ? assignableRoles : ['viewer'],
+        },
+        { keepDirty: false, keepErrors: false },
+      );
+    }
+  }, [canAssignProtected, user, editForm]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: CreateData | EditData) => {
+      const payload = normalizeUserProfilePayload(data);
+      return isEditing
+        ? usersService.update(Number(id), payload as EditData)
+        : usersService.store(payload as CreateData);
+    },
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Usuário criado com sucesso!');
-      navigate('/users');
+      if (isEditing) {
+        queryClient.invalidateQueries({ queryKey: ['user', id] });
+      }
+      apiNotify.showSuccess(isEditing ? 'Usuário atualizado!' : 'Usuário criado!');
+      if (!isEditing && formPage.saveMode === 'new') {
+        createForm.reset(CREATE_DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
+      }
+      const createdId = !isEditing ? response.data.result.id : undefined;
+      navigate(resolveFormSavePath({
+        saveMode: formPage.saveMode,
+        listPath: '/users',
+        newPath: '/users/new',
+        getEditPath: (recordId) => `/users/${recordId}`,
+        isEditing,
+        createdId,
+      }));
     },
     onError: (error: unknown) => {
-      const apiErrors = (error as { response?: { data?: { errors?: Record<string, string[]> } } })
-        ?.response?.data?.errors;
-
-      if (apiErrors) {
-        Object.entries(apiErrors).forEach(([field, messages]) => {
-          createForm.setError(field as keyof CreateFormData, {
-            message: messages[0],
-          });
-        });
-      } else {
-        toast.error('Erro ao criar usuário.');
+      const handled = applyApiFormErrors(form, error);
+      if (!handled) {
+        apiNotify.showError(
+          isEditing ? 'Erro ao atualizar usuário.' : 'Erro ao criar usuário.',
+          error,
+        );
       }
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: EditFormData) => usersService.update(Number(id), data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Usuário atualizado com sucesso!');
-      navigate('/users');
-    },
-    onError: (error: unknown) => {
-      const apiErrors = (error as { response?: { data?: { errors?: Record<string, string[]> } } })
-        ?.response?.data?.errors;
+  const handleSaveAndList = useCallback(() => {
+    formPage.setSaveMode('list');
+    void form.handleSubmit((data) => saveMutation.mutate(data))();
+  }, [form, formPage, saveMutation]);
 
-      if (apiErrors) {
-        Object.entries(apiErrors).forEach(([field, messages]) => {
-          editForm.setError(field as keyof EditFormData, {
-            message: messages[0],
-          });
-        });
-      } else {
-        toast.error('Erro ao atualizar usuário.');
-      }
-    },
+  const handleSaveAndNew = useCallback(() => {
+    formPage.setSaveMode('new');
+    void form.handleSubmit((data) => saveMutation.mutate(data))();
+  }, [form, formPage, saveMutation]);
+
+  const handleSaveAndEdit = useCallback(() => {
+    formPage.setSaveMode('edit');
+    void form.handleSubmit((data) => saveMutation.mutate(data))();
+  }, [form, formPage, saveMutation]);
+
+  const handlePrimarySave = isEditing ? handleSaveAndList : handleSaveAndNew;
+
+  useFormKeyboard({
+    enabled: !isEditing || !isLoading,
+    onSave: handlePrimarySave,
+    isSubmitting: saveMutation.isPending,
   });
 
-  if (isEditing && isLoadingUser) {
+  const resetCreateForm = useCallback(
+    () => createForm.reset(CREATE_DEFAULT_VALUES, {
+      keepDirty: false,
+      keepErrors: false,
+      keepTouched: false,
+    }),
+    [createForm],
+  );
+
+  const handleDiscard = useCallback(
+    () => form.reset(undefined, { keepDirty: false, keepErrors: false, keepTouched: false }),
+    [form],
+  );
+
+  const formAlert = useFormToolbarAlert(form.control, handleDiscard, {
+    resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
+  });
+
+  const pageAlert = useMemo(
+    () => mergeToolbarAlerts(
+      formAlert,
+      isEditing && user && !isActive ? buildInactiveAlert('usuário') : null,
+    ),
+    [formAlert, isActive, isEditing, user],
+  );
+
+  const pageTitle = formatFormPageTitle({
+    isEditing,
+    id,
+    label: user?.name,
+    loading: isEditing && isLoading,
+  });
+
+  usePageToolbar({
+    title: pageTitle,
+    alert: pageAlert,
+    actions: (
+      <FormToolbar
+        isEditing={isEditing}
+        isActive={isActive}
+        isDirty={form.formState.isDirty}
+        isSubmitting={saveMutation.isPending}
+        isTogglingActive={formPage.isTogglingActive}
+        isDeleting={formPage.isDeleting}
+        onSaveAndList={handleSaveAndList}
+        onSaveAndNew={handleSaveAndNew}
+        onSaveAndEdit={handleSaveAndEdit}
+        onBack={formPage.handleBack}
+        onClear={() => form.reset()}
+        onToggleActive={isEditing && user
+          ? () => formPage.handleToggleActive(isActive)
+          : undefined
+        }
+        onDelete={isEditing ? formPage.handleDelete : undefined}
+        entityLabel="usuário"
+        recordLabel={user?.name}
+        activityLog={isEditing && id
+          ? { subjectType: USER_ACTIVITY_LOG_TYPE, subjectId: Number(id) }
+          : undefined
+        }
+        createdBy={getAuditName(user?.created_by_name, user?.created_by)}
+        createdAt={user?.created_at}
+        updatedBy={getAuditName(user?.updated_by_name, user?.updated_by)}
+        updatedAt={user?.updated_at}
+      />
+    ),
+  });
+
+  if (isEditing && isLoading) {
     return (
-      <div className="container py-6 flex justify-center">
-        <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
-      </div>
+      <FormPageSkeleton
+        panels={[
+          { titleWidth: 'w-36', fields: 6, showBadge: true },
+          { titleWidth: 'w-32', fields: 3 },
+        ]}
+      />
     );
   }
 
   return (
-    <div className="container py-6 max-w-2xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" mode="icon" size="sm" onClick={() => navigate('/users')}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">{isEditing ? 'Editar Usuário' : 'Novo Usuário'}</h1>
-          <p className="text-sm text-muted-foreground">
-            {isEditing ? 'Atualize os dados do usuário.' : 'Preencha os dados para criar um usuário.'}
-          </p>
-        </div>
-      </div>
+    <PageBody>
+      <Form {...form}>
+        <form
+          autoComplete="off"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handlePrimarySave();
+          }}
+        >
+          <FormPanel
+            title="Dados pessoais"
+            isActive={isEditing ? isActive : undefined}
+          >
+            <FormFieldGrid>
+              {isEditing && id && (
+                <FormFieldGridItem>
+                  <FormRecordIdField id={id} />
+                </FormFieldGridItem>
+              )}
+              <UserProfileFields control={form.control} />
+              <FormFieldGridItem span={2}>
+                <UserRolesField
+                  control={form.control}
+                  name="roles"
+                  lockedRoles={lockedRoles}
+                  canAssignProtected={canAssignProtected}
+                />
+              </FormFieldGridItem>
+            </FormFieldGrid>
+          </FormPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Dados do usuário</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <Form {...editForm}>
-              <form onSubmit={editForm.handleSubmit((d) => updateMutation.mutate(d))} className="space-y-4">
-                <FormField control={editForm.control} name="name" render={({ field }) => (
+          {isEditing && user && (
+            <FormPanel title="Último acesso">
+              <FormFieldGrid>
+                <FormFieldGridItem>
                   <FormItem>
-                    <FormLabel>Nome</FormLabel>
-                    <FormControl><Input placeholder="Nome completo" {...field} /></FormControl>
-                    <FormMessage />
+                    <FormLabel>Data</FormLabel>
+                    <FormControl>
+                      <Input readOnly value={formatLastLoginDate(user.last_login_at)} className="bg-muted" />
+                    </FormControl>
                   </FormItem>
-                )} />
-                <FormField control={editForm.control} name="email" render={({ field }) => (
+                </FormFieldGridItem>
+                <FormFieldGridItem>
                   <FormItem>
-                    <FormLabel>E-mail</FormLabel>
-                    <FormControl><Input type="email" placeholder="email@exemplo.com" {...field} /></FormControl>
-                    <FormMessage />
+                    <FormLabel>IP</FormLabel>
+                    <FormControl>
+                      <Input readOnly value={user.last_login_ip ?? '—'} className="bg-muted font-mono text-sm" />
+                    </FormControl>
                   </FormItem>
-                )} />
-                <FormField control={editForm.control} name="role" render={({ field }) => (
+                </FormFieldGridItem>
+                <FormFieldGridItem span={2}>
                   <FormItem>
-                    <FormLabel>Papel</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecione um papel" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
+                    <FormLabel>Dispositivo</FormLabel>
+                    <FormControl>
+                      <Input readOnly value={user.last_login_device ?? '—'} className="bg-muted" />
+                    </FormControl>
                   </FormItem>
-                )} />
-                <div className="flex gap-3 pt-2">
-                  <Button type="submit" disabled={updateMutation.isPending}>
-                    {updateMutation.isPending && <LoaderCircle className="size-4 mr-2 animate-spin" />}
-                    Salvar alterações
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => navigate('/users')}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          ) : (
-            <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit((d) => createMutation.mutate(d))} className="space-y-4">
-                <FormField control={createForm.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome</FormLabel>
-                    <FormControl><Input placeholder="Nome completo" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={createForm.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>E-mail</FormLabel>
-                    <FormControl><Input type="email" placeholder="email@exemplo.com" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={createForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl><Input type="password" placeholder="Mínimo 8 caracteres" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={createForm.control} name="password_confirmation" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirmar senha</FormLabel>
-                    <FormControl><Input type="password" placeholder="Repita a senha" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={createForm.control} name="role" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Papel</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecione um papel" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="flex gap-3 pt-2">
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending && <LoaderCircle className="size-4 mr-2 animate-spin" />}
-                    Criar usuário
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => navigate('/users')}>
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </Form>
+                </FormFieldGridItem>
+              </FormFieldGrid>
+            </FormPanel>
           )}
-        </CardContent>
-      </Card>
-    </div>
+
+          {!isEditing && (
+            <FormPanel title="Senha">
+              <FormFieldGrid>
+                <FormFieldGridItem span={2}>
+                  <FormField control={createForm.control} name="password" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Senha</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Mínimo 8 caracteres"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </FormFieldGridItem>
+                <FormFieldGridItem span={2}>
+                  <FormField control={createForm.control} name="password_confirmation" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Confirmar senha</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Repita a senha"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </FormFieldGridItem>
+              </FormFieldGrid>
+            </FormPanel>
+          )}
+        </form>
+      </Form>
+    </PageBody>
   );
 }

@@ -27,8 +27,35 @@ export interface MessageTemplatesPaginatedResponse {
 }
 
 export const messageTemplatesService = {
-  list: (page = 1) =>
-    api.get<MessageTemplatesPaginatedResponse>('/v1/message-templates', { params: { page } }),
+  list: (
+    page = 1,
+    perPage = 15,
+    search?: string,
+    sort?: string | null,
+    direction?: 'asc' | 'desc',
+    columnFilters?: Record<string, string>,
+  ) => {
+    const params: Record<string, string | number> = { page, per_page: perPage };
+
+    if (search?.trim()) params.search = search.trim();
+    if (sort) {
+      params.sort = sort;
+      params.direction = direction ?? 'asc';
+    }
+
+    for (const [key, value] of Object.entries(columnFilters ?? {})) {
+      if (!value.trim()) continue;
+
+      if (key === 'status') {
+        params.is_active = value === 'active' ? '1' : '0';
+        continue;
+      }
+
+      params[`filter_${key}`] = value;
+    }
+
+    return api.get<MessageTemplatesPaginatedResponse>('/v1/message-templates', { params });
+  },
 
   show: (id: number) =>
     api.get<{ status: number; result: MessageTemplate }>(`/v1/message-templates/${id}`),
@@ -58,4 +85,14 @@ export const messageTemplatesService = {
     channels: MessageChannel[];
     data?: Record<string, string>;
   }) => api.post(`/v1/message-templates/${id}/send`, payload),
+
+  uploadImage: (file: File) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.post<{ status: number; result: { url: string } }>(
+      '/v1/message-templates/upload-image',
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
 };

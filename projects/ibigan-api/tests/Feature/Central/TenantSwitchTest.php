@@ -13,6 +13,8 @@ use Laravel\Sanctum\Sanctum;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    cleanupTenantDatabaseFiles('acme', 'beta');
+
     $this->tenant = Tenant::create([
         'id' => 'acme',
         'slug' => 'acme',
@@ -49,15 +51,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    tenancy()->end();
-
-    foreach ([$this->tenant, $this->otherTenant] as $tenant) {
-        $databasePath = database_path('ibigan_tenant_'.$tenant->id);
-
-        if (file_exists($databasePath)) {
-            unlink($databasePath);
-        }
-    }
+    cleanupTenantDatabaseFiles('acme', 'beta');
 });
 
 it('lista organizações disponíveis para o superusuário', function (): void {

@@ -7,7 +7,8 @@ export const APP_SETTINGS: Settings = {
     demo1: {
       sidebarCollapse: false,
       sidebarTheme: 'light',
-      menuMode: 'sidebar',
+      sidebarTransparent: false,
+      menuMode: 'horizontal',
     },
     demo2: {
       headerSticky: true,

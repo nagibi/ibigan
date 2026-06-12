@@ -11,10 +11,9 @@ class MenuSeeder extends Seeder
 {
     public function run(): void
     {
-        // Limpar menus existentes
         Menu::query()->forceDelete();
 
-        // Dashboard
+        // ── Dashboard ─────────────────────────────────────────────
         Menu::create([
             'title' => 'Dashboard',
             'slug' => 'dashboard',
@@ -23,19 +22,19 @@ class MenuSeeder extends Seeder
             'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
 
-        // GESTÃO
+        // ── Gestão ────────────────────────────────────────────────
         $gestao = Menu::create([
-            'title' => 'GESTÃO',
+            'title' => 'Gestão',
             'slug' => 'gestao',
             'icon' => null,
             'path' => null,
             'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
 
         Menu::create([
@@ -47,19 +46,19 @@ class MenuSeeder extends Seeder
             'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager'],
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
 
         Menu::create([
-            'title' => 'Organizações',
-            'slug' => 'organizacoes',
-            'icon' => 'Building2',
-            'path' => '/organizations',
+            'title' => 'Aprovações',
+            'slug' => 'aprovacoes',
+            'icon' => 'UserCheck',
+            'path' => '/user-approvals',
             'parent_id' => $gestao->id,
             'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
+            'roles' => ['admin', 'super-admin'],
         ]);
 
         Menu::create([
@@ -71,7 +70,7 @@ class MenuSeeder extends Seeder
             'order' => 2,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin'],
+            'roles' => ['admin', 'super-admin'],
         ]);
 
         Menu::create([
@@ -83,67 +82,19 @@ class MenuSeeder extends Seeder
             'order' => 3,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager'],
+            'roles' => ['admin', 'manager', 'super-admin'],
         ]);
 
-        // CONFIGURAÇÕES
-        $config = Menu::create([
-            'title' => 'CONFIGURAÇÕES',
-            'slug' => 'configuracoes',
+        // ── Relatórios ────────────────────────────────────────────
+        $relatorios = Menu::create([
+            'title' => 'Relatórios',
+            'slug' => 'relatorios-grupo',
             'icon' => null,
             'path' => null,
             'order' => 2,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
-        ]);
-
-        Menu::create([
-            'title' => 'Templates',
-            'slug' => 'templates',
-            'icon' => 'FileText',
-            'path' => '/message-templates',
-            'parent_id' => $config->id,
-            'order' => 0,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Webhooks',
-            'slug' => 'webhooks',
-            'icon' => 'Webhook',
-            'path' => '/webhooks',
-            'parent_id' => $config->id,
-            'order' => 1,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Notificações',
-            'slug' => 'notificacoes',
-            'icon' => 'Bell',
-            'path' => '/notifications',
-            'parent_id' => $config->id,
-            'order' => 2,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
-        ]);
-
-        Menu::create([
-            'title' => 'Configurações',
-            'slug' => 'settings',
-            'icon' => 'Settings',
-            'path' => '/settings',
-            'parent_id' => $config->id,
-            'order' => 3,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
         ]);
 
         Menu::create([
@@ -151,11 +102,11 @@ class MenuSeeder extends Seeder
             'slug' => 'relatorios',
             'icon' => 'BarChart2',
             'path' => '/reports',
-            'parent_id' => $config->id,
-            'order' => 4,
+            'parent_id' => $relatorios->id,
+            'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin'],
+            'roles' => ['admin', 'super-admin'],
         ]);
 
         Menu::create([
@@ -163,35 +114,35 @@ class MenuSeeder extends Seeder
             'slug' => 'minhas-execucoes',
             'icon' => 'FileBarChart',
             'path' => '/reports/executions',
-            'parent_id' => $config->id,
-            'order' => 5,
+            'parent_id' => $relatorios->id,
+            'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+        ]);
+
+        // ── Administração (tenant + SaaS) ─────────────────────────
+        $administracao = Menu::create([
+            'title' => 'Administração',
+            'slug' => 'administracao',
+            'icon' => null,
+            'path' => null,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
         ]);
 
         Menu::create([
-            'title' => 'Activity Log',
-            'slug' => 'activity-log',
-            'icon' => 'Activity',
-            'path' => '/activity-logs',
-            'parent_id' => $config->id,
-            'order' => 6,
+            'title' => 'Empresas',
+            'slug' => 'empresas',
+            'icon' => 'Building2',
+            'path' => '/admin/tenants',
+            'parent_id' => $administracao->id,
+            'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Segurança',
-            'slug' => 'seguranca',
-            'icon' => 'Shield',
-            'path' => '/security',
-            'parent_id' => $config->id,
-            'order' => 7,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer'],
+            'roles' => ['super-admin'],
         ]);
 
         Menu::create([
@@ -199,11 +150,161 @@ class MenuSeeder extends Seeder
             'slug' => 'menus',
             'icon' => 'Menu',
             'path' => '/menus',
-            'parent_id' => $config->id,
-            'order' => 8,
+            'parent_id' => $administracao->id,
+            'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin'],
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Papéis',
+            'slug' => 'papeis',
+            'icon' => 'ShieldCheck',
+            'path' => '/roles',
+            'parent_id' => $administracao->id,
+            'order' => 2,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Permissões',
+            'slug' => 'permissoes',
+            'icon' => 'Shield',
+            'path' => '/permissions',
+            'parent_id' => $administracao->id,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Webhooks',
+            'slug' => 'webhooks',
+            'icon' => 'Webhook',
+            'path' => '/webhooks',
+            'parent_id' => $administracao->id,
+            'order' => 4,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Activity Log',
+            'slug' => 'activity-log',
+            'icon' => 'Activity',
+            'path' => '/activity-logs',
+            'parent_id' => $administracao->id,
+            'order' => 5,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        // ── Conta ─────────────────────────────────────────────────
+        $conta = Menu::create([
+            'title' => 'Conta',
+            'slug' => 'conta',
+            'icon' => 'User',
+            'path' => null,
+            'order' => 4,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Notificações',
+            'slug' => 'notificacoes',
+            'icon' => 'Bell',
+            'path' => '/notifications',
+            'parent_id' => $conta->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Meu Perfil',
+            'slug' => 'meu-perfil',
+            'icon' => 'User',
+            'path' => '/profile',
+            'parent_id' => $conta->id,
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+        ]);
+
+        // ── Ferramentas (dev) ─────────────────────────────────────
+        $apiBase = rtrim((string) config('app.url'), '/');
+
+        $ferramentas = Menu::create([
+            'title' => 'Ferramentas',
+            'slug' => 'ferramentas',
+            'icon' => 'Wrench',
+            'path' => null,
+            'order' => 5,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Documentação API',
+            'slug' => 'documentacao-api',
+            'icon' => 'BookOpen',
+            'path' => env('DEV_TOOLS_API_DOCS_URL', "{$apiBase}/docs/api"),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Horizon',
+            'slug' => 'horizon',
+            'icon' => 'Gauge',
+            'path' => env('DEV_TOOLS_HORIZON_URL', "{$apiBase}/horizon"),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'phpMyAdmin',
+            'slug' => 'phpmyadmin',
+            'icon' => 'Database',
+            'path' => env('DEV_TOOLS_PHPMYADMIN_URL', 'http://localhost:8080'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 2,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Mailpit',
+            'slug' => 'mailpit',
+            'icon' => 'Mailbox',
+            'path' => env('DEV_TOOLS_MAILPIT_URL', 'http://localhost:8025'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
         ]);
     }
 }

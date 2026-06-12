@@ -64,8 +64,22 @@ it('retorna configurações do tenant', function (): void {
         ->assertJsonPath('result.timezone', 'UTC')
         ->assertJsonPath('result.locale', 'pt_BR')
         ->assertJsonStructure([
-            'result' => ['id', 'name', 'slug', 'timezone', 'locale', 'logo_url'],
-        ]);
+            'result' => [
+                'id',
+                'name',
+                'slug',
+                'timezone',
+                'locale',
+                'logo_url',
+                'registration_mode',
+                'require_email_verification',
+                'require_admin_approval',
+                'require_2fa',
+                'allowed_email_domains',
+            ],
+        ])
+        ->assertJsonPath('result.registration_mode', 'invite_only')
+        ->assertJsonPath('result.require_admin_approval', false);
 });
 
 it('viewer pode ver configurações do tenant', function (): void {
@@ -114,6 +128,22 @@ it('nega timezone inválida', function (): void {
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['timezone']);
+});
+
+it('admin atualiza configurações de segurança do tenant', function (): void {
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->putJson('/api/v1/tenant/settings', [
+        'registration_mode' => 'open',
+        'require_admin_approval' => true,
+        'require_2fa' => true,
+        'allowed_email_domains' => ['@empresa.com', 'parceiro.com'],
+    ], ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.registration_mode', 'open')
+        ->assertJsonPath('result.require_admin_approval', true)
+        ->assertJsonPath('result.require_2fa', true)
+        ->assertJsonPath('result.allowed_email_domains', ['@empresa.com', 'parceiro.com']);
 });
 
 it('nega locale inválido', function (): void {

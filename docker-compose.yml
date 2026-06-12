@@ -150,6 +150,100 @@ services:
       - redis
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
 
+  # ── Meilisearch ───────────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: ibigan_meilisearch
+    restart: unless-stopped
+    networks:
+      - ibigan_network
+    environment:
+      MEILI_MASTER_KEY: masterKey
+      MEILI_ENV: development
+      MEILI_EXPERIMENTAL_ENABLE_METRICS: "true"
+    volumes:
+      - meili_data:/meili_data
+    ports:
+      - "7700:7700"
+
+  # ── Prometheus ────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: ibigan_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - ibigan_network
+
+  # ── Grafana ───────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: ibigan_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - ibigan_network
+    depends_on:
+      - prometheus
+
+  # ── MySQL exporter ────────────────────────────────────────────
+  mysql_exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: ibigan_mysql_exporter
+    restart: unless-stopped
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    command:
+      - "--mysqld.address=mysql:3306"
+      - "--mysqld.username=root"
+    ports:
+      - "9104:9104"
+    networks:
+      - ibigan_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ── Redis exporter ────────────────────────────────────────────
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: ibigan_redis_exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    ports:
+      - "9121:9121"
+    networks:
+      - ibigan_network
+    depends_on:
+      - redis
+
+  # ── cAdvisor (métricas dos containers) ────────────────────────
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: ibigan_cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8085:8080"
+    networks:
+      - ibigan_network
   # ── Vite (React SPA) ──────────────────────────────────────────
   vite:
     build: ./docker/vite
@@ -201,3 +295,6 @@ volumes:
   mysql_data:
   redis_data:
   vite_node_modules:
+  meili_data:
+  prometheus_data:
+  grafana_data:

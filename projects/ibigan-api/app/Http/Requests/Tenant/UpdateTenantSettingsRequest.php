@@ -23,6 +23,12 @@ final class UpdateTenantSettingsRequest extends FormRequest
             'name' => ['nullable', 'string', 'max:255'],
             'timezone' => ['nullable', 'string', Rule::in(timezone_identifiers_list())],
             'locale' => ['nullable', 'string', Rule::in(['pt_BR', 'en', 'es'])],
+            'registration_mode' => ['nullable', 'string', Rule::in(['open', 'invite_only', 'closed'])],
+            'require_email_verification' => ['nullable', 'boolean'],
+            'require_admin_approval' => ['nullable', 'boolean'],
+            'require_2fa' => ['nullable', 'boolean'],
+            'allowed_email_domains' => ['nullable', 'array'],
+            'allowed_email_domains.*' => ['string', 'max:255'],
         ];
     }
 }

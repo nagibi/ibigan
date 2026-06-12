@@ -79,7 +79,7 @@ it('cria webhook com eventos válidos', function (): void {
 
     $this->postJson('/api/v1/webhooks', [
         'url' => 'https://example.com/webhook',
-        'events' => ['user.created', 'organization.created'],
+        'events' => ['user.created', 'invite.accepted'],
         'secret' => 'meu-secret',
         'is_active' => true,
     ], ['X-Tenant-ID' => $this->tenant->id])
@@ -159,7 +159,7 @@ it('dispara job para webhooks ativos que escutam o evento', function (): void {
 
     $this->tenant->run(function (): void {
         Webhook::factory()->withEvents(['user.created'])->create();
-        Webhook::factory()->withEvents(['organization.created'])->create();
+        Webhook::factory()->withEvents(['invite.accepted'])->create();
         Webhook::factory()->inactive()->withEvents(['user.created'])->create();
     });
 
@@ -174,7 +174,7 @@ it('não dispara job quando não há webhooks ativos para o evento', function ()
     Queue::fake();
 
     $this->tenant->run(function (): void {
-        Webhook::factory()->withEvents(['organization.created'])->create();
+        Webhook::factory()->withEvents(['invite.accepted'])->create();
     });
 
     $this->tenant->run(function (): void {

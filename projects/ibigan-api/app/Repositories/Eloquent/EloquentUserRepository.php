@@ -31,7 +31,10 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
 
     public function paginate(int $perPage = 15, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        $query = $this->applyFilters($this->model->newQuery(), $filters);
+        $query = $this->applyFilters(
+            $this->model->newQuery()->where('is_platform_user', false),
+            $filters,
+        );
 
         $sort = $filters['sort'] ?? null;
         $direction = ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
