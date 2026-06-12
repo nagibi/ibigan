@@ -10,6 +10,7 @@ use App\Http\Requests\ToggleActiveRequest;
 use App\Models\ReportExecution;
 use App\Models\ReportTemplate;
 use App\Services\ReportService;
+use App\Support\ApiResponse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -206,12 +207,49 @@ final class ReportController extends Controller
     {
         abort_unless($request->user()->can('relatorio-visualizar'), Response::HTTP_FORBIDDEN);
         abort_unless($execution->report_template_id === $report->id, Response::HTTP_NOT_FOUND);
-        abort_unless($execution->status === 'completed', Response::HTTP_UNPROCESSABLE_ENTITY);
-        abort_unless($execution->result_path && Storage::disk('local')->exists($execution->result_path), Response::HTTP_NOT_FOUND);
+
+        if (in_array($execution->status, ['pending', 'queued', 'running'], true)) {
+            return ApiResponse::error(
+                'report.execution_in_progress',
+                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        if ($execution->result_expires_at?->isPast()) {
+            return ApiResponse::error(
+                'report.result_expired',
+                httpStatus: Response::HTTP_GONE,
+            );
+        }
+
+        $hasStoredResult = $execution->result_path
+            && Storage::disk('local')->exists($execution->result_path);
+
+        if (! $hasStoredResult) {
+            if ($execution->status === 'failed') {
+                return ApiResponse::error(
+                    'report.execution_failed',
+                    params: ['error' => $execution->error_message],
+                    httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+                );
+            }
+
+            return ApiResponse::error(
+                'report.result_not_found',
+                httpStatus: Response::HTTP_NOT_FOUND,
+            );
+        }
 
         $rows = json_decode(Storage::disk('local')->get($execution->result_path), true);
-        $page = $request->integer('page', 1);
-        $perPage = $request->integer('per_page', 50);
+        if (! is_array($rows)) {
+            return ApiResponse::error(
+                'report.result_invalid',
+                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $page = max(1, $request->integer('page', 1));
+        $perPage = min(10_000, max(1, $request->integer('per_page', 50)));
         $total = count($rows);
         $sliced = array_slice($rows, ($page - 1) * $perPage, $perPage);
 
@@ -223,7 +261,7 @@ final class ReportController extends Controller
                     'total' => $total,
                     'per_page' => $perPage,
                     'current_page' => $page,
-                    'last_page' => (int) ceil($total / $perPage),
+                    'last_page' => max(1, (int) ceil($total / $perPage)),
                 ],
             ],
         ]);

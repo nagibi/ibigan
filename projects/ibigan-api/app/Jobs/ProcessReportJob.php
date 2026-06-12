@@ -6,10 +6,12 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\TenantAwareJob;
 use App\Models\ReportExecution;
+use App\Models\User;
 use App\Notifications\ReportCompletedNotification;
 use App\Services\NotificationPreferenceService;
 use App\Services\ReportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 final class ProcessReportJob implements ShouldQueue
@@ -55,19 +57,43 @@ final class ProcessReportJob implements ShouldQueue
                 'progress_message' => 'Concluído.',
             ]);
 
-            if ($prefService->isEnabled($user, 'report.completed', 'app')) {
-                $user->notify(new ReportCompletedNotification($execution, 'app'));
-            }
-
-            if ($prefService->isEnabled($user, 'report.completed', 'email')) {
-                $user->notify(new ReportCompletedNotification($execution, 'email'));
-            }
+            $this->notifyReportCompleted($prefService, $user, $execution);
         } catch (\Exception $e) {
             $execution->update([
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
                 'progress_message' => 'Erro na execução.',
             ]);
+        }
+    }
+
+    private function notifyReportCompleted(
+        NotificationPreferenceService $prefService,
+        User $user,
+        ReportExecution $execution,
+    ): void {
+        if ($prefService->isEnabled($user, 'report.completed', 'app')) {
+            try {
+                $user->notify(new ReportCompletedNotification($execution, 'app'));
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao enviar notificação in-app de relatório concluído.', [
+                    'execution_id' => $execution->id,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($prefService->isEnabled($user, 'report.completed', 'email')) {
+            try {
+                $user->notify(new ReportCompletedNotification($execution, 'email'));
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao enviar e-mail de relatório concluído.', [
+                    'execution_id' => $execution->id,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }

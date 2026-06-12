@@ -217,3 +217,40 @@ it('nega toggle para viewer', function (): void {
     ], reportHeaders($this->tenant->id))
         ->assertForbidden();
 });
+
+it('permite baixar resultado salvo mesmo com status failed', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => true,
+    ]));
+
+    $execution = $this->tenant->run(function () use ($template) {
+        $path = 'reports/failed-with-result.json';
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            $path,
+            json_encode([['mes' => '2026-01', 'total' => 1]], JSON_THROW_ON_ERROR),
+        );
+
+        return \App\Models\ReportExecution::query()->create([
+            'report_template_id' => $template->id,
+            'executed_by' => $this->admin->id,
+            'parameters' => [],
+            'status' => 'failed',
+            'error_message' => 'Falha ao enviar e-mail.',
+            'result_path' => $path,
+            'result_rows_count' => 1,
+            'result_expires_at' => now()->addDays(7),
+            'executed_at' => now(),
+        ]);
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson(
+        "/api/v1/reports/{$template->id}/executions/{$execution->id}/result?page=1&per_page=10000",
+        reportHeaders($this->tenant->id),
+    )
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonPath('result.data.0.total', 1);
+});
