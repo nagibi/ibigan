@@ -62,7 +62,7 @@ jobs:
 
             $DC up -d --build --force-recreate
 
-            sleep 10
+            sleep 15
 
             $DC restart nginx
 
