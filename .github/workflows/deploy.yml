@@ -37,6 +37,7 @@ jobs:
         run: |
           rsync -az --delete \
             --exclude='.git' \
+            --exclude='.env' \
             --exclude='projects/ibigan-api/vendor' \
             --exclude='projects/ibigan-api/node_modules' \
             --exclude='projects/ibigan-api/storage/logs' \
