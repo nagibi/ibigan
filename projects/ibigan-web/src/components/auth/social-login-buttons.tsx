@@ -64,7 +64,13 @@ export function SocialLoginButtons({
           : `/v1/auth/${provider}?tenant_id=${encodeURIComponent(tenantId!.trim())}`;
 
       const { data } = await api.get<{ result: { url: string } }>(endpoint);
-      window.location.href = data.result.url;
+      const url = data?.result?.url;
+
+      if (!url) {
+        throw new Error('missing_oauth_url');
+      }
+
+      window.location.href = url;
     } catch {
       onError(t(config.startFailedKey));
       setLoadingProvider(null);
