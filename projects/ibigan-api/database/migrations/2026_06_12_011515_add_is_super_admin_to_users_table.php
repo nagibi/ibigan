@@ -8,15 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_super_admin')->default(false)->after('status');
-        });
+        if (Schema::hasTable('users')) {
+            Schema::table('users', function (Blueprint $table) {
+                if (! Schema::hasColumn('users', 'is_super_admin')) {
+                    $table->boolean('is_super_admin')->default(false)->after('status');
+                }
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('is_super_admin');
-        });
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'is_super_admin')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('is_super_admin');
+            });
+        }
     }
 };
