@@ -88,6 +88,7 @@ interface GridTableProps<T> {
   onRowClick?: (row: T, event: MouseEvent<HTMLTableRowElement>) => void;
   onRowDoubleClick?: (row: T, event: MouseEvent<HTMLTableRowElement>) => void;
   maxBodyHeight?: string;
+  minBodyHeight?: string;
 }
 
 function getSortTooltip(
@@ -240,6 +241,7 @@ export function GridTable<T>({
   onRowClick,
   onRowDoubleClick,
   maxBodyHeight,
+  minBodyHeight,
 }: GridTableProps<T>) {
   const isRowInteractive = Boolean(onRowClick || onRowDoubleClick);
   const lastClickRef = useRef<{ rowKey: string | number; time: number } | null>(null);
@@ -345,7 +347,7 @@ export function GridTable<T>({
   }
 
   return (
-    <GridTableScroll maxHeight={maxBodyHeight}>
+    <GridTableScroll maxHeight={maxBodyHeight} minHeight={minBodyHeight}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <table className="min-w-full w-max caption-bottom text-sm text-foreground">
           <colgroup>

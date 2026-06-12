@@ -5,12 +5,14 @@ interface GridTableScrollProps {
   children: ReactNode;
   className?: string;
   maxHeight?: string;
+  minHeight?: string;
 }
 
 export function GridTableScroll({
   children,
   className,
   maxHeight = 'calc(100vh - 18rem - var(--impersonation-banner-height, 0px))',
+  minHeight = 'var(--grid-body-min-height, 20rem)',
 }: GridTableScrollProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -69,8 +71,8 @@ export function GridTableScroll({
       )}
       <div
         ref={bodyRef}
-        className="grid-table-scroll min-h-0 w-full min-w-0 flex-1"
-        style={{ maxHeight }}
+        className="grid-table-scroll w-full min-w-0 flex-1"
+        style={{ maxHeight, minHeight }}
         onScroll={() => syncScrollLeft('body')}
       >
         <div ref={contentRef} className="w-max min-w-full">

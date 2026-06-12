@@ -13,6 +13,10 @@
     --header-height: 70px;
     --toolbar-height: 48px;
     --impersonation-banner-height: 0px;
+    --grid-body-min-height: max(
+      20rem,
+      calc(100vh - 26rem - var(--impersonation-banner-height, 0px))
+    );
   }
 
   .demo1.impersonation-banner-visible {

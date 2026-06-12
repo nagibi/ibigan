@@ -32,7 +32,7 @@ export function GridPanel({
       {header}
       {toolbar}
       {footer ? <GridPanelBar position="top">{footer}</GridPanelBar> : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+      <div className="flex min-h-[var(--grid-body-min-height,20rem)] min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
       {footer ? <GridPanelBar position="bottom">{footer}</GridPanelBar> : null}
     </div>
   );
