@@ -37,6 +37,7 @@ services:
       - ./projects/ibigan-api:/var/www
       - ./projects/ibigan-web/dist:/var/www/spa
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - ibigan_network
     depends_on:
