@@ -128,6 +128,7 @@ class DemoSeeder extends Seeder
 
     private array $centralSuperAdmins = [
         ['name' => 'Nagibi Emanuel', 'email' => 'nagibi@gmail.com'],
+        ['name' => 'Hemily Monteiro', 'email' => 'hemily.monteiro01@gmail.com'],
         ['name' => 'Jean Schletz',   'email' => 'jeanschletz@gmail.com'],
         ['name' => 'Breno Silva',    'email' => 'breno.silva@ibigan.com'],
     ];
