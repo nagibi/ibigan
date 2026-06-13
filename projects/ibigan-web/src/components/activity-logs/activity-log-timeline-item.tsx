@@ -38,14 +38,14 @@ export function ActivityLogTimelineItem({
 
   return (
     <TimelineItem icon={Icon} line={line}>
-      <div className="flex flex-col gap-2.5">
-        <div className="flex flex-col gap-1">
-          <div className="text-sm text-foreground">
+      <div className="flex min-w-0 max-w-full flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="min-w-0 text-sm text-foreground">
             <span className="font-semibold text-mono">{actor}</span>
             <span className="text-secondary-foreground"> {actionLabel.toLowerCase()} </span>
-            <span className="font-medium text-primary">{subjectName ?? `registro #${log.subject_id}`}</span>
+            <span className="break-all font-medium text-primary">{subjectName ?? `registro #${log.subject_id}`}</span>
           </div>
-          <span className="flex items-center text-xs font-medium text-muted-foreground">
+          <span className="flex min-w-0 flex-wrap items-center text-xs font-medium text-muted-foreground">
             {formattedDate}
             <span className="mx-1.5 size-1 rounded-full bg-mono/30" />
             <Badge variant={descriptionVariant[log.description] ?? 'outline'} className="h-5 px-1.5 text-[10px]">
@@ -61,21 +61,21 @@ export function ActivityLogTimelineItem({
         </div>
 
         {changes.length > 0 && (
-          <Card className="flex flex-col gap-2 rounded-lg border-0 bg-muted/70 p-3 shadow-none">
+          <Card className="flex min-w-0 max-w-full flex-col gap-2 rounded-lg border-0 bg-muted/70 p-3 shadow-none">
             {changes.slice(0, 4).map((change) => (
-              <div key={change.key} className="text-xs">
+              <div key={change.key} className="min-w-0 text-xs">
                 <span className="font-mono text-muted-foreground">{change.key}</span>
                 {change.oldValue !== undefined ? (
-                  <div className="mt-1 grid grid-cols-2 gap-2">
-                    <span className="rounded bg-destructive/10 px-2 py-1 font-mono text-destructive line-through">
+                  <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <span className="break-all rounded bg-destructive/10 px-2 py-1 font-mono text-destructive line-through">
                       {formatFieldValue(change.oldValue)}
                     </span>
-                    <span className="rounded bg-green-500/10 px-2 py-1 font-mono text-green-700">
+                    <span className="break-all rounded bg-green-500/10 px-2 py-1 font-mono text-green-700">
                       {formatFieldValue(change.newValue)}
                     </span>
                   </div>
                 ) : (
-                  <p className="mt-1 rounded bg-background/80 px-2 py-1 font-mono text-secondary-foreground">
+                  <p className="mt-1 break-all rounded bg-background/80 px-2 py-1 font-mono text-secondary-foreground">
                     {formatFieldValue(change.newValue)}
                   </p>
                 )}

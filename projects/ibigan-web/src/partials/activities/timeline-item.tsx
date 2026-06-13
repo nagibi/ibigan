@@ -22,7 +22,7 @@ export function TimelineItem({
       <div className="flex items-center justify-center shrink-0 rounded-full bg-accent/60 border border-input size-9 text-secondary-foreground">
         <Icon size={16} className="text-base" />
       </div>
-      <div className={`ps-2.5 ${!removeSpace ? 'mb-7' : ''} text-base grow`}>
+      <div className={`min-w-0 max-w-full ps-2.5 ${!removeSpace ? 'mb-7' : ''} text-base grow`}>
         {children}
       </div>
     </div>

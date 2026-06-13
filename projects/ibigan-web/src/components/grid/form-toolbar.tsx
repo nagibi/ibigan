@@ -2,11 +2,11 @@ import { type VariantProps } from 'class-variance-authority';
 import { type ElementType, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity,
   ArrowLeft,
   ChevronDown,
   ClipboardList,
   Copy,
+  History,
   LoaderCircle,
   Pencil,
   Plus,
@@ -341,7 +341,7 @@ export function FormToolbar({
               <FormButton
                 label={t('form.activity_log')}
                 tooltip={t('form.tooltip.activity_log')}
-                icon={Activity}
+                icon={History}
                 onClick={() => setActivityLogOpen(true)}
               />
             )}
@@ -349,7 +349,7 @@ export function FormToolbar({
               <FormButton
                 label={t('form.activity_log')}
                 tooltip={t('form.tooltip.activity_log')}
-                icon={Activity}
+                icon={History}
                 onClick={onHistory}
               />
             )}

@@ -8,6 +8,7 @@ import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
@@ -269,6 +270,14 @@ export function TranslationsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const exportCatalog = infiniteScrollEnabled ? cardListCatalog : paginatedCatalog;
+
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'traducoes',
+    columns: gridColumns.visibleColumns,
+    rows: exportCatalog,
+  });
+
   const activeFilters = useMemo<GridActiveFilter[]>(() => {
     const items: GridActiveFilter[] = [];
 
@@ -344,6 +353,8 @@ export function TranslationsPage() {
         singleSelection={canManage && grid.singleSelection}
         onRefresh={() => void refetch()}
         isRefreshing={isFetching}
+        onExport={handleExport}
+        isExporting={isExporting}
         extra={(
           <GridToolbarButton
             label={t('settings.translations.reload')}
@@ -357,6 +368,8 @@ export function TranslationsPage() {
       canManage,
       grid.singleSelection,
       handleEditSelected,
+      handleExport,
+      isExporting,
       isFetching,
       openCreate,
       refetch,
@@ -396,9 +409,10 @@ export function TranslationsPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
             isRefreshing={isFetching}
+            onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder={t('settings.translations.search_placeholder')}
             filters={{
               active: activeFilters,
               onClearAll: hasActiveFilters ? handleClearFilters : undefined,

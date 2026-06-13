@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, LogIn, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { History, LogIn, Trash2 } from 'lucide-react';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { format } from 'date-fns';
@@ -12,6 +13,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridStringSelection } from '@/hooks/use-grid-string-selection';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
@@ -69,9 +71,10 @@ function formatCreatedAt(value?: string | null) {
 }
 
 export function AdminTenantsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
+  const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
   const { impersonate, impersonatingId } = useImpersonate();
 
   const handleImpersonate = useCallback(
@@ -211,8 +214,8 @@ export function AdminTenantsPage() {
         onClick: () => handleEditTenant(tenant.id),
       },
       {
-        label: 'Activity Logs',
-        icon: Activity,
+        label: t('form.activity_log'),
+        icon: History,
         onClick: () => setActivityLogTenant(tenant),
       },
       {
@@ -222,7 +225,7 @@ export function AdminTenantsPage() {
         onClick: () => selection.requestDelete([tenant.id]),
       },
     ],
-    [handleEditTenant, handleImpersonate, impersonatingId, selection.requestDelete],
+    [handleEditTenant, handleImpersonate, impersonatingId, selection.requestDelete, t],
   );
 
   const handleEscape = useCallback(() => {
@@ -280,10 +283,6 @@ export function AdminTenantsPage() {
     } finally {
       setRowStatusId(null);
     }
-  }
-
-  function handleExport() {
-    showInfo('Exportação em breve.');
   }
 
   const columnDefinitions = useMemo<GridColumnDef<AdminTenant>[]>(
@@ -425,6 +424,12 @@ export function AdminTenantsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'empresas',
+    columns: gridColumns.visibleColumns,
+    rows: displayTenants,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: columnFilters.clearAllFilters,
@@ -495,6 +500,8 @@ export function AdminTenantsPage() {
         onActivate={() => void selection.activateSelected()}
         onDeactivate={() => void selection.deactivateSelected()}
         onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
         hasSelection={selection.hasSelection && !selection.isTogglingActive}
         singleSelection={selection.singleSelection && !selection.isTogglingActive}
         isTogglingActive={selection.isTogglingActive}
@@ -504,6 +511,8 @@ export function AdminTenantsPage() {
       navigate,
       handleEditSelected,
       handleDeleteSelected,
+      handleExport,
+      isExporting,
       selection.activateSelected,
       selection.deactivateSelected,
       selection.hasSelection,
@@ -530,6 +539,7 @@ export function AdminTenantsPage() {
             onRefresh={load}
             isRefreshing={loading}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

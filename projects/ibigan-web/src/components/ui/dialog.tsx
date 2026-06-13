@@ -7,12 +7,16 @@ import { X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 
 const dialogContentVariants = cva(
-  'flex flex-col fixed outline-0 z-50 border border-border bg-background p-6 shadow-lg shadow-black/5 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+  'mobile-overlay-dialog fixed outline-0 z-50 border border-border bg-background shadow-lg shadow-black/5 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
   {
     variants: {
       variant: {
-        default: 'left-[50%] top-[50%] max-w-lg translate-x-[-50%] translate-y-[-50%] w-full',
-        fullscreen: 'inset-5',
+        default:
+          'flex flex-col left-[50%] top-[50%] max-w-lg translate-x-[-50%] translate-y-[-50%] w-[calc(100vw-2rem)] sm:w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-6',
+        fullscreen:
+          'flex flex-col inset-4 sm:inset-5 max-h-[calc(100dvh-2rem)] overflow-hidden p-6',
+        panel:
+          'grid grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 inset-4 max-sm:inset-4 sm:inset-y-5 sm:end-5 sm:start-auto sm:left-auto sm:translate-x-0 sm:translate-y-0 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100',
       },
     },
     defaultVariants: {
@@ -111,7 +115,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
 }
 
 const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div data-slot="dialog-body" className={cn('grow', className)} {...props} />
+  <div data-slot="dialog-body" className={cn('min-h-0 grow overflow-y-auto overscroll-contain', className)} {...props} />
 );
 
 function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {

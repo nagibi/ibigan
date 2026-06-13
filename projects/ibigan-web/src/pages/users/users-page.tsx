@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Activity, ShieldCheck } from 'lucide-react';
+import { History, ShieldCheck } from 'lucide-react';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { format } from 'date-fns';
@@ -13,6 +13,7 @@ import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
@@ -306,16 +307,12 @@ export function UsersPage() {
       },
       {
         label: t('form.activity_log'),
-        icon: Activity,
+        icon: History,
         onClick: () => setActivityLogUser(user),
       },
     ],
     [canViewRoles, cols.edit, handleViewUserRoles, navigate, t],
   );
-
-  function handleExport() {
-    gridToasts.exportSoon();
-  }
 
   async function handleRowStatusChange(user: User, active: boolean) {
     const currentlyActive = isUserActive(user);
@@ -332,31 +329,6 @@ export function UsersPage() {
       setRowStatusId(null);
     }
   }
-
-  const toolbarActions = useMemo(
-    () => (
-      <StandardGridToolbar
-        onNew={() => navigate('/users/new')}
-        onEdit={handleEditSelected}
-        onActivate={() => void grid.activateSelected()}
-        onDeactivate={() => void grid.deactivateSelected()}
-        onDelete={handleDeleteSelected}
-        hasSelection={grid.hasSelection && !grid.isTogglingActive}
-        singleSelection={grid.singleSelection && !grid.isTogglingActive}
-        isTogglingActive={grid.isTogglingActive}
-      />
-    ),
-    [
-      navigate,
-      grid.activateSelected,
-      grid.deactivateSelected,
-      grid.hasSelection,
-      grid.isTogglingActive,
-      grid.singleSelection,
-      handleDeleteSelected,
-      handleEditSelected,
-    ],
-  );
 
   const columnDefinitions = useMemo<GridColumnDef<User>[]>(
     () => [
@@ -404,6 +376,7 @@ export function UsersPage() {
           options: statusFilterOptions,
         },
         className: 'w-[80px]',
+        exportValue: (user) => (isUserActive(user) ? 'Ativo' : 'Inativo'),
         render: (user) => (
           <Switch
             size="sm"
@@ -568,6 +541,12 @@ export function UsersPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'usuarios',
+    columns: gridColumns.visibleColumns,
+    rows: displayUsers,
+  });
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -643,6 +622,35 @@ export function UsersPage() {
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
+  const toolbarActions = useMemo(
+    () => (
+      <StandardGridToolbar
+        onNew={() => navigate('/users/new')}
+        onEdit={handleEditSelected}
+        onActivate={() => void grid.activateSelected()}
+        onDeactivate={() => void grid.deactivateSelected()}
+        onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
+        hasSelection={grid.hasSelection && !grid.isTogglingActive}
+        singleSelection={grid.singleSelection && !grid.isTogglingActive}
+        isTogglingActive={grid.isTogglingActive}
+      />
+    ),
+    [
+      navigate,
+      grid.activateSelected,
+      grid.deactivateSelected,
+      grid.hasSelection,
+      grid.isTogglingActive,
+      grid.singleSelection,
+      handleDeleteSelected,
+      handleEditSelected,
+      handleExport,
+      isExporting,
+    ],
+  );
+
   usePageToolbar({
     title: t('users.title'),
     description: t('users.description'),
@@ -670,6 +678,7 @@ export function UsersPage() {
             onRefresh={load}
             isRefreshing={loading}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

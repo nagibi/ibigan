@@ -247,41 +247,37 @@
     }
   }
 
-  /* Right-side panels (notifications, preferences) — fit mobile viewport */
+  /* Legacy: notifications sheet (side=right) on mobile */
   @media (max-width: 1279px) {
-    .mobile-side-panel-sheet {
+    .mobile-side-panel-sheet:not(.grid) {
       display: flex !important;
       flex-direction: column !important;
       gap: 0 !important;
       inset: 1rem !important;
       width: auto !important;
       max-width: calc(100vw - 2rem) !important;
-      height: auto !important;
+      height: calc(100dvh - 2rem) !important;
       max-height: calc(100dvh - 2rem) !important;
       overflow: hidden !important;
       padding: 0 !important;
       box-sizing: border-box !important;
     }
 
-    .mobile-side-panel-sheet [data-slot='sheet-body'] {
-      display: flex;
-      min-height: 0;
+    .mobile-side-panel-sheet:not(.grid) [data-slot='sheet-body'] {
+      min-height: 0 !important;
       min-width: 0;
-      flex: 1 1 auto;
-      flex-direction: column;
-      overflow: hidden;
+      flex: 1 1 0 !important;
+      overflow: hidden !important;
     }
 
-    .mobile-side-panel-sheet [data-slot='sheet-header'],
-    .mobile-side-panel-sheet [data-slot='sheet-footer'] {
-      flex-shrink: 0;
-      min-width: 0;
+    .mobile-side-panel-sheet:not(.grid) [data-slot='sheet-header'],
+    .mobile-side-panel-sheet:not(.grid) [data-slot='sheet-footer'] {
+      flex-shrink: 0 !important;
     }
 
-    .mobile-side-panel-sheet [data-slot='tabs-list'] {
-      max-width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+    .mobile-side-panel-sheet:not(.grid) [data-slot='scroll-area'] {
+      height: 100% !important;
+      min-height: 0 !important;
     }
   }
 

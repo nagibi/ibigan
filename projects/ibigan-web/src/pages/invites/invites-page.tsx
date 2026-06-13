@@ -11,6 +11,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
   dateRangeFilterFromKey,
@@ -109,7 +110,7 @@ function formatAuditDate(value?: string | null) {
 
 export function InvitesPage() {
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showError, showInfo } = useApiToolbarAlert();
+  const { showSuccess, showError } = useApiToolbarAlert();
 
   const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.invites);
 
@@ -272,10 +273,6 @@ export function InvitesPage() {
     showSuccess('Link copiado!');
   }
 
-  function handleExport() {
-    showInfo('Exportação em breve.');
-  }
-
   const columnDefinitions = useMemo<GridColumnDef<Invite>[]>(
     () => [
       {
@@ -390,6 +387,12 @@ export function InvitesPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'convites',
+    columns: gridColumns.visibleColumns,
+    rows: displayInvites,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: columnFilters.clearAllFilters,
@@ -457,10 +460,12 @@ export function InvitesPage() {
       <StandardGridToolbar
         onNew={() => setCreateOpen(true)}
         onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
         hasSelection={hasPendingSelection}
       />
     ),
-    [handleDeleteSelected, hasPendingSelection],
+    [handleDeleteSelected, handleExport, hasPendingSelection, isExporting],
   );
 
   usePageToolbar({
@@ -490,6 +495,7 @@ export function InvitesPage() {
             onRefresh={load}
             isRefreshing={loading}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

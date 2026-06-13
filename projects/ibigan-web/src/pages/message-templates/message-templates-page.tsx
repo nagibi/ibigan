@@ -11,6 +11,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
@@ -79,7 +80,7 @@ function resetSendState() {
 export function MessageTemplatesPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
+  const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
 
   const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.messageTemplates);
 
@@ -318,10 +319,6 @@ export function MessageTemplatesPage() {
     );
   }
 
-  function handleExport() {
-    showInfo('Exportação em breve.');
-  }
-
   const columnDefinitions = useMemo<GridColumnDef<MessageTemplate>[]>(
     () => [
       {
@@ -445,6 +442,12 @@ export function MessageTemplatesPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'templates-mensagem',
+    columns: gridColumns.visibleColumns,
+    rows: displayTemplates,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: columnFilters.clearAllFilters,
@@ -500,6 +503,8 @@ export function MessageTemplatesPage() {
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
         onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -514,6 +519,8 @@ export function MessageTemplatesPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
+      handleExport,
+      isExporting,
     ],
   );
 
@@ -535,6 +542,7 @@ export function MessageTemplatesPage() {
             onRefresh={load}
             isRefreshing={loading}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

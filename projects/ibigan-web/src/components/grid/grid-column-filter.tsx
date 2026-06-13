@@ -106,7 +106,7 @@ export function GridColumnFilter({
         mask={filter.mask}
         value={value}
         onChange={onChange}
-        placeholder={filter.placeholder ?? 'Filtrar...'}
+        placeholder={t('grid.search_placeholder')}
         variant="sm"
         className={inputClassName}
       />
@@ -116,7 +116,7 @@ export function GridColumnFilter({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={filter.placeholder ?? 'Filtrar...'}
+        placeholder={t('grid.search_placeholder')}
         className={inputClassName}
       />
     );

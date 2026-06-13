@@ -16,6 +16,7 @@ import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
@@ -108,6 +109,16 @@ function matchesExecutionFilters(
   if (to && isAfter(executedAt, endOfDay(parseISO(to)))) return false;
 
   return true;
+}
+
+function formatExecutionProgress(execution: MyReportExecution): string {
+  if (execution.status === 'completed') {
+    return `${execution.rows_count} registros · ${execution.duration_ms}ms`;
+  }
+  if (execution.status === 'failed') {
+    return execution.error_message ?? 'Erro';
+  }
+  return execution.progress_message ?? 'Aguardando...';
 }
 
 export function MyExecutionsPage() {
@@ -238,7 +249,7 @@ export function MyExecutionsPage() {
       {
         id: 'template_name',
         label: 'Relatório',
-        className: 'min-w-[180px]',
+        className: 'min-w-[200px]',
         filter: { type: 'text', filterKey: 'template_name', placeholder: 'Relatório' },
         render: (execution) => (
           <div className="flex items-center gap-2">
@@ -250,7 +261,8 @@ export function MyExecutionsPage() {
       {
         id: 'status',
         label: 'Status',
-        className: 'w-[120px]',
+        className: 'w-[132px] min-w-[132px] max-w-[132px]',
+        exportValue: (execution) => (STATUS_CONFIG[execution.status] ?? STATUS_CONFIG.queued).label,
         filter: {
           type: 'select',
           filterKey: 'status',
@@ -265,22 +277,25 @@ export function MyExecutionsPage() {
       {
         id: 'progress',
         label: 'Progresso',
-        className: 'min-w-[180px]',
+        className: 'min-w-[160px] max-w-[28rem]',
+        exportValue: formatExecutionProgress,
         render: (execution) => {
           if (execution.status === 'completed') {
             return (
-              <span className="text-sm text-muted-foreground">
+              <span className="block max-w-[28rem] truncate text-sm text-muted-foreground">
                 {execution.rows_count} registros · {execution.duration_ms}ms
               </span>
             );
           }
           if (execution.status === 'failed') {
             return (
-              <span className="text-sm text-destructive">{execution.error_message ?? 'Erro'}</span>
+              <span className="block max-w-[28rem] truncate text-sm text-destructive">
+                {execution.error_message ?? 'Erro'}
+              </span>
             );
           }
           return (
-            <span className="text-sm text-muted-foreground">
+            <span className="block max-w-[28rem] truncate text-sm text-muted-foreground">
               {execution.progress_message ?? 'Aguardando...'}
             </span>
           );
@@ -289,7 +304,7 @@ export function MyExecutionsPage() {
       {
         id: 'executed_at',
         label: 'Executado em',
-        className: 'w-[160px] whitespace-nowrap text-sm text-muted-foreground',
+        className: 'w-[168px] min-w-[168px] max-w-[168px] whitespace-nowrap text-sm text-muted-foreground',
         filter: { type: 'dateRange', filterKey: 'executed_at' },
         render: (execution) => format(new Date(execution.executed_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR }),
       },
@@ -312,6 +327,12 @@ export function MyExecutionsPage() {
     ),
     [columnFilters.debouncedFilters, displayExecutions, grid.debouncedSearch],
   );
+
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'minhas-execucoes',
+    columns: gridColumns.visibleColumns,
+    rows: filteredExecutions,
+  });
 
   const activeFilters = useMemo(() => {
     const items = [];
@@ -390,9 +411,10 @@ export function MyExecutionsPage() {
           <GridPanelToolbar
             onRefresh={refresh}
             isRefreshing={isLoading || isFetching}
+            onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder="Buscar por relatório ou status..."
             filters={{
               active: activeFilters,
               onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,

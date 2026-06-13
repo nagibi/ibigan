@@ -7,6 +7,7 @@ import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
@@ -150,6 +151,12 @@ export function CentralUsersPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'super-admins',
+    columns: gridColumns.visibleColumns,
+    rows: displayUsers,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: () => {},
@@ -168,9 +175,10 @@ export function CentralUsersPage() {
           <GridPanelToolbar
             onRefresh={() => void loadRef.current()}
             isRefreshing={isLoading || isFetching}
+            onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder="Buscar por nome ou e-mail..."
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}

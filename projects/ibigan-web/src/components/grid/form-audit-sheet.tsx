@@ -2,13 +2,13 @@ import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  SidePanelSheet,
+  SidePanelSheetBody,
+  SidePanelSheetContent,
+  SidePanelSheetFooter,
+  SidePanelSheetHeader,
+} from '@/components/ui/side-panel-sheet';
+import { SheetTitle } from '@/components/ui/sheet';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -50,9 +50,9 @@ export function FormAuditSheet({
   updatedAt,
 }: FormAuditSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="inset-5 start-auto h-auto w-full gap-0 rounded-lg p-0 sm:max-w-none sm:w-[420px] [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
-        <SheetHeader className="mb-0 border-b px-5 py-4">
+    <SidePanelSheet open={open} onOpenChange={onOpenChange}>
+      <SidePanelSheetContent width={420}>
+        <SidePanelSheetHeader className="border-b px-5 py-4">
           <SheetTitle className="flex items-center gap-2 p-0">
             <ClipboardList className="size-4 shrink-0" />
             Auditoria
@@ -60,9 +60,9 @@ export function FormAuditSheet({
           {entityLabel && (
             <p className="mt-1 truncate text-sm text-muted-foreground">{entityLabel}</p>
           )}
-        </SheetHeader>
+        </SidePanelSheetHeader>
 
-        <SheetBody className="grow p-5">
+        <SidePanelSheetBody>
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Informações do registro</CardTitle>
@@ -74,14 +74,14 @@ export function FormAuditSheet({
               <AuditField label="Usuário de atualização" value={updatedBy ?? '—'} />
             </CardContent>
           </Card>
-        </SheetBody>
+        </SidePanelSheetBody>
 
-        <SheetFooter className="border-t border-border p-5">
+        <SidePanelSheetFooter>
           <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </SidePanelSheetFooter>
+      </SidePanelSheetContent>
+    </SidePanelSheet>
   );
 }

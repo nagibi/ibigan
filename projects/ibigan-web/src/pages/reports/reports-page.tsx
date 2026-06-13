@@ -12,6 +12,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
@@ -57,7 +58,7 @@ function formatAuditDate(value?: string | null) {
 export function ReportsPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
+  const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
   const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.reports);
 
   const grid = useGrid({
@@ -224,10 +225,6 @@ export function ReportsPage() {
     }
   }
 
-  function handleExport() {
-    showInfo('Exportação em breve.');
-  }
-
   const columnDefinitions = useMemo<GridColumnDef<ReportTemplate>[]>(
     () => [
       {
@@ -350,6 +347,12 @@ export function ReportsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'relatorios',
+    columns: gridColumns.visibleColumns,
+    rows: displayReports,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: columnFilters.clearAllFilters,
@@ -405,6 +408,8 @@ export function ReportsPage() {
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
         onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -419,6 +424,8 @@ export function ReportsPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
+      handleExport,
+      isExporting,
     ],
   );
 
@@ -449,6 +456,7 @@ export function ReportsPage() {
             onRefresh={load}
             isRefreshing={loading}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

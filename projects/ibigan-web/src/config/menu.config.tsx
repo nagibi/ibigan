@@ -1,5 +1,5 @@
 import {
-  Activity,
+  History,
   BarChart2,
   Bell,
   BookOpen,
@@ -101,8 +101,8 @@ export const MENU_SIDEBAR: MenuConfig = [
     path: '/webhooks',
   },
   {
-    title: 'Activity Log',
-    icon: Activity,
+    title: 'Histórico',
+    icon: History,
     path: '/activity-logs',
   },
   {

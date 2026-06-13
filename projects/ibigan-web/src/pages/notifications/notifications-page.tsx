@@ -15,6 +15,7 @@ import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
@@ -454,6 +455,12 @@ export function NotificationsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'notificacoes',
+    columns: gridColumns.visibleColumns,
+    rows: displayNotifications,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: columnFilters.clearAllFilters,
@@ -539,6 +546,8 @@ export function NotificationsPage() {
     description: 'Central de notificações do sistema.',
     actions: (
       <StandardGridToolbar
+        onExport={handleExport}
+        isExporting={isExporting}
         onDelete={() => selectedRef.current.length > 0 && setDeleteIds([...selectedRef.current])}
         hasSelection={selected.length > 0}
         extra={(
@@ -611,9 +620,10 @@ export function NotificationsPage() {
             onClearSelection={clearSelection}
             onRefresh={() => void invalidateNotifications(queryClient)}
             isRefreshing={isLoading || isFetching}
+            onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder="Buscar notificações..."
             filters={{
               active: activeFilters,
               onClearAll: activeFilters.length > 0 ? gridActions.handleClearFilters : undefined,

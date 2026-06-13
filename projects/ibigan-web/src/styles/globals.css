@@ -209,4 +209,28 @@ body {
   .grid-filters-mobile-footer {
     padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
   }
+
+  /* Centered dialogs — avoid vertical clipping on small screens */
+  .mobile-overlay-dialog:not(.grid-filters-mobile-panel):not(.side-panel-dialog) {
+    top: max(1rem, env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
+    translate: -50% 0 !important;
+    max-height: calc(
+      100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    ) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box !important;
+  }
+
+  /* Side panel — anchored panel with scrollable body */
+  .side-panel-dialog[data-slot='dialog-content'] {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+    translate: none !important;
+    transform: none !important;
+  }
 }

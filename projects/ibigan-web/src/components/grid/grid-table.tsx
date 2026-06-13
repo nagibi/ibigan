@@ -39,7 +39,6 @@ import {
   getGridColumnCellClassName,
   isGridCenteredColumn,
   resolveGridColumnLabel,
-  toGridColumnMinWidthClassName,
 } from '@/lib/grid-column-presets';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/i18next';
@@ -139,7 +138,7 @@ function SortableHeaderCell<T>({
       }}
       className={cn(
         'overflow-visible whitespace-nowrap',
-        getGridColumnCellClassName(column.id, toGridColumnMinWidthClassName(column.className)),
+        getGridColumnCellClassName(column.id, column.className),
         enableColumnReorder && 'min-w-[6.5rem]',
         isDragging && 'opacity-60',
       )}
@@ -202,7 +201,7 @@ function PinnedHeaderCell<T>({
   return (
     <TableHead className={cn(
       'overflow-visible whitespace-nowrap',
-      getGridColumnCellClassName(column.id, toGridColumnMinWidthClassName(column.className)),
+      getGridColumnCellClassName(column.id, column.className),
       column.sortable && 'min-w-[4.5rem]',
     )}>
       {column.sortable ? (
@@ -304,7 +303,7 @@ export function GridTableHeader<T>({
               key={`filter-${column.id}`}
               className={cn(
                 'overflow-visible bg-muted px-2 py-1.5',
-                getGridColumnCellClassName(column.id, toGridColumnMinWidthClassName(column.className)),
+                getGridColumnCellClassName(column.id, column.className),
               )}
             >
               {column.filter && (onColumnFilterChange || onDateRangeFilterChange) ? (
@@ -474,7 +473,7 @@ export function GridTable<T>({
   return (
     <GridTableScroll maxHeight={maxBodyHeight}>
       <GridTableColumnDndContext columns={columns} onColumnOrderChange={onColumnOrderChange}>
-        <table className="w-max min-w-full table-auto caption-bottom text-sm text-foreground">
+        <table className="w-full min-w-full table-fixed caption-bottom text-sm text-foreground">
           <GridTableHeader
             columns={columns}
             sort={sort}

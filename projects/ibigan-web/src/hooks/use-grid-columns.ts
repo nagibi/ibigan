@@ -11,6 +11,7 @@ export interface GridColumnDef<T> {
   hideable?: boolean;
   filter?: GridColumnFilterDef;
   className?: string;
+  exportValue?: (row: T) => unknown;
   render: (row: T) => ReactNode;
 }
 

@@ -12,6 +12,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
   dateRangeFilterFromKey,
@@ -87,7 +88,7 @@ function getEventLabel(event: string): string {
 export function WebhooksPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
-  const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
+  const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
 
   const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.webhooks);
 
@@ -294,10 +295,6 @@ export function WebhooksPage() {
     }
   }
 
-  function handleExport() {
-    showInfo('Exportação em breve.');
-  }
-
   const columnDefinitions = useMemo<GridColumnDef<Webhook>[]>(
     () => [
       {
@@ -423,6 +420,12 @@ export function WebhooksPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'webhooks',
+    columns: gridColumns.visibleColumns,
+    rows: displayWebhooks,
+  });
+
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
     clearAllFilters: columnFilters.clearAllFilters,
@@ -493,6 +496,8 @@ export function WebhooksPage() {
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
         onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -507,6 +512,8 @@ export function WebhooksPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
+      handleExport,
+      isExporting,
     ],
   );
 
@@ -528,6 +535,7 @@ export function WebhooksPage() {
             onRefresh={load}
             isRefreshing={loading}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

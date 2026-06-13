@@ -11,6 +11,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridExport } from '@/hooks/use-grid-export';
 import {
   formatPermissionAction,
   formatPermissionName,
@@ -237,6 +238,14 @@ export function PermissionsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const exportPermissions = infiniteScrollEnabled ? cardListPermissions : filteredPermissions;
+
+  const { handleExport, isExporting } = useGridExport({
+    filename: 'permissoes',
+    columns: gridColumns.visibleColumns,
+    rows: exportPermissions,
+  });
+
   const activeFilters = useMemo(() => {
     if (!grid.search.trim()) return [];
 
@@ -264,16 +273,14 @@ export function PermissionsPage() {
     gridToasts.gridRestored();
   }
 
-  function handleExport() {
-    gridToasts.exportSoon();
-  }
-
   const toolbarActions = useMemo(
     () => (canManage ? (
       <StandardGridToolbar
         onNew={() => navigate('/permissions/new')}
         onEdit={handleEditSelected}
         onDelete={handleDeleteSelected}
+        onExport={handleExport}
+        isExporting={isExporting}
         hasSelection={grid.hasSelection}
         singleSelection={grid.singleSelection}
       />
@@ -284,6 +291,8 @@ export function PermissionsPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
+      handleExport,
+      isExporting,
       navigate,
     ],
   );
@@ -306,9 +315,9 @@ export function PermissionsPage() {
             onRefresh={() => void refetch()}
             isRefreshing={isLoading || isFetching}
             onExport={handleExport}
+            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
-            searchPlaceholder={t('permissions.search_placeholder')}
             filters={{
               active: activeFilters,
               onClearAll: hasActiveFilters ? handleClearFilters : undefined,

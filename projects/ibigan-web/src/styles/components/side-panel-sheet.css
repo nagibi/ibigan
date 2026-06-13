@@ -1,0 +1,13 @@
+/* Side panel dialog — backup rules; primary layout is Tailwind on DialogContent variant=panel */
+
+.side-panel-dialog[data-slot='dialog-content'] {
+  max-height: calc(
+    100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+  );
+}
+
+@media (min-width: 640px) {
+  .side-panel-dialog[data-slot='dialog-content'] {
+    max-height: calc(100dvh - 2.5rem);
+  }
+}
