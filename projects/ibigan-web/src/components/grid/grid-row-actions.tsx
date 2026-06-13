@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,35 @@ interface GridRowActionsProps {
   actions: GridRowAction[];
 }
 
+function isViewGridAction(label: string, viewLabel: string): boolean {
+  const normalized = label.trim().toLowerCase();
+
+  return label === viewLabel || normalized === 'visualizar' || normalized === 'view';
+}
+
+export function prioritizeViewGridAction(
+  actions: GridRowAction[],
+  viewLabel: string,
+): GridRowAction[] {
+  const viewIndex = actions.findIndex((action) => isViewGridAction(action.label, viewLabel));
+
+  if (viewIndex <= 0) {
+    return actions;
+  }
+
+  const reordered = [...actions];
+  const [viewAction] = reordered.splice(viewIndex, 1);
+
+  return [viewAction, ...reordered];
+}
+
 export function GridRowActions({ actions }: GridRowActionsProps) {
   const { t } = useTranslation();
-  const visibleActions = actions.filter((action) => !action.hidden);
+  const visibleActions = useMemo(() => {
+    const filtered = actions.filter((action) => !action.hidden);
+
+    return prioritizeViewGridAction(filtered, t('common.view'));
+  }, [actions, t]);
 
   if (visibleActions.length === 0) {
     return null;
