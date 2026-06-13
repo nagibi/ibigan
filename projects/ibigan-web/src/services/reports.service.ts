@@ -204,7 +204,15 @@ export async function downloadReportResultCsvWithToast(
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.';
+    const apiMessage = (error as { response?: { data?: { message_code?: string } } })
+      ?.response?.data?.message_code;
+    const message = apiMessage === 'report.result_not_found'
+      ? 'Arquivo do relatório não encontrado. Execute o relatório novamente.'
+      : apiMessage === 'report.result_expired'
+        ? 'O resultado deste relatório expirou. Execute novamente.'
+        : error instanceof Error
+          ? error.message
+          : 'Não foi possível baixar o arquivo.';
     toast.error(message);
     throw error;
   }

@@ -218,6 +218,75 @@ it('nega toggle para viewer', function (): void {
         ->assertForbidden();
 });
 
+it('processa job e permite baixar resultado', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'query' => 'SELECT id, name FROM users LIMIT 2',
+        'parameters' => [],
+        'is_active' => true,
+    ]));
+
+    $executionId = null;
+
+    $this->tenant->run(function () use ($template, &$executionId): void {
+        tenancy()->initialize($this->tenant);
+
+        $execution = app(\App\Services\ReportService::class)->execute(
+            $template,
+            [],
+            $this->admin,
+        );
+
+        $executionId = $execution->id;
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson(
+        "/api/v1/reports/{$template->id}/executions/{$executionId}/result?page=1&per_page=10000",
+        reportHeaders($this->tenant->id),
+    )
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonStructure(['result' => ['data', 'meta']]);
+})->group('integration');
+
+it('localiza resultado salvo em caminho legado do tenant', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => true,
+    ]));
+
+    $execution = $this->tenant->run(function () use ($template) {
+        $path = 'reports/legacy-result.json';
+        $absolutePath = storage_path('tenant'.$this->tenant->id.'/app/'.$path);
+        if (! is_dir(dirname($absolutePath))) {
+            mkdir(dirname($absolutePath), 0775, true);
+        }
+        file_put_contents($absolutePath, json_encode([['id' => 1, 'name' => 'Legacy']], JSON_THROW_ON_ERROR));
+
+        return \App\Models\ReportExecution::query()->create([
+            'report_template_id' => $template->id,
+            'executed_by' => $this->admin->id,
+            'parameters' => [],
+            'status' => 'completed',
+            'result_path' => $path,
+            'result_rows_count' => 1,
+            'result_expires_at' => now()->addDays(7),
+            'executed_at' => now(),
+        ]);
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson(
+        "/api/v1/reports/{$template->id}/executions/{$execution->id}/result?page=1&per_page=10000",
+        reportHeaders($this->tenant->id),
+    )
+        ->assertOk()
+        ->assertJsonPath('result.data.0.name', 'Legacy');
+});
+
 it('permite baixar resultado salvo mesmo com status failed', function (): void {
     $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,

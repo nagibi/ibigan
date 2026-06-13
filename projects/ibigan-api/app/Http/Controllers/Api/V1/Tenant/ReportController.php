@@ -11,10 +11,10 @@ use App\Models\ReportExecution;
 use App\Models\ReportTemplate;
 use App\Services\ReportService;
 use App\Support\ApiResponse;
+use App\Support\ReportResultStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ReportController extends Controller
@@ -222,10 +222,10 @@ final class ReportController extends Controller
             );
         }
 
-        $hasStoredResult = $execution->result_path
-            && Storage::disk('local')->exists($execution->result_path);
+        $resultStorage = app(ReportResultStorage::class);
+        $rows = $resultStorage->load($execution->result_path);
 
-        if (! $hasStoredResult) {
+        if ($rows === null) {
             if ($execution->status === 'failed') {
                 return ApiResponse::error(
                     'report.execution_failed',
@@ -237,14 +237,6 @@ final class ReportController extends Controller
             return ApiResponse::error(
                 'report.result_not_found',
                 httpStatus: Response::HTTP_NOT_FOUND,
-            );
-        }
-
-        $rows = json_decode(Storage::disk('local')->get($execution->result_path), true);
-        if (! is_array($rows)) {
-            return ApiResponse::error(
-                'report.result_invalid',
-                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
             );
         }
 

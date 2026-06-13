@@ -10,9 +10,9 @@ use App\Models\User;
 use App\Notifications\ReportCompletedNotification;
 use App\Services\NotificationPreferenceService;
 use App\Services\ReportService;
+use App\Support\ReportResultStorage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 final class ProcessReportJob implements ShouldQueue
 {
@@ -27,7 +27,16 @@ final class ProcessReportJob implements ShouldQueue
     public function handle(
         ReportService $reportService,
         NotificationPreferenceService $prefService,
+        ReportResultStorage $resultStorage,
     ): void {
+        if (! tenancy()->initialized) {
+            Log::error('ProcessReportJob executed without tenant context.', [
+                'execution_id' => $this->executionId,
+            ]);
+
+            return;
+        }
+
         $execution = ReportExecution::with(['template', 'executor'])->findOrFail($this->executionId);
         $template = $execution->template;
         $user = $execution->executor;
@@ -42,11 +51,7 @@ final class ProcessReportJob implements ShouldQueue
             $results = $reportService->executeRaw($template, $execution->parameters ?? []);
             $duration = (int) ((microtime(true) - $start) * 1000);
 
-            $path = "reports/{$execution->id}.json";
-            Storage::disk('local')->put(
-                $path,
-                json_encode($results, JSON_UNESCAPED_UNICODE),
-            );
+            $path = $resultStorage->store($execution->id, $results);
 
             $execution->update([
                 'status' => 'completed',

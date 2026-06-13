@@ -73,6 +73,20 @@ it('permite admin do tenant com token e tenant_id', function (): void {
         ->assertOk();
 });
 
+it('permite admin do tenant via cookie após redirect', function (): void {
+    $token = $this->tenant->run(fn (): string => $this->admin->createToken('api-token')->plainTextToken);
+
+    $this->get("/docs/api?access_token={$token}&tenant_id={$this->tenant->id}")
+        ->assertRedirect('/docs/api')
+        ->assertCookie('dev_tools_access_token')
+        ->assertCookie('dev_tools_tenant_id');
+
+    $this->withUnencryptedCookie('dev_tools_access_token', $token)
+        ->withUnencryptedCookie('dev_tools_tenant_id', $this->tenant->id)
+        ->get('/docs/api')
+        ->assertOk();
+});
+
 it('permite admin do tenant com token sem tenant_id via busca nos tenants', function (): void {
     $token = $this->tenant->run(fn (): string => $this->admin->createToken('api-token')->plainTextToken);
 
