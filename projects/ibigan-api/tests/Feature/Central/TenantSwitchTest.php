@@ -67,6 +67,24 @@ it('lista organizações disponíveis para o superusuário', function (): void {
         ->assertJsonPath('result.0.is_default', true);
 });
 
+it('lista organização atual quando usuário não possui vínculo em tenant_users', function (): void {
+    $operator = $this->tenant->run(function (): User {
+        $user = User::factory()->create();
+        $user->assignRole('operator');
+
+        return $user;
+    });
+
+    Sanctum::actingAs($operator, ['*'], 'sanctum');
+
+    $this->getJson('/api/central/v1/tenants', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonCount(1, 'result')
+        ->assertJsonPath('result.0.id', 'acme')
+        ->assertJsonPath('result.0.name', 'Acme Corp');
+});
+
 it('retorna novo token ao trocar de organização', function (): void {
     Sanctum::actingAs($this->superUser, ['*'], 'sanctum');
 

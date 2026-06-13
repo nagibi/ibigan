@@ -103,6 +103,7 @@ final class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
+        $tenant = tenant();
 
         return ApiResponse::success([
             'id' => $user->id,
@@ -110,6 +111,11 @@ final class AuthController extends Controller
             'email' => $user->email,
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
+            'tenant' => $tenant ? [
+                'id' => (string) $tenant->id,
+                'slug' => (string) $tenant->slug,
+                'name' => $tenant->name,
+            ] : null,
         ]);
     }
 

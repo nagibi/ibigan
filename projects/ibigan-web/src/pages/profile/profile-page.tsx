@@ -30,6 +30,7 @@ import { resolveMenuIcon } from '@/lib/menu-icons';
 import { cn } from '@/lib/utils';
 import { SecurityContent } from '@/components/security/security-content';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
+import { AvatarCropDialog } from '@/components/profile/avatar-crop-dialog';
 import { PageBody } from '@/components/common/page-body';
 import { FormToolbar } from '@/components/grid/form-toolbar';
 import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
@@ -78,6 +79,9 @@ export function ProfilePage() {
   const { switchToTenant, switchingId } = useTenantSwitch();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const appearance = useAppearanceSettings();
   const apiNotify = useApiToolbarAlert();
 
@@ -316,11 +320,58 @@ export function ProfilePage() {
     ),
   });
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+      if (cropImageSrc) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+    };
+  }, [avatarPreview, cropImageSrc]);
+
+  function resetCropState() {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    setCropImageSrc(null);
+    setPendingAvatarFile(null);
+  }
+
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    setAvatarPreview(URL.createObjectURL(file));
-    avatarMutation.mutate(file);
+
+    resetCropState();
+    setCropImageSrc(URL.createObjectURL(file));
+    setPendingAvatarFile(file);
+    setCropDialogOpen(true);
+  }
+
+  function handleCropDialogOpenChange(open: boolean) {
+    setCropDialogOpen(open);
+    if (!open) {
+      resetCropState();
+    }
+  }
+
+  function handleCropConfirm(file: File, previewUrl: string) {
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setAvatarPreview(previewUrl);
+    setCropDialogOpen(false);
+    resetCropState();
+
+    avatarMutation.mutate(file, {
+      onError: () => {
+        URL.revokeObjectURL(previewUrl);
+        setAvatarPreview(null);
+      },
+    });
   }
 
   if (isLoading) {
@@ -352,7 +403,7 @@ export function ProfilePage() {
               size="sm"
               className="absolute -bottom-1 -right-1 size-7 rounded-full"
               onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarMutation.isPending}
+              disabled={avatarMutation.isPending || cropDialogOpen}
             >
               {avatarMutation.isPending
                 ? <LoaderCircle className="size-3 animate-spin" />
@@ -380,11 +431,17 @@ export function ProfilePage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive"
+              className="size-8 shrink-0 px-0 text-destructive hover:text-destructive sm:h-7 sm:w-auto sm:px-2.5"
+              aria-label="Remover foto"
               onClick={() => deleteAvatarMutation.mutate()}
               disabled={deleteAvatarMutation.isPending}
             >
-              <Trash2 className="mr-1 size-4" /> Remover foto
+              {deleteAvatarMutation.isPending ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              <span className="hidden sm:inline">Remover foto</span>
             </Button>
           )}
         </div>
@@ -546,6 +603,15 @@ export function ProfilePage() {
       </Form>
 
       <SecurityContent />
+
+      <AvatarCropDialog
+        open={cropDialogOpen}
+        imageSrc={cropImageSrc}
+        sourceFile={pendingAvatarFile}
+        onOpenChange={handleCropDialogOpenChange}
+        onConfirm={handleCropConfirm}
+        isUploading={avatarMutation.isPending}
+      />
     </PageBody>
   );
 }
