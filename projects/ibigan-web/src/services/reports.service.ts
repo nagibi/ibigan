@@ -1,6 +1,6 @@
 import api from '@/lib/axios';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
-import { toast } from 'sonner';
+import { showAppToast } from '@/lib/show-app-toast';
 
 export interface ReportParameter {
   name: string;
@@ -197,11 +197,9 @@ export async function downloadReportResultCsvWithToast(
 ) {
   try {
     await downloadReportResultCsv(reportId, executionId, fileName, columns);
-    toast.success('Download iniciado.', {
-      classNames: {
-        title: 'text-foreground font-medium',
-        icon: '!text-green-600',
-      },
+    showAppToast({
+      title: 'Download iniciado.',
+      variant: 'success',
     });
   } catch (error) {
     const apiMessage = (error as { response?: { data?: { message_code?: string } } })
@@ -213,7 +211,10 @@ export async function downloadReportResultCsvWithToast(
         : error instanceof Error
           ? error.message
           : 'Não foi possível baixar o arquivo.';
-    toast.error(message);
+    showAppToast({
+      title: message,
+      variant: 'destructive',
+    });
     throw error;
   }
 }

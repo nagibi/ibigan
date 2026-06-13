@@ -30,6 +30,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +39,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -537,9 +537,9 @@ export function ReportsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               {grid.deleteIds.length === 1 ? 'Remover relatório' : `Remover ${grid.deleteIds.length} relatórios`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Tem certeza? Esta ação não pode ser desfeita.
             </AlertDialogDescription>

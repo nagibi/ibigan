@@ -14,9 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -261,7 +262,9 @@ export function SecurityContent() {
       <AlertDialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desabilitar autenticação em duas etapas</AlertDialogTitle>
+            <AlertDialogPanelTitle icon={ShieldOff}>
+              Desabilitar autenticação em duas etapas
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Confirme sua senha para desabilitar o 2FA. Sua conta ficará menos protegida.
             </AlertDialogDescription>

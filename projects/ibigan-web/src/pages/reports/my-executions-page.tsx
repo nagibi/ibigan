@@ -231,7 +231,7 @@ export function MyExecutionsPage() {
             actions={[
               ...(execution.status === 'completed'
                 ? [{
-                    label: 'Baixar CSV',
+                    label: 'Download',
                     icon: GRID_DOWNLOAD_ICON,
                     onClick: () => void handleDownload(execution),
                     disabled: downloadingId === execution.id,

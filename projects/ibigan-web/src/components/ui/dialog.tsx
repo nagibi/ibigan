@@ -91,7 +91,7 @@ export default DialogContent;
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     data-slot="dialog-header"
-    className={cn('flex flex-col space-y-1 text-center sm:text-start mb-5', className)}
+    className={cn('mb-5 flex flex-col space-y-1 text-start', className)}
     {...props}
   />
 );

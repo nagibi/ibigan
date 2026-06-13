@@ -47,6 +47,7 @@ import { TenantActivityLogsSheet } from '@/components/activity-logs/tenant-activ
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,7 +56,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v5';
@@ -676,7 +676,7 @@ export function AdminTenantsPage() {
       <AlertDialog open={selection.deleteIds.length > 0} onOpenChange={selection.clearDeleteRequest}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover empresa</AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>Remover empresa</AlertDialogPanelTitle>
             <AlertDialogDescription>
               {selection.deleteIds.length === 1
                 ? 'Tem certeza? Todos os dados desta empresa serão removidos permanentemente.'

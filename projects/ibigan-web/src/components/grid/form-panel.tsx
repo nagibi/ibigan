@@ -19,17 +19,17 @@ export function FormPanel({
   return (
     <Card className={cn('mb-4', className)}>
       {title && (
-        <CardHeader className="min-h-0 py-3">
+        <CardHeader className="min-h-0 px-4 py-3 max-xl:px-4 max-xl:py-4">
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base">{title}</CardTitle>
+            <CardTitle className="text-base leading-snug">{title}</CardTitle>
             {isActive !== undefined && <FormStatusBadge isActive={isActive} />}
           </div>
           {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
           )}
         </CardHeader>
       )}
-      <CardContent className={cn(!title && 'pt-5')}>
+      <CardContent className={cn('max-xl:px-4 max-xl:pb-4', title ? 'max-xl:pt-5' : 'pt-5')}>
         {children}
       </CardContent>
     </Card>

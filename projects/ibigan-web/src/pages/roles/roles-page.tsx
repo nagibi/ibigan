@@ -42,6 +42,7 @@ import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +51,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 const GRID_COLUMNS_KEY = 'grid-columns:roles';
@@ -517,11 +517,11 @@ export function RolesPage() {
       <AlertDialog open={grid.deleteIds.length > 0} onOpenChange={grid.clearDeleteRequest}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               {grid.deleteIds.length === 1
                 ? t('roles.delete.title_one')
                 : t('roles.delete.title_many', { count: grid.deleteIds.length })}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               {t('roles.delete.description')}
             </AlertDialogDescription>

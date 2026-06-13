@@ -73,6 +73,7 @@ import {
   TableCell,
   TableRow,
 } from '@/components/ui/table';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,7 +82,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
@@ -1059,9 +1059,9 @@ export function MenusPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               Remover {grid.deleteIds.length === 1 ? 'item de menu' : `${grid.deleteIds.length} itens de menu`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Tem certeza? Filhos dos itens selecionados também serão removidos.
             </AlertDialogDescription>

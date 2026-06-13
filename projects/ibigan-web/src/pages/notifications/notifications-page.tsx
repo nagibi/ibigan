@@ -67,6 +67,7 @@ import {
 } from '@/components/grid/grid-toolbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,7 +76,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 const GRID_COLUMNS_KEY = 'grid-columns:notifications';
@@ -364,7 +364,7 @@ export function NotificationsPage() {
               ...(isReportNotification(notification)
                 ? [
                     {
-                      label: 'Baixar CSV',
+                      label: 'Download',
                       icon: GRID_DOWNLOAD_ICON,
                       onClick: () => void handleDownloadReport(notification),
                       disabled: downloadingId === notification.id,
@@ -722,9 +722,9 @@ export function NotificationsPage() {
       <AlertDialog open={deleteIds.length > 0} onOpenChange={(open) => !open && setDeleteIds([])}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               Remover {deleteIds.length === 1 ? 'notificação' : `${deleteIds.length} notificações`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Tem certeza? Esta ação não pode ser desfeita.
             </AlertDialogDescription>

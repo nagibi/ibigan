@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +36,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import {
@@ -408,7 +408,9 @@ export function FormToolbar({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('form.delete_title', { entity: entityLabel })}</AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
+              {t('form.delete_title', { entity: entityLabel })}
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               {t('common.confirm_delete')}
             </AlertDialogDescription>

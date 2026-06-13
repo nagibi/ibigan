@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Copy, LoaderCircle, Mail, Trash2 } from 'lucide-react';
+import { Copy, LoaderCircle, Mail, Trash2, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -36,6 +36,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { AlertDialogPanelTitle, DialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +45,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,6 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -575,7 +574,7 @@ export function InvitesPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enviar convite</DialogTitle>
+            <DialogPanelTitle icon={Mail}>Enviar convite</DialogPanelTitle>
           </DialogHeader>
           <Form {...form}>
             <form
@@ -657,11 +656,11 @@ export function InvitesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={XCircle}>
               {grid.deleteIds.length === 1
                 ? 'Cancelar convite'
                 : `Cancelar ${grid.deleteIds.length} convites`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Tem certeza que deseja cancelar{' '}
               {grid.deleteIds.length === 1 ? 'este convite' : 'estes convites'}?

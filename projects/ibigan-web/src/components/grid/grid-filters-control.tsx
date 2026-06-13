@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { DialogPanelTitle } from '@/components/common/panel-title';
 import {
   Dialog,
   DialogBody,
@@ -18,7 +19,6 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -331,7 +331,9 @@ export function GridFiltersControl({
           )}
         >
           <DialogHeader className="mb-0 shrink-0 space-y-0 border-b border-border px-4 py-3 pe-12 text-start">
-            <DialogTitle className="text-base">{t('grid.filters')}</DialogTitle>
+            <DialogPanelTitle icon={Filter} className="text-base">
+              {t('grid.filters')}
+            </DialogPanelTitle>
           </DialogHeader>
           <DialogBody className="grid-filters-mobile-scroll mb-0 min-h-0 overflow-y-auto overscroll-contain p-0 [-webkit-overflow-scrolling:touch]">
             <MobileFiltersSheetContent

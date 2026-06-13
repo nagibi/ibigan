@@ -29,6 +29,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +38,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -586,7 +586,7 @@ export function CampaignsPage() {
       <AlertDialog open={cancelId !== null} onOpenChange={(open) => !open && setCancelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar campanha</AlertDialogTitle>
+            <AlertDialogPanelTitle icon={X}>Cancelar campanha</AlertDialogPanelTitle>
             <AlertDialogDescription>
               Tem certeza que deseja cancelar esta campanha?
             </AlertDialogDescription>
@@ -606,11 +606,11 @@ export function CampaignsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               {grid.deleteIds.length === 1
                 ? 'Remover campanha'
                 : `Remover ${grid.deleteIds.length} campanhas`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>

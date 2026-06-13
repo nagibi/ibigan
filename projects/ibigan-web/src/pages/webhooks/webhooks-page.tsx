@@ -43,6 +43,7 @@ import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-to
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { AlertDialogPanelTitle, DialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,13 +52,11 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -621,7 +620,9 @@ export function WebhooksPage() {
       <Dialog open={!!viewDeliveries} onOpenChange={(open) => !open && setViewDeliveries(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Logs de entrega — {viewDeliveries?.url}</DialogTitle>
+            <DialogPanelTitle icon={ScrollText}>
+              Logs de entrega — {viewDeliveries?.url}
+            </DialogPanelTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[500px]">
             {deliveriesLoading ? (
@@ -680,11 +681,11 @@ export function WebhooksPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               {grid.deleteIds.length === 1
                 ? 'Remover webhook'
                 : `Remover ${grid.deleteIds.length} webhooks`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>

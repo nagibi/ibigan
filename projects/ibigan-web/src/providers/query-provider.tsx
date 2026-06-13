@@ -1,14 +1,12 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
-import { RiErrorWarningFill } from '@remixicon/react';
 import {
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
+import { showAppToast } from '@/lib/show-app-toast';
 
 const QueryProvider = ({ children }: { children: ReactNode }) => {
   const [queryClient] = useState(
@@ -19,19 +17,10 @@ const QueryProvider = ({ children }: { children: ReactNode }) => {
             const message =
               error.message || 'Something went wrong. Please try again.';
 
-            toast.custom(
-              () => (
-                <Alert variant="mono" icon="destructive" close={false}>
-                  <AlertIcon>
-                    <RiErrorWarningFill />
-                  </AlertIcon>
-                  <AlertTitle>{message}</AlertTitle>
-                </Alert>
-              ),
-              {
-                position: 'top-center',
-              },
-            );
+            showAppToast({
+              title: message,
+              variant: 'destructive',
+            });
           },
         }),
       }),

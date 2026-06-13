@@ -9,11 +9,11 @@ import {
   getSubjectLabel,
 } from '@/lib/activity-log-utils';
 import { Badge } from '@/components/ui/badge';
+import { DialogPanelTitle } from '@/components/common/panel-title';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 
 interface ActivityLogDetailDialogProps {
@@ -28,10 +28,7 @@ export function ActivityLogDetailDialog({ log, onClose }: ActivityLogDetailDialo
     <Dialog open={log !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Activity className="size-4" />
-            Detalhes da atividade
-          </DialogTitle>
+          <DialogPanelTitle icon={Activity}>Detalhes da atividade</DialogPanelTitle>
         </DialogHeader>
         {log && (
           <div className="space-y-4">

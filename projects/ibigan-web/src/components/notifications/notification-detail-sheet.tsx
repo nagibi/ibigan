@@ -16,13 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { SheetPanelTitle } from '@/components/common/panel-title';
 import {
   Sheet,
   SheetBody,
   SheetContent,
   SheetFooter,
   SheetHeader,
-  SheetTitle,
 } from '@/components/ui/sheet';
 
 interface NotificationDetailSheetProps {
@@ -97,10 +97,7 @@ export function NotificationDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="mobile-side-panel-sheet gap-0 rounded-lg p-0 sm:inset-5 sm:start-auto sm:h-auto sm:max-h-[calc(100vh-2.5rem)] sm:w-[520px] sm:max-w-none [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
         <SheetHeader className="mb-0 border-b px-5 py-4">
-          <SheetTitle className="flex items-center gap-2 p-0">
-            <Bell className="size-4 shrink-0" />
-            Visualizar notificação
-          </SheetTitle>
+          <SheetPanelTitle icon={Bell}>Visualizar notificação</SheetPanelTitle>
         </SheetHeader>
 
         <SheetBody className="min-h-0 grow p-0">
@@ -192,7 +189,7 @@ export function NotificationDetailSheet({
                 ? <LoaderCircle className="mr-1 size-3.5 animate-spin" />
                 : <GridDownloadIcon className="mr-1 size-3.5" />
               }
-              Baixar CSV
+              Download
             </Button>
           ) : null}
           {reportMeta?.templateId ? (

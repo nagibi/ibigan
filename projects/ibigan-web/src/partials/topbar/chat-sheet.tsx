@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import {
   Calendar,
   CheckCheck,
+  MessageCircle,
   MoreVertical,
   Settings2,
   Shield,
@@ -30,13 +31,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { SheetPanelTitle } from '@/components/common/panel-title';
 import {
   Sheet,
   SheetBody,
   SheetContent,
   SheetFooter,
   SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { AvatarGroup } from '../common/avatar-group';
@@ -107,7 +108,7 @@ export function ChatSheet({ trigger }: { trigger: ReactNode }) {
       <SheetContent className="p-0 gap-0 sm:w-[450px] sm:max-w-none inset-5 start-auto h-auto rounded-lg p-0 sm:max-w-none [&_[data-slot=sheet-close]]:top-4.5 [&_[data-slot=sheet-close]]:end-5">
         <SheetHeader>
           <div className="flex items-center justify-between p-3 border-b border-border">
-            <SheetTitle>Chat</SheetTitle>
+            <SheetPanelTitle icon={MessageCircle}>Chat</SheetPanelTitle>
           </div>
           <div className="border-b border-border p-3 shadow-xs">
             <div className="flex items-center justify-between gap-2">

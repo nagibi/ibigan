@@ -1,0 +1,1 @@
+Mail::raw('Teste local', fn ($m) => $m->to('seu@email.com')->subject('Teste Ibigan'));

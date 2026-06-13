@@ -34,7 +34,6 @@ import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-g
 import { GridTableScroll } from '@/components/grid/grid-table-scroll';
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -387,12 +386,6 @@ export function ReportExecutePage() {
 
   return (
     <PageBody>
-      <div className="mb-4 flex items-center gap-2">
-        <Badge variant={report?.is_active ? 'primary' : 'secondary'}>
-          {report?.is_active ? 'Ativo' : 'Inativo'}
-        </Badge>
-      </div>
-
       <Form {...form}>
         <form
           onSubmit={(event) => {

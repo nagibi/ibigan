@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import {
   invalidateNotifications,
   upsertNotificationInCache,
 } from '@/lib/notification-cache';
 import { getEcho } from '@/lib/echo';
-import { showAlertToast } from '@/lib/show-alert-toast';
+import { showAppToast } from '@/lib/show-app-toast';
 import { type AppNotification } from '@/services/notifications.service';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -48,7 +47,7 @@ export function useNotifications() {
         const rowsCount = notification.rows_count ?? 0;
         const records = rowsCount === 1 ? '1 registro' : `${rowsCount} registros`;
 
-        showAlertToast({
+        showAppToast({
           title: 'Relatório pronto',
           description: `${templateName} — ${records}`,
           variant: 'success',
@@ -57,20 +56,27 @@ export function useNotifications() {
       }
 
       if (type === 'UserCreatedNotification' && notification.user_name) {
-        toast.info('Novo usuário', {
+        showAppToast({
+          title: 'Novo usuário',
           description: `${notification.user_name} foi criado`,
+          variant: 'info',
         });
         return;
       }
 
       if (notification.subject) {
-        toast.info(String(notification.subject), {
+        showAppToast({
+          title: String(notification.subject),
           description: notification.body ? String(notification.body).substring(0, 80) : undefined,
+          variant: 'info',
         });
         return;
       }
 
-      toast.info('Nova notificação');
+      showAppToast({
+        title: 'Nova notificação',
+        variant: 'info',
+      });
     });
 
     return () => {

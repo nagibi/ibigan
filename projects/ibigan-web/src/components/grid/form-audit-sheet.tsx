@@ -9,7 +9,7 @@ import {
   SidePanelSheetFooter,
   SidePanelSheetHeader,
 } from '@/components/ui/side-panel-sheet';
-import { SheetTitle } from '@/components/ui/sheet';
+import { SheetPanelTitle } from '@/components/common/panel-title';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -56,10 +56,7 @@ export function FormAuditSheet({
     <SidePanelSheet open={open} onOpenChange={onOpenChange}>
       <SidePanelSheetContent width={420}>
         <SidePanelSheetHeader className="border-b px-5 py-4">
-          <SheetTitle className="flex items-center gap-2 p-0">
-            <ClipboardList className="size-4 shrink-0" />
-            Auditoria
-          </SheetTitle>
+          <SheetPanelTitle icon={ClipboardList}>Auditoria</SheetPanelTitle>
           {entityLabel && (
             <p className="mt-1 truncate text-sm text-muted-foreground">{entityLabel}</p>
           )}

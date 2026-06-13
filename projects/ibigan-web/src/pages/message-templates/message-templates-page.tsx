@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Copy, Send, X } from 'lucide-react';
+import { Copy, Send, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
@@ -33,6 +33,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { AlertDialogPanelTitle, DialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +42,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,6 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -629,7 +628,7 @@ export function MessageTemplatesPage() {
       <Dialog open={!!sendTemplate} onOpenChange={(open) => !open && closeSendDialog()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enviar mensagem</DialogTitle>
+            <DialogPanelTitle icon={Send}>Enviar mensagem</DialogPanelTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
@@ -721,11 +720,11 @@ export function MessageTemplatesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
+            <AlertDialogPanelTitle icon={Trash2}>
               {grid.deleteIds.length === 1
                 ? 'Remover template'
                 : `Remover ${grid.deleteIds.length} templates`}
-            </AlertDialogTitle>
+            </AlertDialogPanelTitle>
             <AlertDialogDescription>
               Tem certeza? Esta ação não pode ser desfeita.
             </AlertDialogDescription>

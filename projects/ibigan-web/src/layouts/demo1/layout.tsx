@@ -15,6 +15,7 @@ import {
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
 import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
+import { NotificationsSheetProvider } from '@/providers/notifications-sheet-provider';
 import { Footer } from './components/footer';
 import { ScrollToTopButton } from '@/components/common/scroll-to-top-button';
 import { ScrollTopAnchor } from '@/components/common/scroll-top-anchor';
@@ -127,17 +128,19 @@ export function Demo1Layout() {
 
   return (
     <NotificationPreferencesSheetProvider>
-      <Helmet>
-        <title>{item?.title}</title>
-      </Helmet>
+      <NotificationsSheetProvider>
+        <Helmet>
+          <title>{item?.title}</title>
+        </Helmet>
 
-      {!isMobile && isSidebarMode && <Sidebar />}
+        {!isMobile && isSidebarMode && <Sidebar />}
 
-      <PageRefreshProvider>
-        <PageToolbarProvider>
-          <Demo1LayoutContent />
-        </PageToolbarProvider>
-      </PageRefreshProvider>
+        <PageRefreshProvider>
+          <PageToolbarProvider>
+            <Demo1LayoutContent />
+          </PageToolbarProvider>
+        </PageRefreshProvider>
+      </NotificationsSheetProvider>
     </NotificationPreferencesSheetProvider>
   );
 }

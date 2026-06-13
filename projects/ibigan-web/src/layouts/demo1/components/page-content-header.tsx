@@ -113,7 +113,7 @@ export function PageContentHeader({
     };
   }, [description, title]);
 
-  const containerClassName = 'max-xl:shrink-0 max-xl:flex-none max-xl:pb-1 max-xl:pt-1 xl:pb-4 xl:pt-3';
+  const containerClassName = 'max-xl:shrink-0 max-xl:flex-none max-xl:pb-3 max-xl:pt-2 xl:pb-4 xl:pt-3';
 
   const content = !title && !description ? (
     <PageBreadcrumbs menu={menu} />
@@ -121,7 +121,7 @@ export function PageContentHeader({
     <>
       <PageBreadcrumbs menu={menu} />
       {title ? (
-        <h1 className="font-medium text-base text-mono lg:text-lg">
+        <h1 className="font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
           {title}
         </h1>
       ) : null}

@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Mail, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { notificationPreferencesService } from '@/services/notification-preferences.service';
-import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { InfoHint } from '@/components/common/info-hint';
+import { NotificationPreferencesSkeleton } from '@/components/common/side-panel-skeleton';
 import { Switch } from '@/components/ui/switch';
 
 const EVENT_LABELS: Record<string, { label: string; description: string }> = {
@@ -44,7 +45,7 @@ export function NotificationPreferencesContent() {
   const preferences = data?.data.result ?? {};
 
   if (isLoading) {
-    return <FormPageSkeleton panels={[{ titleWidth: 'w-48', fields: 4 }]} />;
+    return <NotificationPreferencesSkeleton />;
   }
 
   return (
@@ -67,10 +68,12 @@ export function NotificationPreferencesContent() {
         const prefs = preferences[event] ?? { email: false, app: false };
 
         return (
-          <div key={event} className="flex items-center gap-4 px-4 py-4">
+          <div key={event} className="flex items-center gap-4 px-4 py-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{info.label}</p>
-              <p className="text-xs text-muted-foreground">{info.description}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium">{info.label}</p>
+                <InfoHint content={info.description} side="bottom" />
+              </div>
             </div>
             <div className="flex w-40 shrink-0 items-center justify-around">
               <Switch

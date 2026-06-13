@@ -251,7 +251,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
                 onClick={() => void handleDownloadReport()}
                 disabled={downloading}
               >
-                {downloading ? 'Baixando...' : 'Baixar CSV'}
+                {downloading ? 'Downloading...' : 'Download'}
               </Button>
               <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
                 <Link

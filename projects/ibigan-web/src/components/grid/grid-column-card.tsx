@@ -38,15 +38,15 @@ export function GridColumnCard<T>({
   const titleContent = titleColumn?.render(row);
 
   return (
-    <div className="flex h-full flex-col gap-3 p-4">
+    <div className="flex h-full flex-col gap-4 p-4 max-xl:gap-4">
       {titleContent ? (
-        <div className="min-w-0 font-medium [&_*]:truncate">{titleContent as ReactNode}</div>
+        <div className="min-w-0 font-medium leading-snug [&_*]:truncate">{titleContent as ReactNode}</div>
       ) : null}
 
       {contentColumns.length > 0 ? (
-        <dl className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+        <dl className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 max-xl:gap-y-4">
           {contentColumns.map((column) => (
-            <div key={column.id} className="min-w-0">
+            <div key={column.id} className="min-w-0 space-y-1">
               <dt className="text-xs text-muted-foreground">
                 {resolveGridColumnLabel(column.id, column.label)}
               </dt>

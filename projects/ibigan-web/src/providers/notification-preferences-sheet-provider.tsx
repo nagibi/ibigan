@@ -6,12 +6,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { NotificationPreferencesSheet } from '@/components/notifications/notification-preferences-sheet';
 
 interface NotificationPreferencesSheetContextValue {
   isOpen: boolean;
   open: () => void;
   close: () => void;
+  setOpen: (open: boolean) => void;
 }
 
 const NotificationPreferencesSheetContext =
@@ -28,6 +28,7 @@ export function NotificationPreferencesSheetProvider({ children }: { children: R
       isOpen: open,
       open: openSheet,
       close: closeSheet,
+      setOpen,
     }),
     [open, openSheet, closeSheet],
   );
@@ -35,7 +36,6 @@ export function NotificationPreferencesSheetProvider({ children }: { children: R
   return (
     <NotificationPreferencesSheetContext.Provider value={value}>
       {children}
-      <NotificationPreferencesSheet open={open} onOpenChange={setOpen} />
     </NotificationPreferencesSheetContext.Provider>
   );
 }
@@ -44,7 +44,7 @@ export function useNotificationPreferencesSheet() {
   const context = useContext(NotificationPreferencesSheetContext);
   if (!context) {
     // fora do provider (ex: sidebar no contexto central) — sheet inerte
-    return { isOpen: false, open: () => {}, close: () => {} };
+    return { isOpen: false, open: () => {}, close: () => {}, setOpen: () => {} };
   }
   return context;
 }

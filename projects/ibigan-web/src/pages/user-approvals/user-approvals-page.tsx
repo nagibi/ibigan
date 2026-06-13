@@ -33,6 +33,7 @@ import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
+import { AlertDialogPanelTitle, DialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,13 +42,11 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -404,7 +403,7 @@ export function UserApprovalsPage() {
       <AlertDialog open={approveTarget !== null} onOpenChange={() => setApproveTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Aprovar cadastro</AlertDialogTitle>
+            <AlertDialogPanelTitle icon={CheckCircle}>Aprovar cadastro</AlertDialogPanelTitle>
             <AlertDialogDescription>
               Aprovar o acesso de <strong>{approveTarget?.user_name}</strong> ({approveTarget?.user_email})?
               O usuário receberá um e-mail de confirmação.
@@ -422,7 +421,7 @@ export function UserApprovalsPage() {
       <Dialog open={rejectTarget !== null} onOpenChange={() => setRejectTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rejeitar cadastro</DialogTitle>
+            <DialogPanelTitle icon={XCircle}>Rejeitar cadastro</DialogPanelTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
