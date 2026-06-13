@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Copy, Send, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { useNavigate } from 'react-router-dom';
@@ -78,6 +79,7 @@ function resetSendState() {
 }
 
 export function MessageTemplatesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
@@ -706,7 +708,7 @@ export function MessageTemplatesPage() {
                 )}
               </Button>
               <Button variant="outline" onClick={closeSendDialog}>
-                Cancelar
+                {t('common.close')}
               </Button>
             </div>
           </div>
@@ -729,7 +731,7 @@ export function MessageTemplatesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}

@@ -14,6 +14,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { FormToolbar } from '@/components/grid/form-toolbar';
 import { PageBody } from '@/components/common/page-body';
@@ -106,7 +107,7 @@ export function CampaignFormPage() {
     queryFn: () => messageTemplatesService.list(1),
   });
 
-  const { data: campaignData, isLoading } = useQuery({
+  const { data: campaignData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['campaign', id],
     queryFn: () => campaignsService.show(Number(id)),
     enabled: isEditing,
@@ -238,6 +239,16 @@ export function CampaignFormPage() {
 
   const formAlert = useFormToolbarAlert(form);
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing
+      ? () => form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false })
+      : undefined,
+  });
+
   const pageTitle = formatFormPageTitle({
     isEditing,
     id,
@@ -260,6 +271,8 @@ export function CampaignFormPage() {
         onBack={formPage.handleBack}
         onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         onDelete={isEditing && campaign && isDeletable(campaign) ? formPage.handleDelete : undefined}
         entityLabel="campanha"
         recordLabel={campaign?.name}

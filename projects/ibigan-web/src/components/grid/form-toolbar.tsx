@@ -10,7 +10,8 @@ import {
   LoaderCircle,
   Pencil,
   Plus,
-  RotateCcw,
+  Undo2,
+  RefreshCw,
   Save,
   Trash2,
   UserCheck,
@@ -19,6 +20,7 @@ import {
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useRegisterPageRefresh } from '@/providers/page-refresh-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,6 +64,9 @@ export interface FormToolbarProps {
   onToggleActive?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
+
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 
   onHistory?: () => void;
   activityLog?: {
@@ -150,6 +155,8 @@ export function FormToolbar({
   onToggleActive,
   onDelete,
   onDuplicate,
+  onRefresh,
+  isRefreshing = false,
   onHistory,
   activityLog,
   createdBy,
@@ -167,6 +174,7 @@ export function FormToolbar({
 }: FormToolbarProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  useRegisterPageRefresh(onRefresh, isRefreshing);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
@@ -294,9 +302,19 @@ export function FormToolbar({
               <FormButton
                 label={t('common.clear')}
                 tooltip={t('form.tooltip.clear')}
-                icon={RotateCcw}
+                icon={Undo2}
                 onClick={onClear}
                 disabled={!isDirty}
+              />
+            )}
+
+            {onRefresh && !isMobile && (
+              <FormButton
+                label={t('grid.refresh')}
+                tooltip={t('grid.tooltip.refresh')}
+                icon={RefreshCw}
+                onClick={onRefresh}
+                loading={isRefreshing}
               />
             )}
           </>
@@ -396,7 +414,7 @@ export function FormToolbar({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => { setDeleteOpen(false); onDelete?.(); }}

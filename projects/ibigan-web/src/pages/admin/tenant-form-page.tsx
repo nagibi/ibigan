@@ -11,6 +11,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { digitsOnly } from '@/lib/brazilian-masks';
 import { adminTenantsService } from '@/services/admin-tenants.service';
@@ -85,7 +86,7 @@ export function AdminTenantFormPage() {
   const isEditing = Boolean(id);
   const apiNotify = useApiToolbarAlert();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['admin-tenant', id],
     queryFn: () => adminTenantsService.show(id!),
     enabled: isEditing,
@@ -199,6 +200,16 @@ export function AdminTenantFormPage() {
 
   const formAlert = useFormToolbarAlert(form);
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing
+      ? () => form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false })
+      : undefined,
+  });
+
   const pageTitle = formatFormPageTitle({
     isEditing,
     id,
@@ -227,6 +238,8 @@ export function AdminTenantFormPage() {
           locale: tenant.locale,
           is_active: tenant.is_active,
         } : DEFAULT_VALUES)}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         onDelete={isEditing ? formPage.handleDelete : undefined}
         onNew={isEditing ? () => navigate('/admin/tenants/nova') : undefined}
         entityLabel="empresa"

@@ -755,7 +755,7 @@ export function UsersPage() {
               onRowClick={(user, event) =>
                 grid.selectRow(user.id, {
                   shift: event.shiftKey,
-                  rangeOrder: users.map((item) => item.id),
+                  rangeOrder: displayUsers.map((item) => item.id),
                 })
               }
               onRowDoubleClick={(user) => handleEditUser(user.id)}
@@ -769,6 +769,7 @@ export function UsersPage() {
               onRowClick={(user) =>
                 grid.selectRow(user.id, { rangeOrder: displayUsers.map((item) => item.id) })
               }
+              onRowDoubleClick={(user) => handleEditUser(user.id)}
               renderItem={(user) => (
                 <UserCard
                   user={user}
@@ -785,6 +786,7 @@ export function UsersPage() {
               onRowClick={(user) =>
                 grid.selectRow(user.id, { rangeOrder: displayUsers.map((item) => item.id) })
               }
+              onRowDoubleClick={(user) => handleEditUser(user.id)}
               renderCard={(user) => (
                 <UserCard
                   user={user}
@@ -820,7 +822,7 @@ export function UsersPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}

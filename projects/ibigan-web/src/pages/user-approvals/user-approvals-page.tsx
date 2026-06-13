@@ -411,7 +411,7 @@ export function UserApprovalsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction onClick={() => void handleApprove()} disabled={processing}>
               <CheckCircle className="mr-2 size-4" /> Aprovar
             </AlertDialogAction>
@@ -446,7 +446,7 @@ export function UserApprovalsPage() {
                 <XCircle className="mr-2 size-4" /> Rejeitar
               </Button>
               <Button variant="outline" onClick={() => setRejectTarget(null)}>
-                Cancelar
+                {t('common.close')}
               </Button>
             </div>
           </div>

@@ -14,6 +14,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { focusFirstFormError } from '@/lib/focus-first-form-error';
 import { useAuthStore } from '@/stores/auth.store';
@@ -51,7 +52,7 @@ export function PermissionFormPage() {
   const isEditing = Boolean(id);
   const canManage = useAuthStore((state) => state.hasPermission('permissao-gerenciar'));
 
-  const { data: permissionData, isLoading } = useQuery({
+  const { data: permissionData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['permission', id],
     queryFn: () => permissionsService.show(Number(id)),
     enabled: isEditing,
@@ -182,6 +183,14 @@ export function PermissionFormPage() {
     resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
   });
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing ? resetCreateForm : undefined,
+  });
+
   const pageTitle = formatFormPageTitle({
     isEditing,
     id,
@@ -204,6 +213,8 @@ export function PermissionFormPage() {
         onBack={formPage.handleBack}
         onNew={isEditing ? formPage.handleNew : undefined}
         onClear={handleClear}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         onDelete={isEditing ? formPage.handleDelete : undefined}
         entityLabel={t('permissions.entity')}
         recordLabel={permission ? formatPermissionName(permission.name) : undefined}

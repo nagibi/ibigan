@@ -79,7 +79,7 @@ export function ActivityLogsSheet({
               {isFetching ? 'Atualizando...' : 'Atualizar'}
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              {t('common.cancel')}
+              {t('common.close')}
             </Button>
           </SidePanelSheetActions>
         </SidePanelSheetFooter>

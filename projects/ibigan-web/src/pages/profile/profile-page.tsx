@@ -17,6 +17,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { focusFirstFormError, validateFormWithFocus } from '@/lib/focus-first-form-error';
 import { authService } from '@/services/auth.service';
@@ -79,7 +80,7 @@ export function ProfilePage() {
   const appearance = useAppearanceSettings();
   const apiNotify = useApiToolbarAlert();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['profile'],
     queryFn: () => profileService.show(),
   });
@@ -284,6 +285,13 @@ export function ProfilePage() {
     || passwordMutation.isPending
     || appearance.isSaving;
 
+  const formRefresh = useFormRefresh({
+    isEditing: true,
+    isDirty,
+    isFetching,
+    refetch: () => refetch(),
+  });
+
   useFormKeyboard({
     enabled: !isLoading,
     onSave: () => void handleSave(),
@@ -299,6 +307,8 @@ export function ProfilePage() {
         isDirty={isDirty}
         isSubmitting={isSubmitting}
         onSaveAndList={() => void handleSave()}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         entityLabel="perfil"
         recordLabel={profile?.name}
       />

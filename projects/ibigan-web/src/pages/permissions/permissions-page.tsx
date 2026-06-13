@@ -400,6 +400,7 @@ export function PermissionsPage() {
                 }
                 grid.selectRow(permission.id, { rangeOrder: permissionIds });
               }}
+              onRowDoubleClick={(permission) => handleEditPermission(permission.id)}
               renderItem={(permission) => (
                 <PermissionCard
                   permission={permission}
@@ -420,6 +421,7 @@ export function PermissionsPage() {
                 }
                 grid.selectRow(permission.id, { rangeOrder: permissionIds });
               }}
+              onRowDoubleClick={(permission) => handleEditPermission(permission.id)}
               renderCard={(permission) => (
                 <PermissionCard
                   permission={permission}
@@ -444,7 +446,7 @@ export function PermissionsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}

@@ -592,7 +592,7 @@ export function CampaignsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction onClick={() => void handleCancel()} disabled={isCancelling}>
               Cancelar campanha
             </AlertDialogAction>
@@ -616,7 +616,7 @@ export function CampaignsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}

@@ -1,4 +1,4 @@
-import { RotateCcw } from 'lucide-react';
+import { LayoutTemplate } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ export function GridResetControl({ disabled, onReset }: GridResetControlProps) {
         disabled={disabled}
         onClick={onReset}
       >
-        <RotateCcw className="size-3.5 shrink-0" />
+        <LayoutTemplate className="size-3.5 shrink-0" />
         {!isMobile && t('grid.reset')}
       </Button>
     </ToolbarTooltip>

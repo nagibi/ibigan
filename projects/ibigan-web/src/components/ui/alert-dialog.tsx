@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { VariantProps } from 'class-variance-authority';
@@ -100,13 +101,21 @@ function AlertDialogAction({
   );
 }
 
-function AlertDialogCancel({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+function AlertDialogCancel({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+  const { t } = useTranslation();
+
   return (
     <AlertDialogPrimitive.Cancel
       data-slot="alert-dialog-cancel"
       className={cn(buttonVariants({ variant: 'outline' }), 'mt-2 sm:mt-0', className)}
       {...props}
-    />
+    >
+      {children ?? t('common.close')}
+    </AlertDialogPrimitive.Cancel>
   );
 }
 

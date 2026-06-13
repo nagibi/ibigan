@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
+import { useGridRowClickHandler } from '@/lib/grid-row-interaction';
 import { cn } from '@/lib/utils';
 import { getGridRowClassName } from './grid-table';
 
@@ -7,7 +8,8 @@ export interface GridCardsViewProps<T> {
   getRowKey: (row: T) => string;
   renderCard: (row: T) => ReactNode;
   isRowSelected?: (row: T) => boolean;
-  onRowClick?: (row: T) => void;
+  onRowClick?: (row: T, event: MouseEvent<HTMLElement>) => void;
+  onRowDoubleClick?: (row: T, event: MouseEvent<HTMLElement>) => void;
   className?: string;
 }
 
@@ -17,8 +19,16 @@ export function GridCardsView<T>({
   renderCard,
   isRowSelected,
   onRowClick,
+  onRowDoubleClick,
   className,
 }: GridCardsViewProps<T>) {
+  const handleRowInteraction = useGridRowClickHandler({
+    getRowKey,
+    onRowClick,
+    onRowDoubleClick,
+  });
+  const isInteractive = Boolean(onRowClick || onRowDoubleClick);
+
   return (
     <div
       className={cn(
@@ -31,22 +41,22 @@ export function GridCardsView<T>({
       {data.map((row) => (
         <div
           key={getRowKey(row)}
-          role={onRowClick ? 'button' : undefined}
-          tabIndex={onRowClick ? 0 : undefined}
-          onClick={onRowClick ? () => onRowClick(row) : undefined}
+          role={isInteractive ? 'button' : undefined}
+          tabIndex={isInteractive ? 0 : undefined}
+          onClick={isInteractive ? (event) => handleRowInteraction(row, event) : undefined}
           onKeyDown={
-            onRowClick
+            isInteractive
               ? (event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    onRowClick(row);
+                    handleRowInteraction(row, event);
                   }
                 }
               : undefined
           }
           className={getGridRowClassName({
             selected: isRowSelected?.(row),
-            interactive: Boolean(onRowClick),
+            interactive: isInteractive,
             extra: 'min-w-0 w-full max-w-full overflow-hidden xl:border-b xl:border-e xl:border-border',
           })}
         >
@@ -62,7 +72,8 @@ export interface GridListViewProps<T> {
   getRowKey: (row: T) => string;
   renderItem: (row: T) => ReactNode;
   isRowSelected?: (row: T) => boolean;
-  onRowClick?: (row: T) => void;
+  onRowClick?: (row: T, event: MouseEvent<HTMLElement>) => void;
+  onRowDoubleClick?: (row: T, event: MouseEvent<HTMLElement>) => void;
   className?: string;
 }
 
@@ -72,29 +83,37 @@ export function GridListView<T>({
   renderItem,
   isRowSelected,
   onRowClick,
+  onRowDoubleClick,
   className,
 }: GridListViewProps<T>) {
+  const handleRowInteraction = useGridRowClickHandler({
+    getRowKey,
+    onRowClick,
+    onRowDoubleClick,
+  });
+  const isInteractive = Boolean(onRowClick || onRowDoubleClick);
+
   return (
     <div className={cn('space-y-2 min-w-0 w-full max-w-full overflow-x-hidden', className)}>
       {data.map((row) => (
         <div
           key={getRowKey(row)}
-          role={onRowClick ? 'button' : undefined}
-          tabIndex={onRowClick ? 0 : undefined}
-          onClick={onRowClick ? () => onRowClick(row) : undefined}
+          role={isInteractive ? 'button' : undefined}
+          tabIndex={isInteractive ? 0 : undefined}
+          onClick={isInteractive ? (event) => handleRowInteraction(row, event) : undefined}
           onKeyDown={
-            onRowClick
+            isInteractive
               ? (event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    onRowClick(row);
+                    handleRowInteraction(row, event);
                   }
                 }
               : undefined
           }
           className={getGridRowClassName({
             selected: isRowSelected?.(row),
-            interactive: Boolean(onRowClick),
+            interactive: isInteractive,
             extra: 'min-w-0 w-full max-w-full overflow-hidden rounded-lg border border-border p-3',
           })}
         >

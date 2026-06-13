@@ -637,6 +637,7 @@ export function AdminTenantsPage() {
               onRowClick={(tenant) =>
                 selection.selectRow(tenant.id, { rangeOrder: displayTenants.map((item) => item.id) })
               }
+              onRowDoubleClick={(tenant) => handleEditTenant(tenant.id)}
               renderItem={(tenant) => (
                 <OrganizationCard
                   tenant={tenant}
@@ -653,6 +654,7 @@ export function AdminTenantsPage() {
               onRowClick={(tenant) =>
                 selection.selectRow(tenant.id, { rangeOrder: displayTenants.map((item) => item.id) })
               }
+              onRowDoubleClick={(tenant) => handleEditTenant(tenant.id)}
               renderCard={(tenant) => (
                 <OrganizationCard
                   tenant={tenant}
@@ -682,7 +684,7 @@ export function AdminTenantsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}

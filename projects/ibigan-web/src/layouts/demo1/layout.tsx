@@ -8,6 +8,8 @@ import { useMenu } from '@/hooks/use-menu';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
+import { MobilePullToRefresh } from '@/components/common/mobile-pull-to-refresh';
+import { PageRefreshProvider } from '@/providers/page-refresh-provider';
 import {
   PageToolbarProvider,
   useClearPageToolbarAlertOnNavigate,
@@ -33,6 +35,7 @@ function Demo1LayoutContent() {
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
           <PageScrollContainer className="page-content-scroll flex min-h-0 min-w-0 flex-1 flex-col">
+            <MobilePullToRefresh />
             <ScrollTopAnchor />
             <PageContentHeader />
             <Outlet />
@@ -130,9 +133,11 @@ export function Demo1Layout() {
 
       {!isMobile && isSidebarMode && <Sidebar />}
 
-      <PageToolbarProvider>
-        <Demo1LayoutContent />
-      </PageToolbarProvider>
+      <PageRefreshProvider>
+        <PageToolbarProvider>
+          <Demo1LayoutContent />
+        </PageToolbarProvider>
+      </PageRefreshProvider>
     </NotificationPreferencesSheetProvider>
   );
 }

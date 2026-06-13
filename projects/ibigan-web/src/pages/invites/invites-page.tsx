@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Copy, LoaderCircle, Mail, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
@@ -109,6 +110,7 @@ function formatAuditDate(value?: string | null) {
 }
 
 export function InvitesPage() {
+  const { t } = useTranslation();
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showError } = useApiToolbarAlert();
 
@@ -641,7 +643,7 @@ export function InvitesPage() {
                   variant="outline"
                   onClick={() => setCreateOpen(false)}
                 >
-                  Cancelar
+                  {t('common.close')}
                 </Button>
               </div>
             </form>
@@ -666,7 +668,7 @@ export function InvitesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}

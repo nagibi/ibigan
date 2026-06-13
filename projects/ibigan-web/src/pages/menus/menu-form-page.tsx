@@ -13,6 +13,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
 import { FormToolbar } from '@/components/grid/form-toolbar';
@@ -70,7 +71,7 @@ export function MenuFormPage() {
     enabled: Boolean(tenantId),
   });
 
-  const { data: menuData, isLoading } = useQuery({
+  const { data: menuData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['menu', id],
     queryFn: () => menusService.show(Number(id)),
     enabled: isEditing,
@@ -201,6 +202,16 @@ export function MenuFormPage() {
 
   const formAlert = useFormToolbarAlert(form);
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing
+      ? () => form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false })
+      : undefined,
+  });
+
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       formAlert,
@@ -237,6 +248,8 @@ export function MenuFormPage() {
         onBack={formPage.handleBack}
         onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         onToggleActive={isEditing && menu
           ? () => formPage.handleToggleActive(isActive)
           : undefined

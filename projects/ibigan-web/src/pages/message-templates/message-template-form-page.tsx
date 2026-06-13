@@ -15,6 +15,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
 import { FormToolbar } from '@/components/grid/form-toolbar';
@@ -62,7 +63,7 @@ export function MessageTemplateFormPage() {
   const isEditing = Boolean(id);
   const [tagInput, setTagInput] = useState('');
 
-  const { data: templateData, isLoading } = useQuery({
+  const { data: templateData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['message-template', id],
     queryFn: () => messageTemplatesService.show(Number(id)),
     enabled: isEditing,
@@ -189,6 +190,16 @@ export function MessageTemplateFormPage() {
 
   const formAlert = useFormToolbarAlert(form);
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing
+      ? () => form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false })
+      : undefined,
+  });
+
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       formAlert,
@@ -252,6 +263,8 @@ export function MessageTemplateFormPage() {
         onBack={formPage.handleBack}
         onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         onToggleActive={isEditing && template
           ? () => formPage.handleToggleActive(isActive)
           : undefined

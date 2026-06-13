@@ -1,4 +1,5 @@
 import { ClipboardList } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -49,6 +50,8 @@ export function FormAuditSheet({
   updatedBy,
   updatedAt,
 }: FormAuditSheetProps) {
+  const { t } = useTranslation();
+
   return (
     <SidePanelSheet open={open} onOpenChange={onOpenChange}>
       <SidePanelSheetContent width={420}>
@@ -78,7 +81,7 @@ export function FormAuditSheet({
 
         <SidePanelSheetFooter>
           <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
-            Fechar
+            {t('common.close')}
           </Button>
         </SidePanelSheetFooter>
       </SidePanelSheetContent>

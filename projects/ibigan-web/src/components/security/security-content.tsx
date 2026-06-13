@@ -278,7 +278,7 @@ export function SecurityContent() {
             </form>
           </Form>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={disableForm.handleSubmit((data) => disableMutation.mutate(data))}

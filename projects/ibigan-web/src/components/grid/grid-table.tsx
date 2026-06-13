@@ -1,4 +1,4 @@
-import { useCallback, useRef, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, type MouseEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   closestCenter,
@@ -40,12 +40,10 @@ import {
   isGridCenteredColumn,
   resolveGridColumnLabel,
 } from '@/lib/grid-column-presets';
+import { useGridRowClickHandler } from '@/lib/grid-row-interaction';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/i18next';
 import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
-
-const ROW_INTERACTIVE_SELECTOR =
-  'button, a, input, textarea, select, label, [role="switch"], [role="checkbox"], [data-grid-no-row-select]';
 
 export function getGridRowClassName(options?: {
   selected?: boolean;
@@ -61,12 +59,6 @@ export function getGridRowClassName(options?: {
       ? 'bg-primary/10 [&:has(td):hover]:bg-primary/15 data-[state=selected]:bg-primary/10'
       : interactive && '[&:has(td):hover]:bg-muted/40',
   );
-}
-
-const ROW_DOUBLE_CLICK_MS = 400;
-
-function isRowInteractiveTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement && Boolean(target.closest(ROW_INTERACTIVE_SELECTOR));
 }
 
 interface GridTableProps<T> {
@@ -390,33 +382,11 @@ export function GridTable<T>({
   maxBodyHeight,
 }: GridTableProps<T>) {
   const isRowInteractive = Boolean(onRowClick || onRowDoubleClick);
-  const lastClickRef = useRef<{ rowKey: string | number; time: number } | null>(null);
-
-  const handleRowClick = useCallback(
-    (row: T, event: MouseEvent<HTMLTableRowElement>) => {
-      if (isRowInteractiveTarget(event.target)) return;
-      if (!onRowClick && !onRowDoubleClick) return;
-
-      const rowKey = getRowKey(row);
-      const now = Date.now();
-      const lastClick = lastClickRef.current;
-
-      if (
-        onRowDoubleClick &&
-        lastClick &&
-        lastClick.rowKey === rowKey &&
-        now - lastClick.time <= ROW_DOUBLE_CLICK_MS
-      ) {
-        lastClickRef.current = null;
-        onRowDoubleClick(row, event);
-        return;
-      }
-
-      lastClickRef.current = { rowKey, time: now };
-      onRowClick?.(row, event);
-    },
-    [getRowKey, onRowClick, onRowDoubleClick],
-  );
+  const handleRowClick = useGridRowClickHandler({
+    getRowKey,
+    onRowClick,
+    onRowDoubleClick,
+  });
 
   let body: ReactNode;
 

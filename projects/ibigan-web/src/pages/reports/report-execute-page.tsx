@@ -15,6 +15,7 @@ import { ptBR } from 'date-fns/locale';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import {
   buildReportExecuteDefaults,
@@ -148,13 +149,13 @@ export function ReportExecutePage() {
   });
   const formAlert = useFormToolbarAlert(form);
 
-  const { data: reportData, isLoading, isFetched, isError: isReportError } = useQuery({
+  const { data: reportData, isLoading, isFetched, isError: isReportError, isFetching: isReportFetching, refetch: refetchReport } = useQuery({
     queryKey: ['report', id],
     queryFn: () => reportsService.show(reportId),
     enabled: Number.isFinite(reportId),
   });
 
-  const { data: executionsData, refetch: refetchExecutions } = useQuery({
+  const { data: executionsData, refetch: refetchExecutions, isFetching: isExecutionsFetching } = useQuery({
     queryKey: ['report-executions', id],
     queryFn: () => reportsService.executions(reportId),
     enabled: Number.isFinite(reportId),
@@ -306,6 +307,18 @@ export function ReportExecutePage() {
     [apiAlert, formAlert, isReportInactive],
   );
 
+  const refreshReport = useCallback(() => {
+    void refetchReport();
+    void refetchExecutions();
+  }, [refetchExecutions, refetchReport]);
+
+  const formRefresh = useFormRefresh({
+    isEditing: true,
+    isDirty: form.formState.isDirty,
+    isFetching: isReportFetching || isExecutionsFetching,
+    refetch: refreshReport,
+  });
+
   const toolbarActions = useMemo(
     () => (
       <FormToolbar
@@ -314,6 +327,8 @@ export function ReportExecutePage() {
         onSaveAndList={handleExecute}
         onBack={() => navigate('/reports')}
         backImmediatelyAfterPrimary
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         primarySaveLabel="Executar"
         primarySaveTooltip="Executa o relatório com os parâmetros informados."
         primarySaveIcon={Play}
@@ -334,7 +349,7 @@ export function ReportExecutePage() {
         ) : undefined}
       />
     ),
-    [exportCSV, handleExecute, isExecuting, isReportInactive, navigate, report?.name, results],
+    [exportCSV, formRefresh.isRefreshing, formRefresh.onRefresh, handleExecute, isExecuting, isReportInactive, navigate, report?.name, results],
   );
 
   usePageToolbar({

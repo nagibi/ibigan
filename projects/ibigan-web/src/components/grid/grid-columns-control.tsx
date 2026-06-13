@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Columns3, GripVertical, Lock, RotateCcw } from 'lucide-react';
+import { Columns3, GripVertical, LayoutTemplate, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -350,7 +350,7 @@ export function GridColumnsControl<T>({
               disabled={!isCustomized}
               onClick={onResetDefault}
             >
-              <RotateCcw className="size-3.5 shrink-0" />
+              <LayoutTemplate className="size-3.5 shrink-0" />
               {t('grid.reset_columns')}
             </Button>
           </ToolbarTooltip>

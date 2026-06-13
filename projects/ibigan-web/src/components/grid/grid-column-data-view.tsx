@@ -36,10 +36,6 @@ type GridColumnDataViewProps<T> = {
   skeletonRows?: number;
 };
 
-function createSyntheticRowClickEvent(): MouseEvent<HTMLTableRowElement> {
-  return { shiftKey: false } as MouseEvent<HTMLTableRowElement>;
-}
-
 export function GridColumnDataView<T>({
   viewMode,
   columns,
@@ -68,10 +64,6 @@ export function GridColumnDataView<T>({
 }: GridColumnDataViewProps<T>) {
   const resolvedCardData = cardData ?? data;
   const resolvedEmpty = isEmpty ?? (!loading && data.length === 0);
-
-  const handleCardRowClick = onRowClick
-    ? (row: T) => onRowClick(row, createSyntheticRowClickEvent())
-    : undefined;
 
   const renderCard = (row: T) => (
     <GridColumnCard
@@ -116,7 +108,8 @@ export function GridColumnDataView<T>({
           data={resolvedCardData}
           getRowKey={(row) => String(getRowKey(row))}
           isRowSelected={isRowSelected}
-          onRowClick={handleCardRowClick}
+          onRowClick={onRowClick}
+          onRowDoubleClick={onRowDoubleClick}
           renderItem={renderCard}
         />
       )}
@@ -125,7 +118,8 @@ export function GridColumnDataView<T>({
           data={resolvedCardData}
           getRowKey={(row) => String(getRowKey(row))}
           isRowSelected={isRowSelected}
-          onRowClick={handleCardRowClick}
+          onRowClick={onRowClick}
+          onRowDoubleClick={onRowDoubleClick}
           renderCard={renderCard}
         />
       )}

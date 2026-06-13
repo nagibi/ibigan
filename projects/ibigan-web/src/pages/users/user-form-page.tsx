@@ -24,6 +24,7 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
 import { FormToolbar } from '@/components/grid/form-toolbar';
@@ -99,7 +100,7 @@ export function UserFormPage() {
   const queryClient = useQueryClient();
   const isEditing = Boolean(id);
 
-  const { data: userData, isLoading } = useQuery({
+  const { data: userData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['user', id],
     queryFn: () => usersService.show(Number(id)),
     enabled: isEditing,
@@ -257,6 +258,14 @@ export function UserFormPage() {
     resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
   });
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing ? resetCreateForm : undefined,
+  });
+
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       formAlert,
@@ -289,6 +298,8 @@ export function UserFormPage() {
         onBack={formPage.handleBack}
         onNew={isEditing ? formPage.handleNew : undefined}
         onClear={() => form.reset()}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         onToggleActive={isEditing && user
           ? () => formPage.handleToggleActive(isActive)
           : undefined

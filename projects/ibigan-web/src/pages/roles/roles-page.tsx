@@ -481,6 +481,7 @@ export function RolesPage() {
                 }
                 grid.selectRow(role.id, { rangeOrder: filteredRoles.map((item) => item.id) });
               }}
+              onRowDoubleClick={(role) => handleEditRole(role.id)}
               renderItem={(role) => (
                 <RoleCard
                   role={role}
@@ -501,6 +502,7 @@ export function RolesPage() {
                 }
                 grid.selectRow(role.id, { rangeOrder: filteredRoles.map((item) => item.id) });
               }}
+              onRowDoubleClick={(role) => handleEditRole(role.id)}
               renderCard={(role) => (
                 <RoleCard
                   role={role}
@@ -525,7 +527,7 @@ export function RolesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => void handleDelete()}

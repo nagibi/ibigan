@@ -12,6 +12,7 @@ import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { translationsService } from '@/services/translations.service';
@@ -71,7 +72,7 @@ export function TranslationFormPage() {
   const prefilledLocale = searchParams.get('locale') === 'en' ? 'en' : 'pt';
   const lockIdentityFields = Boolean(prefilledKey) || isEditing;
 
-  const { data: translationData, isLoading } = useQuery({
+  const { data: translationData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['translation', id],
     queryFn: async () => {
       const response = await translationsService.manage({});
@@ -222,6 +223,14 @@ export function TranslationFormPage() {
     resetPhantomDirty: !isEditing ? resetCreateForm : undefined,
   });
 
+  const formRefresh = useFormRefresh({
+    isEditing,
+    isDirty: form.formState.isDirty,
+    isFetching: isEditing && isFetching,
+    refetch: isEditing ? () => refetch() : undefined,
+    onReset: !isEditing ? resetCreateForm : undefined,
+  });
+
   const pageTitle = formatFormPageTitle({
     isEditing,
     id,
@@ -243,6 +252,8 @@ export function TranslationFormPage() {
         onBack={formPage.handleBack}
         onNew={isEditing ? formPage.handleNew : undefined}
         onClear={handleDiscard}
+        onRefresh={formRefresh.onRefresh}
+        isRefreshing={formRefresh.isRefreshing}
         entityLabel={t('settings.translations.entity')}
         recordLabel={translation?.key}
       />
