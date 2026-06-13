@@ -24,6 +24,7 @@ use App\Models\UserNotificationPreference;
 use App\Models\UserPreference;
 use App\Models\Webhook;
 use App\Models\WebhookDelivery;
+use App\Support\SystemMessageTemplates;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -280,6 +281,8 @@ class DemoSeeder extends Seeder
 
     private function seedMessageTemplates(): void
     {
+        SystemMessageTemplates::seed();
+
         $templates = [
             [
                 'name'       => 'Boas-vindas',

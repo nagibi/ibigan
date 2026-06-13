@@ -36,6 +36,7 @@ export function useNotifications() {
       template_name?: string;
       rows_count?: number;
       subject?: string;
+      body?: string;
       [key: string]: unknown;
     }) => {
       void invalidateNotifications(queryClient);
@@ -43,13 +44,16 @@ export function useNotifications() {
       const type = notification.type?.split('\\').pop() ?? '';
 
       if (type === 'ReportCompletedNotification') {
-        const templateName = notification.template_name ?? 'Relatório';
-        const rowsCount = notification.rows_count ?? 0;
-        const records = rowsCount === 1 ? '1 registro' : `${rowsCount} registros`;
+        const subject = notification.subject
+          ? String(notification.subject)
+          : 'Relatório pronto';
+        const description = notification.body
+          ? String(notification.body).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)
+          : undefined;
 
         showAppToast({
-          title: 'Relatório pronto',
-          description: `${templateName} — ${records}`,
+          title: subject,
+          description,
           variant: 'success',
         });
         return;

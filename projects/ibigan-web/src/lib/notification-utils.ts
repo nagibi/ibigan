@@ -11,6 +11,7 @@ export function isReportNotification(notification: AppNotification): boolean {
 
 export function getNotificationTitle(notification: AppNotification): string {
   const data = notification.data;
+  if (data.subject) return String(data.subject);
   if (data.template_name) return `Relatório "${String(data.template_name)}"`;
   if (data.message) return String(data.message);
   if (data.title) return String(data.title);

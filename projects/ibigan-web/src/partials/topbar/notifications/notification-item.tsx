@@ -206,6 +206,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
 
   if (type === 'ReportCompletedNotification') {
     const { templateId, templateName, fileName, fileMeta } = getReportDownloadMeta(notification);
+    const headline = data.subject ? String(data.subject) : templateName;
 
     return (
       <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>
@@ -223,12 +224,14 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
                   className="font-semibold text-mono hover:text-primary"
                   onClick={() => isUnread && onMarkRead(notification.id)}
                 >
-                  {templateName}
+                  {headline}
                 </Link>
               ) : (
-                <span className="font-semibold text-mono">{templateName}</span>
+                <span className="font-semibold text-mono">{headline}</span>
               )}
-              <span className="text-secondary-foreground"> disponibilizou 1 anexo</span>
+              {!data.subject ? (
+                <span className="text-secondary-foreground"> disponibilizou 1 anexo</span>
+              ) : null}
             </div>
             <NotificationMeta timeAgo={timeAgo} category="Relatórios" />
           </div>
