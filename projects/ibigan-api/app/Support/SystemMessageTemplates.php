@@ -5,10 +5,26 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\MessageTemplate;
+use App\Services\TemplateMailService;
 
 final class SystemMessageTemplates
 {
     public const REPORT_COMPLETED_ACTION_LABEL = 'Download';
+
+    /**
+     * @param  array<string, string>  $data
+     * @return array{subject: string, body: string}
+     */
+    public static function resolveReportCompleted(array $data): array
+    {
+        $definition = self::definitions()[0];
+        $service = app(TemplateMailService::class);
+
+        return [
+            'subject' => $service->replace((string) $definition['subject'], $data),
+            'body' => trim($service->replace((string) $definition['body'], $data)),
+        ];
+    }
 
     /**
      * @return list<array<string, mixed>>

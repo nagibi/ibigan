@@ -40,7 +40,7 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
     public function toMail(object $notifiable): MailMessage
     {
         $data = $this->mergeData($notifiable);
-        $content = $this->resolvedContent($notifiable);
+        $content = SystemMessageTemplates::resolveReportCompleted($data);
         $parts = $this->bodyParts($content['body']);
 
         return (new MailMessage)
@@ -90,10 +90,15 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
 
         if ($template !== null) {
             $resolved = app(TemplateMailService::class)->resolve($template, $data);
+            $body = trim($resolved['body']);
+
+            if (self::containsHtml($body)) {
+                $body = SystemMessageTemplates::resolveReportCompleted($data)['body'];
+            }
 
             return $this->resolvedContent = [
                 'subject' => $resolved['subject'],
-                'body' => trim($resolved['body']),
+                'body' => $body,
                 'slug' => $template->slug,
             ];
         }
@@ -119,6 +124,11 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
             array_map(static fn (string $part): string => trim($part), $parts),
             static fn (string $part): bool => $part !== '',
         ));
+    }
+
+    private static function containsHtml(string $body): bool
+    {
+        return preg_match('/<\s*\/?\s*(p|a|div|span|h[1-6]|br|strong|em|ul|ol|li|table)\b/i', $body) === 1;
     }
 
     /**
@@ -148,6 +158,8 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
             'name' => (string) ($notifiable->name ?? 'Usuário'),
             'report_name' => (string) $this->execution->template->name,
             'rows_summary' => $rowsSummary,
+            'rows_count' => (string) $rowsCount,
+            'duration_ms' => (string) $durationMs,
             'download_url' => $downloadUrl,
             'expires_at' => $expiresAt->timezone(config('app.timezone'))->format('d/m/Y H:i'),
         ];
