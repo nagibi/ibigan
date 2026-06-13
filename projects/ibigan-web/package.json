@@ -42,6 +42,7 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.21",
     "i18next": "^26.3.1",
+    "input-otp": "^1.4.2",
     "laravel-echo": "^2.3.7",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.556.0",

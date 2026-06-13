@@ -33,7 +33,7 @@ export function CentralLoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setCentralAuth } = useCentralAuthStore();
+  const { setCentralAuth, setRequires2FA } = useCentralAuthStore();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +70,20 @@ export function CentralLoginPage() {
 
     try {
       const res = await centralAuthService.login(data.email, data.password);
-      const { token, user } = res.data.result;
-      setCentralAuth(token, user);
+      const result = res.data.result;
+
+      if (result.requires_2fa && result.two_factor_token) {
+        setRequires2FA(result.two_factor_token);
+        navigate('/auth/two-factor', { state: { scope: 'central' } });
+        return;
+      }
+
+      if (!result.token || !result.user) {
+        setError(t('auth.login.generic_error'));
+        return;
+      }
+
+      setCentralAuth(result.token, result.user);
       navigate('/admin/tenants');
     } catch (err: unknown) {
       const payload = (err as { response?: { data?: { message_code?: string; status?: number } } })

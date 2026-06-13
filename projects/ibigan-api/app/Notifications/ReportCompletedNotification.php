@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Models\MessageTemplate;
 use App\Models\ReportExecution;
-use App\Services\TemplateMailService;
+use App\Notifications\Concerns\ResolvesMessageTemplate;
 use App\Support\MessageTemplateSlugs;
+use App\Support\PlainTextMailMessageBuilder;
 use App\Support\SystemMessageTemplates;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -19,9 +19,7 @@ use Illuminate\Support\Facades\URL;
 final class ReportCompletedNotification extends Notification implements ShouldBroadcast
 {
     use Queueable;
-
-    /** @var array{subject: string, body: string, slug: string}|null */
-    private ?array $resolvedContent = null;
+    use ResolvesMessageTemplate;
 
     public function __construct(
         private readonly ReportExecution $execution,
@@ -40,21 +38,19 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
     public function toMail(object $notifiable): MailMessage
     {
         $data = $this->mergeData($notifiable);
-        $content = SystemMessageTemplates::resolveReportCompleted($data);
-        $parts = $this->bodyParts($content['body']);
+        $content = $this->resolveTemplate($notifiable);
 
-        return (new MailMessage)
-            ->subject($content['subject'])
-            ->greeting($parts[0] ?? 'Hello!')
-            ->line($parts[1] ?? '')
-            ->line($parts[2] ?? '')
-            ->action(SystemMessageTemplates::REPORT_COMPLETED_ACTION_LABEL, $data['download_url'])
-            ->line($parts[3] ?? 'O resultado estará disponível por 7 dias.');
+        return PlainTextMailMessageBuilder::build(
+            $content['subject'],
+            $content['body'],
+            SystemMessageTemplates::REPORT_COMPLETED_ACTION_LABEL,
+            $data['download_url'],
+        );
     }
 
     public function toArray(object $notifiable): array
     {
-        $content = $this->resolvedContent($notifiable);
+        $content = $this->resolveTemplate($notifiable);
 
         return [
             'execution_id' => $this->execution->id,
@@ -73,51 +69,15 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
         return new BroadcastMessage($this->toArray($notifiable));
     }
 
-    /**
-     * @return array{subject: string, body: string, slug: string}
-     */
-    private function resolvedContent(object $notifiable): array
+    protected function templateSlug(): string
     {
-        if ($this->resolvedContent !== null) {
-            return $this->resolvedContent;
-        }
-
-        $data = $this->mergeData($notifiable);
-        $canonical = SystemMessageTemplates::resolveReportCompleted($data);
-
-        $template = MessageTemplate::query()
-            ->where('slug', MessageTemplateSlugs::REPORT_COMPLETED)
-            ->where('is_active', true)
-            ->first();
-
-        $subject = $template !== null
-            ? app(TemplateMailService::class)->replace($template->subject, $data)
-            : $canonical['subject'];
-
-        return $this->resolvedContent = [
-            'subject' => $subject,
-            'body' => $canonical['body'],
-            'slug' => MessageTemplateSlugs::REPORT_COMPLETED,
-        ];
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function bodyParts(string $body): array
-    {
-        $parts = preg_split("/\R(?:\s*\R)+/", trim($body)) ?: [];
-
-        return array_values(array_filter(
-            array_map(static fn (string $part): string => trim($part), $parts),
-            static fn (string $part): bool => $part !== '',
-        ));
+        return MessageTemplateSlugs::REPORT_COMPLETED;
     }
 
     /**
      * @return array<string, string>
      */
-    private function mergeData(object $notifiable): array
+    protected function mergeData(object $notifiable): array
     {
         $expiresAt = $this->execution->result_expires_at ?? now()->addDays(7);
         $rowsCount = (int) ($this->execution->result_rows_count ?? 0);

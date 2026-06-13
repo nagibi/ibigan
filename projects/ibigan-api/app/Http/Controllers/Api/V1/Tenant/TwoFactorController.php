@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\TwoFactorSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -53,7 +54,7 @@ final class TwoFactorController extends Controller
     /**
      * Confirmar 2FA com código OTP do aplicativo autenticador.
      */
-    public function confirm(Request $request): JsonResponse
+    public function confirm(Request $request, TwoFactorSyncService $twoFactorSyncService): JsonResponse
     {
         $request->validate([
             'code' => ['required', 'string'],
@@ -79,12 +80,15 @@ final class TwoFactorController extends Controller
             'two_factor_confirmed_at' => now(),
         ]);
 
+        $freshUser = $user->fresh();
+        $twoFactorSyncService->syncFromTenantUser($freshUser);
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000425',
             'description' => 'Autenticação em duas etapas confirmada!',
             'result' => [
-                'recovery_codes' => $this->decryptRecoveryCodes($user->fresh()),
+                'recovery_codes' => $this->decryptRecoveryCodes($freshUser),
             ],
         ]);
     }
@@ -94,7 +98,7 @@ final class TwoFactorController extends Controller
      *
      * Requer senha atual do usuário.
      */
-    public function disable(Request $request): JsonResponse
+    public function disable(Request $request, TwoFactorSyncService $twoFactorSyncService): JsonResponse
     {
         $request->validate([
             'password' => ['required', 'string', 'current_password'],
@@ -105,6 +109,8 @@ final class TwoFactorController extends Controller
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ]);
+
+        $twoFactorSyncService->clearForTenantUser($request->user());
 
         return response()->json([
             'status' => 1,
@@ -117,7 +123,7 @@ final class TwoFactorController extends Controller
     /**
      * Retornar recovery codes do 2FA.
      */
-    public function recoveryCodes(Request $request): JsonResponse
+    public function recoveryCodes(Request $request, TwoFactorSyncService $twoFactorSyncService): JsonResponse
     {
         $user = $request->user();
 
@@ -126,6 +132,8 @@ final class TwoFactorController extends Controller
                 'two_factor' => ['Ative a autenticação em duas etapas antes de continuar.'],
             ]);
         }
+
+        $twoFactorSyncService->syncFromTenantUser($user);
 
         return response()->json([
             'status' => 1,
@@ -139,7 +147,7 @@ final class TwoFactorController extends Controller
     /**
      * Gerar novos recovery codes e invalidar os anteriores.
      */
-    public function regenerateRecoveryCodes(Request $request): JsonResponse
+    public function regenerateRecoveryCodes(Request $request, TwoFactorSyncService $twoFactorSyncService): JsonResponse
     {
         $user = $request->user();
 
@@ -154,6 +162,8 @@ final class TwoFactorController extends Controller
         $user->update([
             'two_factor_recovery_codes' => Crypt::encryptString(json_encode($recoveryCodes)),
         ]);
+
+        $twoFactorSyncService->syncFromTenantUser($user->fresh());
 
         return response()->json([
             'status' => 1,

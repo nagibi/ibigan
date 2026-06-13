@@ -12,49 +12,39 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class UserApprovedNotification extends Notification
+final class ResetPasswordNotification extends Notification
 {
     use Queueable;
     use ResolvesMessageTemplate;
+
+    public function __construct(
+        private readonly string $token,
+    ) {}
 
     /**
      * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return ['mail'];
     }
 
     public function toMail(object $notifiable): MailMessage
     {
         $content = $this->resolveTemplate($notifiable);
+        $resetUrl = $this->resetUrl($notifiable);
 
         return PlainTextMailMessageBuilder::build(
             $content['subject'],
             $content['body'],
-            SystemMessageTemplates::USER_APPROVED_ACTION_LABEL,
-            (string) config('app.frontend_url', url('/')),
+            SystemMessageTemplates::PASSWORD_RESET_ACTION_LABEL,
+            $resetUrl,
         );
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function toArray(object $notifiable): array
-    {
-        $content = $this->resolveTemplate($notifiable);
-
-        return [
-            'type' => 'user_approved',
-            'subject' => $content['subject'],
-            'body' => $content['body'],
-            'slug' => $content['slug'],
-        ];
     }
 
     protected function templateSlug(): string
     {
-        return MessageTemplateSlugs::USER_APPROVED;
+        return MessageTemplateSlugs::PASSWORD_RESET;
     }
 
     /**
@@ -62,9 +52,25 @@ final class UserApprovedNotification extends Notification
      */
     protected function mergeData(object $notifiable): array
     {
+        $resetUrl = $this->resetUrl($notifiable);
+
         return [
             'name' => (string) ($notifiable->name ?? 'Usuário'),
-            'app_url' => (string) config('app.frontend_url', url('/')),
+            'email' => (string) ($notifiable->email ?? ''),
+            'link' => $resetUrl,
         ];
+    }
+
+    private function resetUrl(object $notifiable): string
+    {
+        $frontendUrl = rtrim((string) config('app.frontend_url', url('/')), '/');
+        $tenantId = tenant()?->id;
+        $query = http_build_query(array_filter([
+            'token' => $this->token,
+            'email' => $notifiable->email ?? null,
+            'tenant_id' => is_string($tenantId) ? $tenantId : null,
+        ]));
+
+        return "{$frontendUrl}/auth/forgot-password?{$query}";
     }
 }

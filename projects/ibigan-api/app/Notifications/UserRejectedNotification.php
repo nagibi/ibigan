@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\ResolvesMessageTemplate;
+use App\Support\MessageTemplateSlugs;
+use App\Support\PlainTextMailMessageBuilder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -11,6 +14,7 @@ use Illuminate\Notifications\Notification;
 final class UserRejectedNotification extends Notification
 {
     use Queueable;
+    use ResolvesMessageTemplate;
 
     public function __construct(private readonly ?string $reason = null) {}
 
@@ -24,15 +28,12 @@ final class UserRejectedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $msg = (new MailMessage)
-            ->subject('Cadastro não aprovado')
-            ->line('Infelizmente seu cadastro não foi aprovado.');
+        $content = $this->resolveTemplate($notifiable);
 
-        if ($this->reason) {
-            $msg->line("Motivo: {$this->reason}");
-        }
-
-        return $msg->line('Entre em contato com o administrador para mais informações.');
+        return PlainTextMailMessageBuilder::build(
+            $content['subject'],
+            $content['body'],
+        );
     }
 
     /**
@@ -40,9 +41,32 @@ final class UserRejectedNotification extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $content = $this->resolveTemplate($notifiable);
+
         return [
             'type' => 'user_rejected',
             'reason' => $this->reason,
+            'subject' => $content['subject'],
+            'body' => $content['body'],
+            'slug' => $content['slug'],
+        ];
+    }
+
+    protected function templateSlug(): string
+    {
+        return MessageTemplateSlugs::USER_REJECTED;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function mergeData(object $notifiable): array
+    {
+        return [
+            'name' => (string) ($notifiable->name ?? 'Usuário'),
+            'reason_line' => $this->reason !== null && $this->reason !== ''
+                ? "Motivo: {$this->reason}"
+                : '',
         ];
     }
 }

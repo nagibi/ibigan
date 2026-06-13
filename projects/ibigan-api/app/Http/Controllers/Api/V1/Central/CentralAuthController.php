@@ -9,7 +9,9 @@ use App\Models\Central\CentralUser;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 final class CentralAuthController extends Controller
@@ -36,6 +38,24 @@ final class CentralAuthController extends Controller
             return ApiResponse::error(
                 'auth.login.unauthorized',
                 httpStatus: Response::HTTP_FORBIDDEN,
+            );
+        }
+
+        if ($user->two_factor_confirmed_at !== null) {
+            $twoFactorToken = Str::uuid()->toString();
+
+            Cache::put('two_factor:'.$twoFactorToken, [
+                'scope' => 'central',
+                'user_id' => $user->id,
+            ], now()->addMinutes(5));
+
+            return ApiResponse::success(
+                [
+                    'requires_2fa' => true,
+                    'two_factor_token' => $twoFactorToken,
+                ],
+                'auth.login.two_factor_required',
+                severity: 'info',
             );
         }
 

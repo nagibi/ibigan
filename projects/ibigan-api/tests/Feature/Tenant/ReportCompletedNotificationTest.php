@@ -158,13 +158,13 @@ it('monta email padrao laravel com botao download', function (): void {
     expect($mail->outroLines)->toContain('O resultado estará disponível por 7 dias.');
 });
 
-it('ignora corpo html legado do template na notificacao in-app', function (): void {
+it('usa corpo do template cadastrado no banco', function (): void {
     tenancy()->initialize($this->tenant);
 
     MessageTemplate::query()
         ->where('slug', MessageTemplateSlugs::REPORT_COMPLETED)
         ->update([
-            'body' => '<p>Olá, {{name}}!</p><p>{{rows_count}} registros encontrados em {{duration_ms}}.</p>',
+            'body' => 'Relatório {{report_name}} concluído com {{rows_summary}}.',
         ]);
 
     $template = ReportTemplate::query()->create([
@@ -193,11 +193,7 @@ it('ignora corpo html legado do template na notificacao in-app', function (): vo
     $notification = new ReportCompletedNotification($execution, 'app');
     $payload = $notification->toArray($this->user);
 
-    expect($payload['body'])->toContain('Hello!');
-    expect($payload['body'])->toContain('Relatório mensal');
-    expect($payload['body'])->toContain('5 registros encontrados em 120ms');
-    expect($payload['body'])->not->toContain('<p>');
-    expect($payload['body'])->not->toContain('{{report_name}}');
+    expect($payload['body'])->toBe('Relatório Relatório mensal concluído com 5 registros encontrados em 120ms.');
 });
 
 it('substitui merge tags mesmo quando template no banco esta em uma linha', function (): void {

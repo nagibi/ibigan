@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Jobs\Concerns\TenantAwareJob;
-use App\Models\MessageTemplate;
 use App\Models\User;
 use App\Notifications\TemplateNotification;
-use App\Services\TemplateMailService;
+use App\Services\MessageTemplateResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 final class SendTemplateNotificationJob implements ShouldQueue
@@ -24,14 +23,9 @@ final class SendTemplateNotificationJob implements ShouldQueue
         private readonly array $data = [],
     ) {}
 
-    public function handle(TemplateMailService $service): void
+    public function handle(MessageTemplateResolver $templateResolver): void
     {
-        $template = MessageTemplate::query()
-            ->where('slug', $this->templateSlug)
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        $resolved = $service->resolve($template, $this->data);
+        $resolved = $templateResolver->resolve($this->templateSlug, $this->data);
 
         $user = User::query()->where('email', $this->toEmail)->first();
 
@@ -42,7 +36,7 @@ final class SendTemplateNotificationJob implements ShouldQueue
         $user->notify(new TemplateNotification(
             subject: $resolved['subject'],
             body: $resolved['body'],
-            slug: $this->templateSlug,
+            slug: $resolved['slug'],
         ));
     }
 }

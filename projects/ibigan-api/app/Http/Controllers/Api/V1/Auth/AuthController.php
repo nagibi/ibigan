@@ -62,6 +62,7 @@ final class AuthController extends Controller
             $twoFactorToken = Str::uuid()->toString();
 
             Cache::put('two_factor:'.$twoFactorToken, [
+                'scope' => 'tenant',
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
             ], now()->addMinutes(5));

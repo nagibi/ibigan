@@ -6,8 +6,7 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\TenantAwareJob;
 use App\Mail\TemplateMailable;
-use App\Models\MessageTemplate;
-use App\Services\TemplateMailService;
+use App\Services\MessageTemplateResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Mail;
 
@@ -24,13 +23,9 @@ final class SendTemplateEmailJob implements ShouldQueue
         private readonly array $data = [],
     ) {}
 
-    public function handle(TemplateMailService $templateMailService): void
+    public function handle(MessageTemplateResolver $templateResolver): void
     {
-        $template = MessageTemplate::query()
-            ->where('slug', $this->templateSlug)
-            ->firstOrFail();
-
-        $resolved = $templateMailService->resolve($template, $this->data);
+        $resolved = $templateResolver->resolve($this->templateSlug, $this->data);
 
         Mail::to($this->to)->send(new TemplateMailable(
             emailSubject: $resolved['subject'],

@@ -9,6 +9,7 @@ use App\Models\MessageTemplate;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Notifications\TemplateNotification;
+use App\Services\MessageTemplateResolver;
 use App\Services\TemplateMailService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -208,7 +209,7 @@ it('job envia email ao ser processado', function (): void {
             ['nome' => 'João', 'empresa' => 'Acme'],
         );
 
-        $job->handle(new TemplateMailService);
+        $job->handle(app(MessageTemplateResolver::class));
     });
 
     Mail::assertSent(TemplateMailable::class);
@@ -224,7 +225,7 @@ it('job de notificação envia para usuário existente', function (): void {
             ['nome' => 'João', 'empresa' => 'Acme'],
         );
 
-        $job->handle(new TemplateMailService);
+        $job->handle(app(MessageTemplateResolver::class));
     });
 
     Notification::assertSentTo($this->admin, TemplateNotification::class);
@@ -240,7 +241,7 @@ it('job de notificação ignora destinatário sem usuário cadastrado', function
             ['nome' => 'João'],
         );
 
-        $job->handle(new TemplateMailService);
+        $job->handle(app(MessageTemplateResolver::class));
     });
 
     Notification::assertNothingSent();

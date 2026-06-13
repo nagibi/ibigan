@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
 use Database\Seeders\RolePermissionSeeder;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -57,7 +57,7 @@ it('envia link de reset para email válido', function (): void {
         ->assertJsonPath('status', 1);
 
     $this->tenant->run(function (): void {
-        Notification::assertSentTo($this->user, ResetPassword::class);
+        Notification::assertSentTo($this->user, ResetPasswordNotification::class);
     });
 });
 

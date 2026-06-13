@@ -148,6 +148,12 @@ final class CampaignService
      */
     public function resolveContent(Campaign $campaign, User $user): array
     {
+        $template = $campaign->template;
+
+        if ($template === null) {
+            throw new \RuntimeException('Campanha sem template de mensagem cadastrado.');
+        }
+
         $mergeData = array_merge(
             $campaign->merge_data ?? [],
             [
@@ -157,14 +163,7 @@ final class CampaignService
             ],
         );
 
-        if ($campaign->template) {
-            return $this->templateMailService->resolve($campaign->template, $mergeData);
-        }
-
-        return [
-            'subject' => $this->replaceTags((string) $campaign->subject, $mergeData),
-            'body' => $this->replaceTags((string) $campaign->body, $mergeData),
-        ];
+        return $this->templateMailService->resolve($template, $mergeData);
     }
 
     private function updateCampaignProgress(?Campaign $campaign): void
@@ -197,17 +196,5 @@ final class CampaignService
                 'failed' => $failed,
             ]),
         ]);
-    }
-
-    /**
-     * @param  array<string, string>  $data
-     */
-    private function replaceTags(string $content, array $data): string
-    {
-        foreach ($data as $tag => $value) {
-            $content = str_replace('{{'.$tag.'}}', $value, $content);
-        }
-
-        return $content;
     }
 }
