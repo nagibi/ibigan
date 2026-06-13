@@ -94,6 +94,59 @@ it('nega listagem de menus para viewer', function (): void {
         ->assertForbidden();
 });
 
+it('retorna menu de navegação para viewer autenticado', function (): void {
+    $this->tenant->run(function (): void {
+        Menu::factory()->create([
+            'title' => 'Campanhas',
+            'slug' => 'campanhas',
+            'path' => '/campaigns',
+            'roles' => ['viewer'],
+            'is_active' => true,
+        ]);
+        Menu::factory()->create([
+            'title' => 'Administração',
+            'slug' => 'administracao',
+            'path' => '/menus',
+            'roles' => ['admin'],
+            'is_active' => true,
+        ]);
+    });
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/menus/navigation', menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('status', 1)
+        ->assertJsonFragment(['title' => 'Campanhas'])
+        ->assertJsonMissing(['title' => 'Administração']);
+});
+
+it('menu de navegação exclui itens inativos', function (): void {
+    $this->tenant->run(function (): void {
+        Menu::factory()->create([
+            'title' => 'Ativo',
+            'slug' => 'ativo',
+            'path' => '/active',
+            'roles' => ['viewer'],
+            'is_active' => true,
+        ]);
+        Menu::factory()->create([
+            'title' => 'Inativo',
+            'slug' => 'inativo',
+            'path' => '/inactive',
+            'roles' => ['viewer'],
+            'is_active' => false,
+        ]);
+    });
+
+    Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/menus/navigation', menuHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonFragment(['title' => 'Ativo'])
+        ->assertJsonMissing(['title' => 'Inativo']);
+});
+
 it('nega listagem sem autenticação', function (): void {
     $this->getJson('/api/v1/menus', menuHeaders($this->tenant->id))
         ->assertUnauthorized();

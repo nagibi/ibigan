@@ -25,6 +25,8 @@ export interface MenusResponse {
 }
 
 export const menusService = {
+  navigation: () => api.get<MenusResponse>('/v1/menus/navigation'),
+
   list: () => api.get<MenusResponse>('/v1/menus'),
 
   show: (id: number) =>

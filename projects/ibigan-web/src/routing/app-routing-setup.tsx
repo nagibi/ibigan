@@ -44,6 +44,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router';
 import { CentralLayout } from '@/components/layouts/central-layout';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
 import { RequireSuperAdmin } from '@/routing/require-super-admin';
+import { RequirePermission } from '@/routing/require-permission';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 /**
@@ -166,15 +167,19 @@ export function AppRoutingSetup() {
         <Route path="/users/new" element={<UserFormPage key="user-new" />} />
         <Route path="/users/:id" element={<UserFormPage key="user-edit" />} />
         <Route path="/user-approvals" element={<UserApprovalsPage />} />
-        <Route path="/menus" element={<MenusPage />} />
-        <Route path="/menus/new" element={<MenuFormPage key="menu-new" />} />
-        <Route path="/menus/:id" element={<MenuFormPage key="menu-edit" />} />
-        <Route path="/roles" element={<RolesPage />} />
-        <Route path="/roles/new" element={<RoleFormPage key="role-new" />} />
-        <Route path="/roles/:id" element={<RoleFormPage key="role-edit" />} />
-        <Route path="/permissions" element={<PermissionsPage />} />
-        <Route path="/permissions/new" element={<PermissionFormPage key="permission-new" />} />
-        <Route path="/permissions/:id" element={<PermissionFormPage key="permission-edit" />} />
+        <Route element={<RequirePermission permission="menu-visualizar" />}>
+          <Route path="/menus" element={<MenusPage />} />
+          <Route path="/menus/new" element={<MenuFormPage key="menu-new" />} />
+          <Route path="/menus/:id" element={<MenuFormPage key="menu-edit" />} />
+        </Route>
+        <Route element={<RequirePermission permission="permissao-visualizar" />}>
+          <Route path="/roles" element={<RolesPage />} />
+          <Route path="/roles/new" element={<RoleFormPage key="role-new" />} />
+          <Route path="/roles/:id" element={<RoleFormPage key="role-edit" />} />
+          <Route path="/permissions" element={<PermissionsPage />} />
+          <Route path="/permissions/new" element={<PermissionFormPage key="permission-new" />} />
+          <Route path="/permissions/:id" element={<PermissionFormPage key="permission-edit" />} />
+        </Route>
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />

@@ -22,7 +22,7 @@ class MenuSeeder extends Seeder
             'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         // ── Gestão ────────────────────────────────────────────────
@@ -34,7 +34,7 @@ class MenuSeeder extends Seeder
             'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         Menu::create([
@@ -82,7 +82,7 @@ class MenuSeeder extends Seeder
             'order' => 3,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'super-admin'],
+            'roles' => ['admin', 'manager', 'operator', 'super-admin'],
         ]);
 
         Menu::create([
@@ -94,7 +94,7 @@ class MenuSeeder extends Seeder
             'order' => 4,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         // ── Relatórios ────────────────────────────────────────────
@@ -106,7 +106,7 @@ class MenuSeeder extends Seeder
             'order' => 2,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         Menu::create([
@@ -118,7 +118,7 @@ class MenuSeeder extends Seeder
             'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         Menu::create([
@@ -130,7 +130,7 @@ class MenuSeeder extends Seeder
             'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         // ── Administração (tenant + SaaS) ─────────────────────────
@@ -226,7 +226,7 @@ class MenuSeeder extends Seeder
             'order' => 4,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         Menu::create([
@@ -238,7 +238,7 @@ class MenuSeeder extends Seeder
             'order' => 0,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         Menu::create([
@@ -250,7 +250,7 @@ class MenuSeeder extends Seeder
             'order' => 1,
             'is_active' => true,
             'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'super-admin'],
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
         // ── Ferramentas (dev) ─────────────────────────────────────

@@ -22,22 +22,47 @@ final class MenuController extends Controller
     use TogglesModelActive;
 
     /**
-     * Listar menus em árvore hierárquica.
+     * Menu de navegação para o usuário autenticado (somente itens ativos).
+     */
+    public function navigation(Request $request): JsonResponse
+    {
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000067',
+            'result' => $this->buildMenuTreeForUser($request, activeOnly: true),
+        ]);
+    }
+
+    /**
+     * Listar menus em árvore hierárquica (gestão — inclui inativos).
      */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()->can('menu-visualizar'), Response::HTTP_FORBIDDEN);
 
-        $userRoles = $request->user()->getRoleNames()->all();
-        $menus = Menu::query()->orderBy('order')->get();
-        $visibleMenus = MenuData::visibleForUserRoles($menus, $userRoles);
-        $tree = MenuData::pruneEmptyGroups(MenuData::treeFromCollection($visibleMenus));
-
         return response()->json([
             'status' => 1,
             'message' => 'MSG000067',
-            'result' => $tree,
+            'result' => $this->buildMenuTreeForUser($request),
         ]);
+    }
+
+    /**
+     * @return list<MenuData>
+     */
+    private function buildMenuTreeForUser(Request $request, bool $activeOnly = false): array
+    {
+        $userRoles = $request->user()->getRoleNames()->all();
+
+        $query = Menu::query()->orderBy('order');
+
+        if ($activeOnly) {
+            $query->where('is_active', true);
+        }
+
+        $visibleMenus = MenuData::visibleForUserRoles($query->get(), $userRoles);
+
+        return MenuData::pruneEmptyGroups(MenuData::treeFromCollection($visibleMenus));
     }
 
     /**

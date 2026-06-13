@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { menusService } from '@/services/menus.service';
 import { mapApiMenusToConfig } from '@/lib/menu-mapper';
 import { filterMenuForUser } from '@/lib/filter-menu-for-user';
+import { filterMenuByPermissions } from '@/lib/filter-menu-by-permissions';
 import { mergeAccountMenuItems } from '@/lib/merge-account-menu-items';
 import { mergeDevToolsMenuItems } from '@/lib/merge-dev-tools-menu-items';
 import { mergeSaasMenuItems } from '@/lib/merge-saas-menu-items';
@@ -20,27 +21,42 @@ export function useDynamicMenu(): MenuConfig {
   const isCentralSuperAdmin = useCentralAuthStore((state) => state.centralUser?.is_super_admin);
   const isSuperAdmin = Boolean(isCentralSuperAdmin || isTenantSuperAdmin);
 
-  const { data } = useQuery({
-    queryKey: ['menus', tenantId],
-    queryFn: () => menusService.list(),
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+
+  const { data, isSuccess, isPending } = useQuery({
+    queryKey: ['menus', 'navigation', tenantId],
+    queryFn: () => menusService.navigation(),
     staleTime: 5 * 60 * 1000,
     enabled: Boolean(tenantId),
   });
 
   return useMemo(() => {
-    const baseMenu = !data?.data.result?.length
-      ? MENU_SIDEBAR
-      : mergeDevToolsMenuItems(
-        mergeAccountMenuItems(
-          mergeSaasMenuItems(
-            mapApiMenusToConfig(data.data.result, (key, fallback) => t(key, fallback)),
-            MENU_SIDEBAR,
-          ),
+    const fallbackMenu = filterMenuByPermissions(
+      filterMenuForUser(MENU_SIDEBAR, isSuperAdmin),
+      hasPermission,
+    );
+
+    if (isPending) {
+      return [];
+    }
+
+    const apiMenus = isSuccess ? data?.data.result ?? [] : [];
+
+    if (!isSuccess || apiMenus.length === 0) {
+      return fallbackMenu;
+    }
+
+    const baseMenu = mergeDevToolsMenuItems(
+      mergeAccountMenuItems(
+        mergeSaasMenuItems(
+          mapApiMenusToConfig(apiMenus, (key, fallback) => t(key, fallback)),
           MENU_SIDEBAR,
         ),
         MENU_SIDEBAR,
-      );
+      ),
+      MENU_SIDEBAR,
+    );
 
     return filterMenuForUser(baseMenu, isSuperAdmin);
-  }, [data, isSuperAdmin, t]);
+  }, [data, hasPermission, isPending, isSuccess, isSuperAdmin, t]);
 }

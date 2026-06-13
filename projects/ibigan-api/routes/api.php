@@ -150,6 +150,7 @@ Route::prefix('v1')
         Route::get('activity-logs', [ActivityLogController::class, 'index']);
         Route::get('activity-logs/{type}/{id}', [ActivityLogController::class, 'forSubject']);
 
+        Route::get('menus/navigation', [MenuController::class, 'navigation']);
         Route::patch('menus/reorder', [MenuController::class, 'reorder']);
         Route::patch('menus/{menu}/toggle-active', [MenuController::class, 'toggleActive']);
         Route::apiResource('menus', MenuController::class);
