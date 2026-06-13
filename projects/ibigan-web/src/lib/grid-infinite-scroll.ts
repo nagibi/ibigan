@@ -2,6 +2,8 @@ import type { ViewMode } from '@/types/view-mode';
 import type { GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { isGridPerPageAll, resolveGridPerPageForSlice } from '@/lib/grid-pagination-config';
 
+import type { GridInfiniteScrollConfig } from '@/components/grid/data-view';
+
 export function shouldUseGridInfiniteScroll(isMobile: boolean, viewMode: ViewMode) {
   return isMobile && viewMode !== 'table';
 }
@@ -37,4 +39,48 @@ export function getClientInfiniteSlice<T>(items: T[], page: number, perPage: num
 
 export function appendGridInfinitePage<T>(previous: T[], pageItems: T[], page: number) {
   return page === 1 ? pageItems : [...previous, ...pageItems];
+}
+
+export function buildServerGridInfiniteScrollProps(options: {
+  enabled: boolean;
+  infiniteScroll: {
+    hasMore: boolean;
+    loadMore: () => void;
+    loadingMore: boolean;
+    loadedCount: number;
+    total: number;
+  };
+  loading: boolean;
+}): GridInfiniteScrollConfig | undefined {
+  if (!options.enabled) return undefined;
+
+  return {
+    enabled: true,
+    hasMore: options.infiniteScroll.hasMore,
+    loading: options.loading,
+    loadingMore: options.infiniteScroll.loadingMore,
+    onLoadMore: options.infiniteScroll.loadMore,
+    loadedCount: options.infiniteScroll.loadedCount,
+    total: options.infiniteScroll.total,
+  };
+}
+
+export function buildClientGridInfiniteScrollProps(options: {
+  enabled: boolean;
+  clientInfinite: {
+    hasMore: boolean;
+    loadMore: () => void;
+    loadedCount: number;
+    total: number;
+  };
+}): GridInfiniteScrollConfig | undefined {
+  if (!options.enabled) return undefined;
+
+  return {
+    enabled: true,
+    hasMore: options.clientInfinite.hasMore,
+    onLoadMore: options.clientInfinite.loadMore,
+    loadedCount: options.clientInfinite.loadedCount,
+    total: options.clientInfinite.total,
+  };
 }

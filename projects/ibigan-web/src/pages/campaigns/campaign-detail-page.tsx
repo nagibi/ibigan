@@ -6,11 +6,12 @@ import { ArrowLeft, CheckCircle, Clock, LoaderCircle, Mail, XCircle } from 'luci
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { campaignsService } from '@/services/campaigns.service';
+import { PageBody } from '@/components/common/page-body';
+import { GridTableScroll } from '@/components/grid/grid-table-scroll';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -48,20 +49,22 @@ export function CampaignDetailPage() {
 
   if (loadingCampaign) {
     return (
-      <div className="container py-6 flex justify-center">
-        <LoaderCircle className="size-6 animate-spin" />
-      </div>
+      <PageBody>
+        <div className="flex justify-center py-12">
+          <LoaderCircle className="size-6 animate-spin" />
+        </div>
+      </PageBody>
     );
   }
 
   return (
-    <div className="container py-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" mode="icon" size="sm" onClick={() => navigate('/campaigns')}>
+    <PageBody>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start">
+        <Button variant="ghost" mode="icon" size="sm" className="self-start" onClick={() => navigate('/campaigns')}>
           <ArrowLeft className="size-4" />
         </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold">{campaign?.name}</h1>
             <Badge variant={campaign?.status === 'sent' ? 'primary' : 'secondary'}>
               {campaign?.status}
@@ -74,7 +77,7 @@ export function CampaignDetailPage() {
       </div>
 
       {campaign?.stats && (
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {[
             { label: 'Total', value: campaign.stats.total, color: 'text-foreground' },
             { label: 'Enviados', value: campaign.stats.sent, color: 'text-blue-600' },
@@ -84,7 +87,7 @@ export function CampaignDetailPage() {
             <Card key={s.label}>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">{s.label}</p>
-                <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
+                <p className={`text-2xl font-bold sm:text-3xl ${s.color}`}>{s.value}</p>
               </CardContent>
             </Card>
           ))}
@@ -94,10 +97,10 @@ export function CampaignDetailPage() {
       <Card className="mb-6">
         <CardHeader><CardTitle>Detalhes</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
             <div>
               <p className="text-muted-foreground">Canais</p>
-              <div className="flex gap-1 mt-1">
+              <div className="mt-1 flex flex-wrap gap-1">
                 {campaign?.channels.map((ch) => (
                   <Badge key={ch} variant="outline">{ch}</Badge>
                 ))}
@@ -122,56 +125,58 @@ export function CampaignDetailPage() {
       <Card>
         <CardHeader><CardTitle>Histórico de entregas</CardTitle></CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Destinatário</TableHead>
-                <TableHead>Canal</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Enviado em</TableHead>
-                <TableHead>Aberto em</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loadingDeliveries ? (
+          <GridTableScroll className="max-xl:h-auto max-xl:flex-none">
+            <table className="w-max min-w-full table-auto caption-bottom text-sm text-foreground">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <LoaderCircle className="size-5 animate-spin mx-auto" />
-                  </TableCell>
+                  <TableHead>Destinatário</TableHead>
+                  <TableHead>Canal</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Enviado em</TableHead>
+                  <TableHead>Aberto em</TableHead>
                 </TableRow>
-              ) : deliveries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Nenhuma entrega registrada ainda.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                deliveries.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className="text-sm">{d.recipient_email ?? `User #${d.user_id}`}</TableCell>
-                    <TableCell><Badge variant="outline">{d.channel}</Badge></TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {statusIcon[d.status]}
-                        <span className="text-sm">{d.status}</span>
-                      </div>
-                      {d.error_message && (
-                        <p className="text-xs text-destructive mt-0.5">{d.error_message}</p>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {d.sent_at ? format(new Date(d.sent_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : '—'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {d.opened_at ? format(new Date(d.opened_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : '—'}
+              </TableHeader>
+              <TableBody>
+                {loadingDeliveries ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center">
+                      <LoaderCircle className="mx-auto size-5 animate-spin" />
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : deliveries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                      Nenhuma entrega registrada ainda.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  deliveries.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="text-sm">{d.recipient_email ?? `User #${d.user_id}`}</TableCell>
+                      <TableCell><Badge variant="outline">{d.channel}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {statusIcon[d.status]}
+                          <span className="text-sm">{d.status}</span>
+                        </div>
+                        {d.error_message && (
+                          <p className="mt-0.5 text-xs text-destructive">{d.error_message}</p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {d.sent_at ? format(new Date(d.sent_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {d.opened_at ? format(new Date(d.opened_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </table>
+          </GridTableScroll>
           {meta && meta.last_page > 1 && (
-            <div className="flex justify-center gap-2 p-4">
+            <div className="flex flex-wrap justify-center gap-2 p-4">
               <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
               <span className="flex items-center text-sm text-muted-foreground">Página {meta.current_page} de {meta.last_page}</span>
               <Button variant="outline" size="sm" disabled={page === meta.last_page} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
@@ -179,6 +184,6 @@ export function CampaignDetailPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageBody>
   );
 }

@@ -139,6 +139,7 @@ Rotas protegidas requerem Bearer token obtido via `/auth/login`.',
 
     'middleware' => [
         'web',
+        \App\Http\Middleware\AuthenticateDevTools::class,
         RestrictedDocsAccess::class,
     ],
 

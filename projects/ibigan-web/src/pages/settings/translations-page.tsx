@@ -2,12 +2,18 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Pencil, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridFilters } from '@/hooks/use-grid-filters';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildClientGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { getApiErrorMessage } from '@/lib/get-api-error-message';
 import {
   buildTranslationCatalog,
@@ -19,7 +25,9 @@ import { useLanguage } from '@/providers/i18n-provider';
 import { translationsService } from '@/services/translations.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { PageBody } from '@/components/common/page-body';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { type GridActiveFilter } from '@/components/grid/grid-filters-control';
 import { isGridPerPageAll } from '@/lib/grid-pagination-config';
 import { GridPagination } from '@/components/grid/grid-pagination';
@@ -27,7 +35,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridQuickFilters } from '@/components/grid/grid-quick-filters';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
-import { GridTable } from '@/components/grid/grid-table';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import {
   GridPanelToolbar,
   GridToolbarButton,
@@ -44,6 +52,7 @@ export function TranslationsPage() {
   const { reloadTranslations } = useLanguage();
   const gridToasts = useGridToasts();
   const canManage = useAuthStore((state) => state.hasPermission('configuracao-gerenciar'));
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.translations);
   const grid = useGrid({ defaultPerPage: 25 });
   const columnFilters = useGridFilters(() => grid.setPage(1));
 
@@ -113,6 +122,23 @@ export function TranslationsPage() {
     const start = (grid.page - 1) * pageSize;
     return sortedCatalog.slice(start, start + pageSize);
   }, [grid.page, grid.slicePerPage, sortedCatalog]);
+
+  const clientInfinite = useClientGridInfiniteScroll({
+    items: sortedCatalog,
+    page: grid.page,
+    perPage: grid.perPage,
+    setPage: grid.setPage,
+    enabled: infiniteScrollEnabled,
+    resetDeps: [
+      grid.debouncedSearch,
+      columnFilters.debouncedFilters,
+      localeQuickFilter,
+      grid.sort,
+      grid.sortDir,
+    ],
+  });
+
+  const cardListCatalog = infiniteScrollEnabled ? clientInfinite.displayItems : paginatedCatalog;
 
   const rowIds = useMemo(
     () => paginatedCatalog.map((row) => getTranslationRowId(row)),
@@ -227,9 +253,9 @@ export function TranslationsPage() {
             <GridRowActions
               actions={[
                 {
-                  label: t('common.edit'),
-                  tooltip: t('grid.tooltip.edit'),
-                  icon: Pencil,
+                  label: t('common.view'),
+                  tooltip: t('grid.tooltip.view'),
+                  icon: GRID_VIEW_ICON,
                   onClick: () => openEdit(row),
                 },
               ]}
@@ -261,10 +287,7 @@ export function TranslationsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -412,6 +435,9 @@ export function TranslationsPage() {
                 onReset={handleResetGrid}
               />
             )}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
             quickFiltersControl={(
               <GridQuickFilters
                 value={localeQuickFilter}
@@ -436,17 +462,23 @@ export function TranslationsPage() {
                 ]}
               />
             )}
-            recordCount={{ total: meta.total }}
+            recordCount={getGridRecordCount(meta.total, cardListCatalog.length, infiniteScrollEnabled)}
           />
         )}
-        footer={pagination}
+        footer={!infiniteScrollEnabled ? pagination : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={paginatedCatalog}
+          cardData={infiniteScrollEnabled ? cardListCatalog : undefined}
           getRowKey={(row) => getTranslationRowKey(row)}
           loading={false}
           emptyMessage={emptyMessage}
+          infiniteScroll={buildClientGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            clientInfinite,
+          })}
           sort={grid.sort}
           sortDir={grid.sortDir}
           onSort={grid.toggleSort}

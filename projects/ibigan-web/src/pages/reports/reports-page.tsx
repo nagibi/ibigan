@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Pencil, Play, Trash2 } from 'lucide-react';
+import { Play, Trash2 } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { useNavigate } from 'react-router-dom';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
@@ -11,13 +14,19 @@ import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { reportsService, type ReportTemplate } from '@/services/reports.service';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import {
@@ -49,6 +58,7 @@ export function ReportsPage() {
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.reports);
 
   const grid = useGrid({
     onActivate: async (ids) => {
@@ -86,6 +96,22 @@ export function ReportsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [rowStatusId, setRowStatusId] = useState<number | null>(null);
 
+  const infiniteScroll = useGridInfiniteScroll<ReportTemplate>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -97,7 +123,9 @@ export function ReportsPage() {
         grid.sortDir,
         columnFilters.activeFilterParams,
       );
-      setReports(res.data.result.data);
+      const pageReports = res.data.result.data;
+      setReports(pageReports);
+      infiniteScroll.receivePage(pageReports, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar relatórios.', error);
@@ -111,8 +139,11 @@ export function ReportsPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
   ]);
+
+  const displayReports = infiniteScrollEnabled ? infiniteScroll.items : reports;
 
   loadRef.current = load;
 
@@ -237,8 +268,8 @@ export function ReportsPage() {
                 onClick: () => navigate(`/reports/${report.id}/execute`),
               },
               {
-                label: 'Editar',
-                icon: Pencil,
+                label: 'Visualizar',
+                icon: GRID_VIEW_ICON,
                 onClick: () => handleEditReport(report.id),
               },
               {
@@ -319,6 +350,13 @@ export function ReportsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -337,12 +375,7 @@ export function ReportsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -360,25 +393,6 @@ export function ReportsPage() {
     grid.search,
     grid.clearSearch,
   ]);
-
-  function handleResetColumns() {
-    gridColumns.resetColumns();
-    showSuccess('Colunas restauradas ao padrão.');
-  }
-
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
@@ -439,7 +453,7 @@ export function ReportsPage() {
             onSearch={grid.setSearch}
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -461,26 +475,36 @@ export function ReportsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={handleResetColumns}
+                onResetDefault={gridActions.handleResetColumns}
               />
             }
             resetControl={
               <GridResetControl
                 disabled={!isGridCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             }
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayReports.length, infiniteScrollEnabled)}
           />
         }
-        footer={pagination}
+        footer={!infiniteScrollEnabled ? pagination : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={reports}
+          cardData={infiniteScrollEnabled ? displayReports : undefined}
           getRowKey={(report) => report.id}
           loading={loading}
           emptyMessage="Nenhum relatório encontrado."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading,
+          })}
           sort={grid.sort}
           sortDir={grid.sortDir}
           onSort={grid.toggleSort}

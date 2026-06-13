@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BarChart2, Bell, CheckCircle, Download, ExternalLink, LoaderCircle, Mail, Trash2 } from 'lucide-react';
+import { BarChart2, Bell, CheckCircle, Eye, LoaderCircle, Mail, Trash2 } from 'lucide-react';
+import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
 import {
   getNotificationTitle,
   getNotificationType,
@@ -189,7 +190,7 @@ export function NotificationDetailSheet({
             >
               {downloading
                 ? <LoaderCircle className="mr-1 size-3.5 animate-spin" />
-                : <Download className="mr-1 size-3.5" />
+                : <GridDownloadIcon className="mr-1 size-3.5" />
               }
               Baixar CSV
             </Button>
@@ -197,8 +198,8 @@ export function NotificationDetailSheet({
           {reportMeta?.templateId ? (
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to={`/reports/${reportMeta.templateId}/execute`} onClick={() => onOpenChange(false)}>
-                <ExternalLink className="mr-1 size-3.5" />
-                Abrir relatório
+                <Eye className="mr-1 size-3.5" />
+                Visualizar
               </Link>
             </Button>
           ) : null}

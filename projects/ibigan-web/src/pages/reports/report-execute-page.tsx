@@ -5,11 +5,11 @@ import { useForm } from 'react-hook-form';
 import {
   CheckCircle,
   Clock,
-  Download,
   LoaderCircle,
   Play,
   XCircle,
 } from 'lucide-react';
+import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
@@ -24,13 +24,13 @@ import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolba
 import { FormToolbar } from '@/components/grid/form-toolbar';
 import { PageBody } from '@/components/common/page-body';
 import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
+import { GridTableScroll } from '@/components/grid/grid-table-scroll';
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -296,7 +296,7 @@ export function ReportExecutePage() {
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       apiAlert,
-      isReportInactive ? buildInactiveAlert('relatório') : null,
+      isReportInactive ? buildInactiveAlert('report') : null,
     ),
     [apiAlert, isReportInactive],
   );
@@ -323,7 +323,7 @@ export function ReportExecutePage() {
             className="h-8 gap-1.5 px-2 text-xs font-medium"
             onClick={exportCSV}
           >
-            <Download className="size-3.5" />
+            <GridDownloadIcon className="size-3.5" />
             Exportar CSV
           </Button>
         ) : undefined}
@@ -481,8 +481,8 @@ export function ReportExecutePage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-auto max-h-[600px] rounded-md border">
-            <Table>
+          <GridTableScroll className="rounded-md border max-xl:h-auto max-xl:flex-none">
+            <table className="w-max min-w-full table-auto caption-bottom text-sm text-foreground">
               <TableHeader>
                 <TableRow>
                   {cols.map((column) => (
@@ -509,8 +509,8 @@ export function ReportExecutePage() {
                   ))
                 )}
               </TableBody>
-            </Table>
-          </div>
+            </table>
+          </GridTableScroll>
         )}
       </FormPanel>
     </PageBody>

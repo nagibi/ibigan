@@ -1,4 +1,5 @@
 import type { TranslationCatalogRow } from '@/lib/translation-catalog';
+import { matchesSelectFilterValue } from '@/lib/grid-filter-display';
 
 export function filterTranslationCatalog(
   rows: TranslationCatalogRow[],
@@ -18,7 +19,7 @@ export function filterTranslationCatalog(
       return false;
     }
 
-    if (localeFilter && row.locale !== localeFilter) {
+    if (localeFilter && !matchesSelectFilterValue(row.locale, localeFilter)) {
       return false;
     }
 

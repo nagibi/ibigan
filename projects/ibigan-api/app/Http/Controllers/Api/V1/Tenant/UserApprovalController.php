@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UserApproval;
 use App\Notifications\UserApprovedNotification;
 use App\Notifications\UserRejectedNotification;
+use App\Support\GridFilter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,8 +19,15 @@ final class UserApprovalController extends Controller
     {
         abort_unless($request->user()->can('aprovacao-visualizar'), Response::HTTP_FORBIDDEN);
 
+        $statuses = GridFilter::csvValues($request->query('status', 'pending'));
+
         $approvals = UserApproval::with('user')
-            ->where('status', $request->query('status', 'pending'))
+            ->when(
+                $statuses !== [],
+                fn ($query) => count($statuses) === 1
+                    ? $query->where('status', $statuses[0])
+                    : $query->whereIn('status', $statuses),
+            )
             ->orderByDesc('created_at')
             ->paginate($request->integer('per_page', 15));
 

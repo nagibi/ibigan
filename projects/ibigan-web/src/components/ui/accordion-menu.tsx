@@ -194,7 +194,7 @@ function AccordionMenuSeparator({ className, ...props }: AccordionMenuSeparatorP
 }
 
 const itemVariants = cva(
-  'relative cursor-pointer select-none flex w-full text-start items-center text-foreground rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground disabled:opacity-50 disabled:bg-transparent focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 [&_a]:flex [&>a]:w-full [&>a]:items-center [&>a]:gap-2',
+  'relative cursor-pointer select-none flex w-full text-start items-center text-foreground rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary disabled:opacity-50 disabled:bg-transparent focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 [&_a]:flex [&>a]:w-full [&>a]:items-center [&>a]:gap-2 data-[selected=true]:[&_svg]:opacity-100',
   {
     variants: {
       variant: {
@@ -215,12 +215,16 @@ function AccordionMenuItem({
   variant,
   asChild,
   onClick,
+  selected,
   ...props
 }: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item> &
   VariantProps<typeof itemVariants> & {
     onClick?: React.MouseEventHandler<HTMLElement>;
+    selected?: boolean;
   }) {
   const { classNames, selectedValue, matchPath, onItemClick } = React.useContext(AccordionMenuContext);
+  const isSelected = selected ?? (matchPath(props.value as string) || selectedValue === props.value);
+
   return (
     <AccordionPrimitive.Item className="flex" {...props}>
       <AccordionPrimitive.Header className="flex w-full">
@@ -257,7 +261,7 @@ function AccordionMenuItem({
               }
             }
           }}
-          data-selected={matchPath(props.value as string) || selectedValue === props.value ? 'true' : undefined}
+          data-selected={isSelected ? 'true' : undefined}
         >
           {children}
         </AccordionPrimitive.Trigger>
@@ -290,7 +294,7 @@ function AccordionMenuSubTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-menu-sub-trigger"
         className={cn(
-          'w-full relative flex items-center cursor-pointer select-none text-start rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([role=img]):not([class*=text-])]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0',
+          'relative w-full flex items-center cursor-pointer select-none text-start rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([role=img]):not([class*=text-])]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 data-[selected=true]:[&_[data-slot=accordion-menu-icon]]:opacity-100',
           classNames?.subTrigger,
           className,
         )}

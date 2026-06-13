@@ -110,7 +110,7 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Templates de Relatório',
+            'title' => 'Relatórios',
             'slug' => 'templates-relatorio',
             'icon' => 'BarChart2',
             'path' => '/reports',
@@ -254,8 +254,6 @@ class MenuSeeder extends Seeder
         ]);
 
         // ── Ferramentas (dev) ─────────────────────────────────────
-        $apiBase = rtrim((string) config('app.url'), '/');
-
         $ferramentas = Menu::create([
             'title' => 'Ferramentas',
             'slug' => 'ferramentas',
@@ -271,7 +269,7 @@ class MenuSeeder extends Seeder
             'title' => 'Documentação API',
             'slug' => 'documentacao-api',
             'icon' => 'BookOpen',
-            'path' => env('DEV_TOOLS_API_DOCS_URL', "{$apiBase}/docs/api"),
+            'path' => config('dev-tools.api_docs_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
             'order' => 0,
@@ -284,7 +282,7 @@ class MenuSeeder extends Seeder
             'title' => 'Horizon',
             'slug' => 'horizon',
             'icon' => 'Gauge',
-            'path' => env('DEV_TOOLS_HORIZON_URL', "{$apiBase}/horizon"),
+            'path' => config('dev-tools.horizon_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
             'order' => 1,
@@ -297,7 +295,7 @@ class MenuSeeder extends Seeder
             'title' => 'phpMyAdmin',
             'slug' => 'phpmyadmin',
             'icon' => 'Database',
-            'path' => env('DEV_TOOLS_PHPMYADMIN_URL', 'http://localhost:8080'),
+            'path' => config('dev-tools.phpmyadmin_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
             'order' => 2,
@@ -310,7 +308,7 @@ class MenuSeeder extends Seeder
             'title' => 'Mailpit',
             'slug' => 'mailpit',
             'icon' => 'Mailbox',
-            'path' => env('DEV_TOOLS_MAILPIT_URL', 'http://localhost:8025'),
+            'path' => config('dev-tools.mailpit_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
             'order' => 3,

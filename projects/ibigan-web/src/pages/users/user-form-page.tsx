@@ -116,7 +116,7 @@ export function UserFormPage() {
   const formPage = useFormPage({
     backPath: '/users',
     newPath: '/users/new',
-    entityLabel: 'usuário',
+    entityKey: 'user',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {
@@ -260,7 +260,7 @@ export function UserFormPage() {
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       formAlert,
-      isEditing && user && !isActive ? buildInactiveAlert('usuário') : null,
+      isEditing && user && !isActive ? buildInactiveAlert('user') : null,
     ),
     [formAlert, isActive, isEditing, user],
   );

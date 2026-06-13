@@ -17,7 +17,7 @@ import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
 import { FormToolbar } from '@/components/grid/form-toolbar';
 import { PageBody } from '@/components/common/page-body';
-import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
+import { FormFieldGrid, FormFieldGridItem, FormRepeatableRow, FormRepeatableRowAction } from '@/components/grid/form-field-grid';
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
@@ -97,7 +97,7 @@ export function ReportFormPage() {
   const formPage = useFormPage({
     backPath: '/reports',
     newPath: '/reports/new',
-    entityLabel: 'relatório',
+    entityKey: 'report',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {
@@ -226,7 +226,7 @@ export function ReportFormPage() {
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       formAlert,
-      isEditing && !isActive ? buildInactiveAlert('relatório') : null,
+      isEditing && !isActive ? buildInactiveAlert('report') : null,
     ),
     [formAlert, isActive, isEditing],
   );
@@ -366,7 +366,7 @@ export function ReportFormPage() {
             ) : (
               <div className="space-y-3">
                 {paramFields.map((field, i) => (
-                  <div key={field.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-end">
+                  <FormRepeatableRow key={field.id} variant="5-col">
                     <FormField control={form.control} name={`parameters.${i}.name`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Nome (código)</FormLabel>}
@@ -399,10 +399,12 @@ export function ReportFormPage() {
                         <FormControl><Switch checked={f.value} onCheckedChange={f.onChange} /></FormControl>
                       </FormItem>
                     )} />
-                    <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeParam(i)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </div>
+                    <FormRepeatableRowAction>
+                      <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeParam(i)}>
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </FormRepeatableRowAction>
+                  </FormRepeatableRow>
                 ))}
               </div>
             )}
@@ -424,7 +426,7 @@ export function ReportFormPage() {
             ) : (
               <div className="space-y-3">
                 {colFields.map((field, i) => (
-                  <div key={field.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                  <FormRepeatableRow key={field.id} variant="4-col">
                     <FormField control={form.control} name={`columns.${i}.key`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Chave (campo SQL)</FormLabel>}
@@ -453,10 +455,12 @@ export function ReportFormPage() {
                         </Select>
                       </FormItem>
                     )} />
-                    <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeCol(i)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </div>
+                    <FormRepeatableRowAction>
+                      <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeCol(i)}>
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </FormRepeatableRowAction>
+                  </FormRepeatableRow>
                 ))}
               </div>
             )}

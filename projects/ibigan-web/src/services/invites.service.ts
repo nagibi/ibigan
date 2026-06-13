@@ -33,21 +33,25 @@ export const invitesService = {
     direction?: 'asc' | 'desc',
     columnFilters?: Record<string, string>,
   ) => {
-    const filterParams = Object.fromEntries(
-      Object.entries(columnFilters ?? {})
-        .filter(([, value]) => value.trim().length > 0)
-        .map(([key, value]) => [`filter_${key}`, value]),
-    );
+    const params: Record<string, string | number> = {
+      page,
+      per_page: perPage,
+      ...(search ? { search } : {}),
+      ...(sort ? { sort, direction: direction ?? 'asc' } : {}),
+    };
 
-    return api.get<InvitesPaginatedResponse>('/v1/invites', {
-      params: {
-        page,
-        per_page: perPage,
-        ...(search ? { search } : {}),
-        ...(sort ? { sort, direction: direction ?? 'asc' } : {}),
-        ...filterParams,
-      },
-    });
+    for (const [key, value] of Object.entries(columnFilters ?? {})) {
+      if (!value.trim()) continue;
+
+      if (key === 'status') {
+        params.status = value;
+        continue;
+      }
+
+      params[`filter_${key}`] = value;
+    }
+
+    return api.get<InvitesPaginatedResponse>('/v1/invites', { params });
   },
 
   store: (payload: { email: string; role: string }) =>

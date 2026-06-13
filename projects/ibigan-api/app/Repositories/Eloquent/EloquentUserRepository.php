@@ -6,6 +6,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Support\GridFilter;
 use Illuminate\Database\Eloquent\Builder;
 
 final class EloquentUserRepository extends BaseRepository implements UserRepositoryInterface
@@ -114,7 +115,7 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
             )
             ->when(
                 filled($filters['filter_status'] ?? null),
-                fn (Builder $q) => $q->where('status', $filters['filter_status'])
+                fn (Builder $q) => GridFilter::applyWhereInFromCsv($q, 'status', (string) $filters['filter_status']),
             )
             ->when(
                 filled($filters['filter_created_at_from'] ?? null) || filled($filters['filter_created_at_to'] ?? null),
@@ -162,7 +163,7 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
             )
             ->when(
                 filled($filters['filter_gender'] ?? null),
-                fn (Builder $q) => $q->where('gender', $filters['filter_gender'])
+                fn (Builder $q) => GridFilter::applyWhereInFromCsv($q, 'gender', (string) $filters['filter_gender']),
             )
             ->when(
                 filled($filters['filter_bio'] ?? null),

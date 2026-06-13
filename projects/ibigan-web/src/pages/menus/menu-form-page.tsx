@@ -84,7 +84,7 @@ export function MenuFormPage() {
   const formPage = useFormPage({
     backPath: '/menus',
     newPath: '/menus/new',
-    entityLabel: 'menu',
+    entityKey: 'menu',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {

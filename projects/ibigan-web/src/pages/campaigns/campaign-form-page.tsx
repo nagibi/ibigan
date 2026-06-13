@@ -17,7 +17,7 @@ import { useFormPage } from '@/hooks/use-form-page';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { FormToolbar } from '@/components/grid/form-toolbar';
 import { PageBody } from '@/components/common/page-body';
-import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
+import { FormFieldGrid, FormFieldGridItem, FormInlineRow } from '@/components/grid/form-field-grid';
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
@@ -117,7 +117,7 @@ export function CampaignFormPage() {
   const formPage = useFormPage({
     backPath: '/campaigns',
     newPath: '/campaigns/new',
-    entityLabel: 'campanha',
+    entityKey: 'campaign',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {
@@ -374,7 +374,7 @@ export function CampaignFormPage() {
           </FormPanel>
 
           <FormPanel title="Canais de envio">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {CHANNELS.map((ch) => (
                 <div key={ch.value} className="flex items-center gap-2">
                   <Checkbox
@@ -415,7 +415,7 @@ export function CampaignFormPage() {
             </div>
             <div className="space-y-3">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex gap-2 items-start">
+                <FormInlineRow key={field.id}>
                   <FormField
                     control={form.control}
                     name={`recipients.${index}.type`}
@@ -453,11 +453,11 @@ export function CampaignFormPage() {
                     />
                   )}
                   {fields.length > 1 && (
-                    <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => remove(index)}>
+                    <Button type="button" variant="ghost" mode="icon" size="sm" className="self-end sm:self-start" onClick={() => remove(index)}>
                       <Trash2 className="size-4 text-destructive" />
                     </Button>
                   )}
-                </div>
+                </FormInlineRow>
               ))}
               {form.formState.errors.recipients && (
                 <p className="text-sm text-destructive">{form.formState.errors.recipients.message}</p>

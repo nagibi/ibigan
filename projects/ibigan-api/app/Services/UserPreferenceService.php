@@ -20,6 +20,17 @@ final class UserPreferenceService
         'permissions.view',
         'organizations.view',
         'menus.view',
+        'reports.view',
+        'campaigns.view',
+        'message-templates.view',
+        'invites.view',
+        'webhooks.view',
+        'translations.view',
+        'reports.executions.view',
+        'user-approvals.view',
+        'activity-logs.view',
+        'notifications.view',
+        'central-users.view',
     ];
 
     public function getForUser(User $user): array

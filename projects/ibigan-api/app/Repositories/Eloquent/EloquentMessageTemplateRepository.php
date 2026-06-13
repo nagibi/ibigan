@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\Models\MessageTemplate;
+use App\Support\GridFilter;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -28,7 +29,24 @@ final class EloquentMessageTemplateRepository extends BaseRepository implements 
             )
             ->when(
                 isset($filters['is_active']),
-                fn (Builder $q) => $q->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN))
+                function (Builder $q) use ($filters): void {
+                    $values = array_map(
+                        static fn (string $value): bool => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+                        GridFilter::csvValues((string) $filters['is_active']),
+                    );
+
+                    if ($values === []) {
+                        return;
+                    }
+
+                    if (count($values) === 1) {
+                        $q->where('is_active', $values[0]);
+
+                        return;
+                    }
+
+                    $q->whereIn('is_active', $values);
+                },
             )
             ->when(
                 isset($filters['filter_name']),

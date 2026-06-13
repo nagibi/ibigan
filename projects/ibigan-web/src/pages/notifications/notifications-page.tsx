@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart2, Check, CheckCheck, Download, ExternalLink, Eye, MailOpen, Settings, Trash2 } from 'lucide-react';
+import { BarChart2, Check, CheckCheck, ExternalLink, Eye, MailOpen, Settings, Trash2 } from 'lucide-react';
+import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
 import { Switch } from '@/components/ui/switch';
 import { resolveMenuIcon } from '@/lib/menu-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
+import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { useReadUnreadFilterOptions } from '@/lib/grid-filter-options';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import {
   dateRangeFilterFromKey,
   dateRangeFilterToKey,
@@ -38,14 +48,16 @@ import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { NotificationDetailSheet } from '@/components/notifications/notification-detail-sheet';
 import { PageBody } from '@/components/common/page-body';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination } from '@/components/grid/grid-pagination';
 import { GridQuickFilters } from '@/components/grid/grid-quick-filters';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
-import { GridTable } from '@/components/grid/grid-table';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import {
   GridPanelToolbar,
   GridToolbarButton,
@@ -67,18 +79,16 @@ import {
 
 const GRID_COLUMNS_KEY = 'grid-columns:notifications';
 
-const READ_STATUS_FILTER_OPTIONS = [
-  { label: 'Lida', value: 'read' },
-  { label: 'Não lida', value: 'unread' },
-];
-
 export function NotificationsPage() {
+  const { t } = useTranslation();
+  const readStatusFilterOptions = useReadUnreadFilterOptions();
   const navigate = useNavigate();
   const { open: openPreferences } = useNotificationPreferencesSheet();
   const notificationsMenu = useApiMenuByPath('/notifications');
   const notificationPreferencesMenu = useApiMenuByPath('/notification-preferences');
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useApiToolbarAlert();
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.notifications);
   const grid = useGrid();
   const columnFilters = useGridFilters(() => grid.setPage(1));
   const [activeFilter, setActiveFilter] = useState<NotificationQuickFilter>('all');
@@ -131,6 +141,29 @@ export function NotificationsPage() {
       setKnownTotal(meta.total);
     }
   }, [meta.total]);
+
+  const infiniteScroll = useGridInfiniteScroll<AppNotification>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading: isLoading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      columnFilters.activeFilterParams,
+      activeFilter,
+      infiniteScrollEnabled,
+    ],
+  });
+
+  useEffect(() => {
+    if (!isLoading) {
+      infiniteScroll.receivePage(notifications, grid.page);
+    }
+  }, [notifications, grid.page, isLoading, infiniteScroll.receivePage]);
+
+  const displayNotifications = infiniteScrollEnabled ? infiniteScroll.items : notifications;
 
   const reportCount = useMemo(
     () => notifications.filter(isReportNotification).length,
@@ -331,7 +364,7 @@ export function NotificationsPage() {
                 ? [
                     {
                       label: 'Baixar CSV',
-                      icon: Download,
+                      icon: GRID_DOWNLOAD_ICON,
                       onClick: () => void handleDownloadReport(notification),
                       disabled: downloadingId === notification.id,
                     },
@@ -376,7 +409,7 @@ export function NotificationsPage() {
           type: 'select',
           filterKey: 'read_status',
           placeholder: 'Status',
-          options: READ_STATUS_FILTER_OPTIONS,
+          options: readStatusFilterOptions,
         },
         render: (notification) => {
           const isToggling = (
@@ -421,6 +454,23 @@ export function NotificationsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+  });
+
+  const gridToasts = useGridToasts();
+
+  const handleResetGrid = useCallback(() => {
+    gridColumns.resetColumns();
+    grid.resetSettings();
+    columnFilters.clearAllFilters();
+    setActiveFilter('all');
+    clearSelection();
+    gridToasts.gridRestored();
+  }, [clearSelection, columnFilters, grid, gridColumns, gridToasts]);
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -453,12 +503,7 @@ export function NotificationsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -478,26 +523,11 @@ export function NotificationsPage() {
     grid.search,
   ]);
 
-  const handleClearFilters = useCallback(() => {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }, [columnFilters, grid, showSuccess]);
-
   const handleFilterChange = useCallback((value: NotificationQuickFilter) => {
     setActiveFilter(value);
     clearSelection();
     grid.setPage(1);
   }, [clearSelection, grid]);
-
-  const handleResetGrid = useCallback(() => {
-    gridColumns.resetColumns();
-    grid.resetSettings();
-    columnFilters.clearAllFilters();
-    setActiveFilter('all');
-    clearSelection();
-    showSuccess('Grid restaurado ao padrão.');
-  }, [clearSelection, columnFilters, grid, gridColumns, showSuccess]);
 
   const isGridCustomized = grid.isCustomized
     || gridColumns.isCustomized
@@ -586,7 +616,7 @@ export function NotificationsPage() {
             searchPlaceholder="Buscar notificações..."
             filters={{
               active: activeFilters,
-              onClearAll: activeFilters.length > 0 ? handleClearFilters : undefined,
+              onClearAll: activeFilters.length > 0 ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -617,6 +647,9 @@ export function NotificationsPage() {
                 onReset={handleResetGrid}
               />
             )}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
             quickFiltersControl={(
               <GridQuickFilters
                 value={activeFilter}
@@ -630,24 +663,31 @@ export function NotificationsPage() {
                 ]}
               />
             )}
-            recordCount={{ total: knownTotal || meta.total }}
+            recordCount={getGridRecordCount(knownTotal || meta.total, displayNotifications.length, infiniteScrollEnabled)}
           />
         )}
-        footer={(
+        footer={!infiniteScrollEnabled ? (
           <GridPagination
             meta={meta}
             perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />
-        )}
+        ) : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={notifications}
+          cardData={infiniteScrollEnabled ? displayNotifications : undefined}
           getRowKey={(notification) => notification.id}
           loading={isLoading}
           emptyMessage={emptyMessage}
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading: isLoading,
+          })}
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
           isRowSelected={(notification) => selected.includes(notification.id)}
           onRowClick={handleViewNotification}

@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BarChart3, Pencil, Trash2, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { BarChart3, Trash2, X } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { useTranslation } from 'react-i18next';
+import { useCampaignStatusFilterOptions } from '@/lib/grid-filter-options';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridFilters } from '@/hooks/use-grid-filters';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import { campaignsService, type Campaign } from '@/services/campaigns.service';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import {
@@ -44,22 +54,6 @@ const statusVariant: Record<Campaign['status'], 'primary' | 'secondary' | 'outli
   cancelled: 'destructive',
 };
 
-const statusLabel: Record<Campaign['status'], string> = {
-  draft: 'Rascunho',
-  scheduled: 'Agendado',
-  sending: 'Enviando',
-  sent: 'Enviado',
-  cancelled: 'Cancelado',
-};
-
-const STATUS_FILTER_OPTIONS = [
-  { label: 'Rascunho', value: 'draft' },
-  { label: 'Agendado', value: 'scheduled' },
-  { label: 'Enviando', value: 'sending' },
-  { label: 'Enviado', value: 'sent' },
-  { label: 'Cancelado', value: 'cancelled' },
-];
-
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
   return format(new Date(value), "dd/MM/yy 'às' HH:mm", { locale: ptBR });
@@ -74,9 +68,23 @@ function isEditable(campaign: Campaign) {
 }
 
 export function CampaignsPage() {
+  const { t } = useTranslation();
+  const statusFilterOptions = useCampaignStatusFilterOptions();
+  const statusLabel = useMemo(
+    () => ({
+      draft: t('campaigns.status.draft'),
+      scheduled: t('campaigns.status.scheduled'),
+      sending: t('campaigns.status.sending'),
+      sent: t('campaigns.status.sent'),
+      cancelled: t('campaigns.status.cancelled'),
+    }),
+    [t],
+  );
   const navigate = useNavigate();
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showError, showInfo } = useApiToolbarAlert();
+
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.campaigns);
 
   const grid = useGrid();
   const columnFilters = useGridFilters(() => grid.setPage(1));
@@ -93,6 +101,22 @@ export function CampaignsPage() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelId, setCancelId] = useState<number | null>(null);
 
+  const infiniteScroll = useGridInfiniteScroll<Campaign>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -104,7 +128,9 @@ export function CampaignsPage() {
         grid.sortDir,
         columnFilters.activeFilterParams,
       );
-      setCampaigns(res.data.result.data);
+      const pageCampaigns = res.data.result.data;
+      setCampaigns(pageCampaigns);
+      infiniteScroll.receivePage(pageCampaigns, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar campanhas.', error);
@@ -118,8 +144,11 @@ export function CampaignsPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
   ]);
+
+  const displayCampaigns = infiniteScrollEnabled ? infiniteScroll.items : campaigns;
 
   loadRef.current = load;
 
@@ -270,8 +299,8 @@ export function CampaignsPage() {
                 onClick: () => handleViewCampaign(campaign.id),
               },
               {
-                label: 'Editar',
-                icon: Pencil,
+                label: 'Visualizar',
+                icon: GRID_VIEW_ICON,
                 hidden: !isEditable(campaign),
                 onClick: () => handleEditCampaign(campaign.id),
               },
@@ -333,7 +362,7 @@ export function CampaignsPage() {
           type: 'select',
           filterKey: 'status',
           placeholder: 'Todos',
-          options: STATUS_FILTER_OPTIONS,
+          options: statusFilterOptions,
         },
         className: 'w-[120px]',
         render: (campaign) => (
@@ -374,10 +403,19 @@ export function CampaignsPage() {
       grid.toggleSelect,
       handleEditCampaign,
       handleViewCampaign,
+      statusFilterOptions,
+      statusLabel,
     ],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
 
   const activeFilters = useMemo(() => {
     const items = [];
@@ -397,10 +435,7 @@ export function CampaignsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -418,25 +453,6 @@ export function CampaignsPage() {
     grid.search,
     grid.clearSearch,
   ]);
-
-  function handleResetColumns() {
-    gridColumns.resetColumns();
-    showSuccess('Colunas restauradas ao padrão.');
-  }
-
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
@@ -482,7 +498,7 @@ export function CampaignsPage() {
             onSearch={grid.setSearch}
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -504,33 +520,43 @@ export function CampaignsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={handleResetColumns}
+                onResetDefault={gridActions.handleResetColumns}
               />
             }
             resetControl={
               <GridResetControl
                 disabled={!isGridCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             }
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayCampaigns.length, infiniteScrollEnabled)}
           />
         }
-        footer={
+        footer={!infiniteScrollEnabled ? (
           <GridPagination
             meta={meta}
             perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />
-        }
+        ) : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={campaigns}
+          cardData={infiniteScrollEnabled ? displayCampaigns : undefined}
           getRowKey={(campaign) => campaign.id}
           loading={loading}
           emptyMessage="Nenhuma campanha criada ainda."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading,
+          })}
           sort={grid.sort}
           sortDir={grid.sortDir}
           onSort={grid.toggleSort}

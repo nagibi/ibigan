@@ -19,7 +19,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { format, isAfter, isBefore, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronRight, GripVertical, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, GripVertical, Trash2 } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getColumnFilterDisplayValue, matchesSelectFilterValue } from '@/lib/grid-filter-display';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
@@ -239,8 +241,10 @@ function matchesMenuColumnFilters(menu: ApiMenu, filters: Record<string, string>
   }
 
   const activeFilter = filters.is_active?.trim();
-  if (activeFilter === 'active' && !menu.is_active) return false;
-  if (activeFilter === 'inactive' && menu.is_active) return false;
+  if (activeFilter) {
+    const isActive = menu.is_active ? 'active' : 'inactive';
+    if (!matchesSelectFilterValue(isActive, activeFilter)) return false;
+  }
 
   const title = filters.title?.trim();
   if (title && !menu.title.toLowerCase().includes(title.toLowerCase())) return false;
@@ -368,7 +372,7 @@ function renderMenuTableCell(
         <div className="flex justify-center">
           <GridRowActions
             actions={[
-              { label: 'Editar', icon: Pencil, onClick: () => options.onEdit(menu) },
+              { label: 'Visualizar', icon: GRID_VIEW_ICON, onClick: () => options.onEdit(menu) },
               {
                 label: 'Remover',
                 icon: Trash2,
@@ -653,12 +657,7 @@ export function MenusPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -749,7 +748,7 @@ export function MenusPage() {
 
   const getMenuRowActions = useCallback(
     (menu: ApiMenu): GridRowAction[] => [
-      { label: 'Editar', icon: Pencil, onClick: () => handleEdit(menu) },
+      { label: 'Visualizar', icon: GRID_VIEW_ICON, onClick: () => handleEdit(menu) },
       {
         label: 'Remover',
         icon: Trash2,

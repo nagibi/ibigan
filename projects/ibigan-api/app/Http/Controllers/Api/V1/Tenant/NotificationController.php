@@ -8,6 +8,7 @@ use App\Data\NotificationData;
 use App\Events\NotificationsInvalidated;
 use App\Events\NotificationStatusChanged;
 use App\Http\Controllers\Controller;
+use App\Support\GridFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
@@ -169,12 +170,18 @@ final class NotificationController extends Controller
         }
 
         if ($request->filled('filter_read_status')) {
-            $status = $request->string('filter_read_status')->toString();
+            $statuses = GridFilter::csvValues($request->string('filter_read_status')->toString());
 
-            if ($status === 'read') {
-                $query->whereNotNull('read_at');
-            } elseif ($status === 'unread') {
-                $query->whereNull('read_at');
+            if ($statuses !== []) {
+                $query->where(function (Builder $q) use ($statuses): void {
+                    foreach ($statuses as $status) {
+                        if ($status === 'read') {
+                            $q->orWhereNotNull('read_at');
+                        } elseif ($status === 'unread') {
+                            $q->orWhereNull('read_at');
+                        }
+                    }
+                });
             }
         }
 

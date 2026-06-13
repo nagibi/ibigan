@@ -72,11 +72,6 @@
   }
 
   @media (max-width: theme(--breakpoint-xl)) {
-    .demo1 .grid-table-scroll-mobile .grid-table-scroll {
-      contain: none;
-      overflow-y: visible;
-    }
-
     .demo1 .page-content-header {
       position: sticky;
       top: 0;

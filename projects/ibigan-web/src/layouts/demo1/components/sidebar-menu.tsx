@@ -7,6 +7,7 @@ import { MenuConfig, MenuItem } from '@/config/types';
 import { useCentralMenu } from '@/hooks/use-central-menu';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { cn } from '@/lib/utils';
+import { MENU_NAV_GROUP_SELECTED_CLASS } from '@/lib/menu-nav-link-styles';
 import {
   AccordionMenu,
   AccordionMenuClassNames,
@@ -57,6 +58,10 @@ function menuGroupIsActive(item: MenuItem, activePath: string | null): boolean {
   return item.children?.some((child) => menuGroupIsActive(child, activePath)) ?? false;
 }
 
+function isMenuItemActive(item: MenuItem, activePath: string | null): boolean {
+  return Boolean(item.path && activePath && item.path === activePath);
+}
+
 function MenuIcon({ icon }: { icon?: LucideIcon }) {
   const Icon = icon ?? LayoutGrid;
   return <Icon data-slot="accordion-menu-icon" />;
@@ -81,8 +86,7 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
     [activeMenuPath],
   );
 
-  const selectedMenuClass =
-    'data-[selected=true]:bg-primary/10 data-[selected=true]:font-semibold data-[selected=true]:text-primary data-[selected=true]:before:absolute data-[selected=true]:before:inset-y-1 data-[selected=true]:before:start-0 data-[selected=true]:before:w-0.5 data-[selected=true]:before:rounded-full data-[selected=true]:before:bg-primary';
+  const selectedMenuClass = MENU_NAV_GROUP_SELECTED_CLASS;
 
   // Global classNames for consistent styling
   const classNames: AccordionMenuClassNames = {
@@ -141,11 +145,14 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
         </AccordionMenuSub>
       );
     } else {
+      const isActive = isMenuItemActive(item, activeMenuPath);
+
       return (
         <AccordionMenuItem
           key={index}
           value={item.path || ''}
           className="text-sm font-medium"
+          selected={isActive}
           asChild
         >
           <MenuNavLink
@@ -247,11 +254,14 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
         </AccordionMenuSub>
       );
     } else {
+      const isActive = isMenuItemActive(item, activeMenuPath);
+
       return (
         <AccordionMenuItem
           key={index}
           value={item.path || ''}
           className="text-[13px]"
+          selected={isActive}
           asChild
         >
           <MenuNavLink

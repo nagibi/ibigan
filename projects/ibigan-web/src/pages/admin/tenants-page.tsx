@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, LogIn, Pencil, Trash2 } from 'lucide-react';
+import { Activity, LogIn, Trash2 } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { useImpersonate } from '@/hooks/use-impersonate';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
@@ -203,8 +206,8 @@ export function AdminTenantsPage() {
         onClick: () => void handleImpersonate(tenant),
       },
       {
-        label: 'Editar',
-        icon: Pencil,
+        label: 'Visualizar',
+        icon: GRID_VIEW_ICON,
         onClick: () => handleEditTenant(tenant.id),
       },
       {
@@ -422,6 +425,13 @@ export function AdminTenantsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -454,12 +464,7 @@ export function AdminTenantsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -478,25 +483,6 @@ export function AdminTenantsPage() {
     grid.search,
     grid.clearSearch,
   ]);
-
-  function handleResetColumns() {
-    gridColumns.resetColumns();
-    showSuccess('Colunas restauradas ao padrão.');
-  }
-
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
@@ -548,7 +534,7 @@ export function AdminTenantsPage() {
             onSearch={grid.setSearch}
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -570,13 +556,13 @@ export function AdminTenantsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={handleResetColumns}
+                onResetDefault={gridActions.handleResetColumns}
               />
             }
             resetControl={
               <GridResetControl
                 disabled={!isGridCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             }
             viewModeControl={

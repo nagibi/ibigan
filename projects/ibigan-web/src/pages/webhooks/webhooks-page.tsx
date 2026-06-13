@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, LoaderCircle, Pencil, ScrollText, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle, LoaderCircle, ScrollText, Trash2, XCircle } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
@@ -15,6 +18,10 @@ import {
   dateRangeFilterToKey,
   useGridFilters,
 } from '@/hooks/use-grid-filters';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import {
   webhooksService,
   WEBHOOK_EVENTS,
@@ -22,12 +29,14 @@ import {
   type WebhookDelivery,
 } from '@/services/webhooks.service';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
@@ -80,6 +89,8 @@ export function WebhooksPage() {
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showToggleActive, showError, showInfo } = useApiToolbarAlert();
 
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.webhooks);
+
   const grid = useGrid({
     onActivate: async (ids) => {
       try {
@@ -119,6 +130,22 @@ export function WebhooksPage() {
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
   const [deliveriesLoading, setDeliveriesLoading] = useState(false);
 
+  const infiniteScroll = useGridInfiniteScroll<Webhook>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -130,7 +157,9 @@ export function WebhooksPage() {
         grid.sortDir,
         columnFilters.activeFilterParams,
       );
-      setWebhooks(res.data.result.data);
+      const pageWebhooks = res.data.result.data;
+      setWebhooks(pageWebhooks);
+      infiniteScroll.receivePage(pageWebhooks, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar webhooks.', error);
@@ -144,8 +173,11 @@ export function WebhooksPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
   ]);
+
+  const displayWebhooks = infiniteScrollEnabled ? infiniteScroll.items : webhooks;
 
   loadRef.current = load;
 
@@ -305,8 +337,8 @@ export function WebhooksPage() {
                 onClick: () => setViewDeliveries(webhook),
               },
               {
-                label: 'Editar',
-                icon: Pencil,
+                label: 'Visualizar',
+                icon: GRID_VIEW_ICON,
                 onClick: () => handleEditWebhook(webhook.id),
               },
               {
@@ -391,6 +423,13 @@ export function WebhooksPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -423,12 +462,7 @@ export function WebhooksPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -447,25 +481,6 @@ export function WebhooksPage() {
     grid.search,
     grid.clearSearch,
   ]);
-
-  function handleResetColumns() {
-    gridColumns.resetColumns();
-    showSuccess('Colunas restauradas ao padrão.');
-  }
-
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
@@ -517,7 +532,7 @@ export function WebhooksPage() {
             onSearch={grid.setSearch}
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -539,33 +554,43 @@ export function WebhooksPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={handleResetColumns}
+                onResetDefault={gridActions.handleResetColumns}
               />
             }
             resetControl={
               <GridResetControl
                 disabled={!isGridCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             }
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayWebhooks.length, infiniteScrollEnabled)}
           />
         }
-        footer={
+        footer={!infiniteScrollEnabled ? (
           <GridPagination
             meta={meta}
             perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />
-        }
+        ) : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={webhooks}
+          cardData={infiniteScrollEnabled ? displayWebhooks : undefined}
           getRowKey={(webhook) => webhook.id}
           loading={loading}
           emptyMessage="Nenhum webhook configurado."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading,
+          })}
           sort={grid.sort}
           sortDir={grid.sortDir}
           onSort={grid.toggleSort}

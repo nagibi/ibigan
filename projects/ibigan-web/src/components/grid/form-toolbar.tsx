@@ -92,6 +92,7 @@ function FormButton({
   loading,
   className,
   showLabelOnMobile = false,
+  iconOnly = false,
 }: {
   label: string;
   tooltip?: string;
@@ -101,9 +102,10 @@ function FormButton({
   loading?: boolean;
   className?: string;
   showLabelOnMobile?: boolean;
+  iconOnly?: boolean;
 }) {
   const isMobile = useIsMobile();
-  const showLabel = !isMobile || showLabelOnMobile;
+  const showLabel = !iconOnly && (!isMobile || showLabelOnMobile);
 
   return (
     <ToolbarTooltip content={tooltip ?? label}>
@@ -275,7 +277,7 @@ export function FormToolbar({
                 tooltip={t('form.tooltip.new')}
                 icon={Plus}
                 onClick={onNew}
-                showLabelOnMobile
+                iconOnly
               />
             )}
 

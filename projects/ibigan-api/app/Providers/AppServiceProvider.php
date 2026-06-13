@@ -15,11 +15,15 @@ use App\Repositories\Eloquent\EloquentInviteRepository;
 use App\Repositories\Eloquent\EloquentMessageTemplateRepository;
 use App\Models\MultiTenantPersonalAccessToken;
 use App\Repositories\Eloquent\EloquentUserRepository;
+use App\Models\Central\CentralUser;
+use App\Support\DevToolsAccess;
 use App\Support\SentryContext;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 use SocialiteProviders\Apple\Provider as AppleProvider;
@@ -55,6 +59,26 @@ class AppServiceProvider extends ServiceProvider
             $openApi->info->title = config('scramble.ui.title', 'Ibigan API');
             $openApi->info->version = config('scramble.info.version', '1.0.0');
             $openApi->info->description = config('scramble.info.description', '');
+        });
+
+        Gate::define('viewApiDocs', function ($user = null) {
+            if (DevToolsAccess::userCanAccess($user)) {
+                return true;
+            }
+
+            if (DevToolsAccess::userCanAccess(Auth::guard('web')->user())) {
+                return true;
+            }
+
+            $centralUserId = session('dev_tools_central_user_id');
+
+            if (! is_numeric($centralUserId)) {
+                return false;
+            }
+
+            return DevToolsAccess::userCanAccess(
+                CentralUser::query()->find((int) $centralUserId),
+            );
         });
 
         Event::listen(JobProcessing::class, function (): void {

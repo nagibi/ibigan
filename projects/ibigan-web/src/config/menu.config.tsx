@@ -62,7 +62,7 @@ export const MENU_SIDEBAR: MenuConfig = [
     heading: 'RELATÓRIOS',
   },
   {
-    title: 'Templates de Relatório',
+    title: 'Relatórios',
     icon: BarChart2,
     path: '/reports',
   },

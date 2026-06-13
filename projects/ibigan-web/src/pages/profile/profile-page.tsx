@@ -30,7 +30,7 @@ import { SecurityContent } from '@/components/security/security-content';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
 import { PageBody } from '@/components/common/page-body';
 import { FormToolbar } from '@/components/grid/form-toolbar';
-import { FormFieldGrid } from '@/components/grid/form-field-grid';
+import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
 import { FormPanel } from '@/components/grid/form-panel';
 import {
   AppearanceSettingsPanel,
@@ -495,35 +495,41 @@ export function ProfilePage() {
           }}
         >
           <FormPanel title="Alterar senha">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <FormField control={passwordForm.control} name="current_password" render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>Senha atual</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Sua senha atual" autoComplete="current-password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={passwordForm.control} name="password" render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>Nova senha</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={passwordForm.control} name="password_confirmation" render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>Confirmar nova senha</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Repita a nova senha" autoComplete="new-password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            <FormFieldGrid columns={3}>
+              <FormFieldGridItem columns={3}>
+                <FormField control={passwordForm.control} name="current_password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>Senha atual</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Sua senha atual" autoComplete="current-password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </FormFieldGridItem>
+              <FormFieldGridItem columns={3}>
+                <FormField control={passwordForm.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>Nova senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </FormFieldGridItem>
+              <FormFieldGridItem columns={3}>
+                <FormField control={passwordForm.control} name="password_confirmation" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>Confirmar nova senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Repita a nova senha" autoComplete="new-password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </FormFieldGridItem>
+            </FormFieldGrid>
           </FormPanel>
         </form>
       </Form>

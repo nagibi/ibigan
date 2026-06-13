@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 
 export interface UserApproval {
   id: number;
@@ -31,15 +32,20 @@ export const userApprovalsService = {
     perPage = 15,
     columnFilters?: Record<string, string>,
   ) => {
-    const status = columnFilters?.status?.trim() || 'pending';
+    const statusFilter = columnFilters?.status?.trim();
+    const statuses = statusFilter ? parseMultiFilterValue(statusFilter) : [];
+    const params: Record<string, string | number> = {
+      page,
+      per_page: perPage,
+    };
 
-    return api.get<UserApprovalsPaginatedResponse>('/v1/user-approvals', {
-      params: {
-        page,
-        per_page: perPage,
-        status,
-      },
-    });
+    if (statuses.length > 0) {
+      params.status = statuses.join(',');
+    } else {
+      params.status = 'pending';
+    }
+
+    return api.get<UserApprovalsPaginatedResponse>('/v1/user-approvals', { params });
   },
 
   approve: (id: number) =>

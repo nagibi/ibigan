@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/types/view-mode';
 import { GridInfiniteScrollSentinel } from './grid-infinite-scroll-sentinel';
@@ -41,12 +42,19 @@ export function DataView({
   infiniteScroll,
 }: DataViewProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const resolvedEmptyMessage = emptyMessage ?? t('grid.empty');
   const showInitialLoading = loading && !infiniteScroll?.loadingMore;
 
   if (viewMode === 'table') {
     return (
-      <div className={cn('flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden', className)}>
+      <div
+        className={cn(
+          'flex min-w-0 flex-col',
+          isMobile ? 'h-auto flex-none overflow-visible' : 'h-0 min-h-0 flex-1 overflow-hidden',
+          className,
+        )}
+      >
         {tableView}
       </div>
     );

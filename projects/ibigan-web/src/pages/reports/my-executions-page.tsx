@@ -2,19 +2,25 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowRight,
+  BarChart2,
   CheckCircle,
   Clock,
-  Download,
+  Eye,
   LoaderCircle,
   XCircle,
 } from 'lucide-react';
+import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
 import { format, isAfter, isBefore, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { getColumnFilterDisplayValue, matchesSelectFilterValue } from '@/lib/grid-filter-display';
 import {
   dateRangeFilterFromKey,
   dateRangeFilterToKey,
@@ -22,8 +28,11 @@ import {
 } from '@/hooks/use-grid-filters';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import {
   downloadReportResultCsvWithToast,
   reportsService,
@@ -33,7 +42,6 @@ import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Button } from '@/components/ui/button';
@@ -49,17 +57,18 @@ const STATUS_OPTIONS = [
 
 const STATUS_CONFIG: Record<string, {
   label: string;
-  variant: 'primary' | 'secondary' | 'destructive' | 'outline';
+  variant: 'success' | 'secondary' | 'destructive' | 'outline';
 }> = {
   queued: { label: 'Na fila', variant: 'secondary' },
   running: { label: 'Executando', variant: 'outline' },
-  completed: { label: 'Concluído', variant: 'primary' },
+  completed: { label: 'Concluído', variant: 'success' },
+  success: { label: 'Concluído', variant: 'success' },
   failed: { label: 'Falhou', variant: 'destructive' },
 };
 
 function StatusIcon({ status }: { status: string }) {
   if (status === 'running') return <LoaderCircle className="size-4 animate-spin text-blue-500" />;
-  if (status === 'completed') return <CheckCircle className="size-4 text-green-600" />;
+  if (status === 'completed' || status === 'success') return <CheckCircle className="size-4 text-green-600" />;
   if (status === 'failed') return <XCircle className="size-4 text-destructive" />;
   return <Clock className="size-4 text-muted-foreground" />;
 }
@@ -89,7 +98,7 @@ function matchesExecutionFilters(
   }
 
   const status = filters.status?.trim();
-  if (status && execution.status !== status) return false;
+  if (status && !matchesSelectFilterValue(execution.status, status)) return false;
 
   const from = filters[dateRangeFilterFromKey('executed_at')]?.trim();
   const to = filters[dateRangeFilterToKey('executed_at')]?.trim();
@@ -104,7 +113,7 @@ function matchesExecutionFilters(
 export function MyExecutionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useApiToolbarAlert();
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.myExecutions);
   const grid = useGrid({ defaultSort: 'executed_at', defaultSortDir: 'desc' });
   const columnFilters = useGridFilters(() => grid.setPage(1));
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
@@ -134,6 +143,28 @@ export function MyExecutionsPage() {
       setKnownTotal(meta.total);
     }
   }, [meta.total]);
+
+  const infiniteScroll = useGridInfiniteScroll<MyReportExecution>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading: isLoading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
+
+  useEffect(() => {
+    if (!isLoading) {
+      infiniteScroll.receivePage(executions, grid.page);
+    }
+  }, [executions, grid.page, isLoading, infiniteScroll.receivePage]);
+
+  const displayExecutions = infiniteScrollEnabled ? infiniteScroll.items : executions;
 
   useEffect(() => {
     const prev = queryClient.getQueryData<typeof data>(['my-executions', grid.page, grid.perPage, requestPerPage]);
@@ -190,14 +221,14 @@ export function MyExecutionsPage() {
               ...(execution.status === 'completed'
                 ? [{
                     label: 'Baixar CSV',
-                    icon: Download,
+                    icon: GRID_DOWNLOAD_ICON,
                     onClick: () => void handleDownload(execution),
                     disabled: downloadingId === execution.id,
                   }]
                 : []),
               {
-                label: 'Abrir relatório',
-                icon: ArrowRight,
+                label: 'Visualizar',
+                icon: Eye,
                 onClick: () => navigate(`/reports/${execution.template_id}/execute`),
               },
             ]}
@@ -268,11 +299,18 @@ export function MyExecutionsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
+
   const filteredExecutions = useMemo(
-    () => executions.filter((execution) =>
+    () => displayExecutions.filter((execution) =>
       matchesExecutionFilters(execution, grid.debouncedSearch, columnFilters.debouncedFilters),
     ),
-    [columnFilters.debouncedFilters, executions, grid.debouncedSearch],
+    [columnFilters.debouncedFilters, displayExecutions, grid.debouncedSearch],
   );
 
   const activeFilters = useMemo(() => {
@@ -307,11 +345,7 @@ export function MyExecutionsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue = column.filter.type === 'select'
-        ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-        : column.filter.type === 'multi'
-          ? parseMultiFilterValue(value).join(', ')
-          : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -333,23 +367,10 @@ export function MyExecutionsPage() {
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
 
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
-
   const toolbarActions = useMemo(
     () => (
-      <Button variant="outline" size="sm" className="h-8" onClick={() => navigate('/reports')}>
+      <Button variant="primary" size="sm" className="h-8 gap-1.5" onClick={() => navigate('/reports')}>
+        <BarChart2 className="size-4" />
         Ver relatórios
       </Button>
     ),
@@ -374,7 +395,7 @@ export function MyExecutionsPage() {
             searchPlaceholder="Buscar por relatório ou status..."
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -396,36 +417,43 @@ export function MyExecutionsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={() => {
-                  gridColumns.resetColumns();
-                  showSuccess('Colunas restauradas ao padrão.');
-                }}
+                onResetDefault={gridActions.handleResetColumns}
               />
             )}
             resetControl={(
               <GridResetControl
                 disabled={!hasActiveFilters && !gridColumns.isCustomized && !grid.isCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             )}
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, filteredExecutions.length, infiniteScrollEnabled)}
           />
         )}
-        footer={(
+        footer={!infiniteScrollEnabled ? (
           <GridPagination
             meta={meta}
             perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />
-        )}
+        ) : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
-          data={filteredExecutions}
+          data={infiniteScrollEnabled ? executions : filteredExecutions}
+          cardData={infiniteScrollEnabled ? filteredExecutions : undefined}
           getRowKey={(execution) => execution.id}
           loading={isLoading || isFetching}
           emptyMessage="Nenhuma execução encontrada."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading: isLoading,
+          })}
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
           columnFilters={columnFilters.filters}
           onColumnFilterChange={columnFilters.setFilter}

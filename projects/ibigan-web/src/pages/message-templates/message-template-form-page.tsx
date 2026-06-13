@@ -76,7 +76,7 @@ export function MessageTemplateFormPage() {
   const formPage = useFormPage({
     backPath: '/message-templates',
     newPath: '/message-templates/new',
-    entityLabel: 'template',
+    entityKey: 'message_template',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {
@@ -192,7 +192,7 @@ export function MessageTemplateFormPage() {
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       formAlert,
-      isEditing && !isActive ? buildInactiveAlert('template') : null,
+      isEditing && !isActive ? buildInactiveAlert('message_template') : null,
     ),
     [formAlert, isActive, isEditing],
   );

@@ -3,9 +3,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/i18next';
 import {
-  Download,
+  Eye,
   LoaderCircle,
-  Pencil,
   Plus,
   Power,
   PowerOff,
@@ -14,6 +13,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -366,7 +366,7 @@ export function GridPanelToolbar({
               <GridToolbarButton
                 label={t('grid.export')}
                 tooltip={t('grid.tooltip.export')}
-                icon={Download}
+                icon={GRID_DOWNLOAD_ICON}
                 onClick={onExport}
                 loading={isExporting}
               />
@@ -453,9 +453,9 @@ export function StandardGridToolbar({
       )}
       {onEdit && (
         <GridToolbarButton
-          label={t('common.edit')}
-          tooltip={t('grid.tooltip.edit')}
-          icon={Pencil}
+          label={t('common.view')}
+          tooltip={t('grid.tooltip.view')}
+          icon={Eye}
           disabled={!singleSelection}
           onClick={onEdit}
         />
@@ -502,7 +502,7 @@ export function StandardGridToolbar({
         <GridToolbarButton
           label={t('grid.export')}
           tooltip={t('grid.tooltip.export')}
-          icon={Download}
+          icon={GRID_DOWNLOAD_ICON}
           onClick={onExport}
           loading={isExporting}
         />

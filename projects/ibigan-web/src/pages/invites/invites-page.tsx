@@ -6,6 +6,7 @@ import { Copy, LoaderCircle, Mail, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
@@ -16,14 +17,21 @@ import {
   dateRangeFilterToKey,
   useGridFilters,
 } from '@/hooks/use-grid-filters';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { invitesService, type Invite } from '@/services/invites.service';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import {
@@ -103,6 +111,8 @@ export function InvitesPage() {
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showError, showInfo } = useApiToolbarAlert();
 
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.invites);
+
   const grid = useGrid();
   const columnFilters = useGridFilters(() => grid.setPage(1));
 
@@ -117,6 +127,22 @@ export function InvitesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isStoring, setIsStoring] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const infiniteScroll = useGridInfiniteScroll<Invite>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -134,7 +160,9 @@ export function InvitesPage() {
         grid.sortDir,
         columnFilters.activeFilterParams,
       );
-      setInvites(res.data.result.data);
+      const pageInvites = res.data.result.data;
+      setInvites(pageInvites);
+      infiniteScroll.receivePage(pageInvites, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar convites.', error);
@@ -148,8 +176,11 @@ export function InvitesPage() {
     grid.sort,
     grid.sortDir,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
   ]);
+
+  const displayInvites = infiniteScrollEnabled ? infiniteScroll.items : invites;
 
   loadRef.current = load;
 
@@ -359,6 +390,13 @@ export function InvitesPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -391,12 +429,7 @@ export function InvitesPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -415,25 +448,6 @@ export function InvitesPage() {
     grid.search,
     grid.clearSearch,
   ]);
-
-  function handleResetColumns() {
-    gridColumns.resetColumns();
-    showSuccess('Colunas restauradas ao padrão.');
-  }
-
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
@@ -480,7 +494,7 @@ export function InvitesPage() {
             onSearch={grid.setSearch}
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -502,26 +516,36 @@ export function InvitesPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={handleResetColumns}
+                onResetDefault={gridActions.handleResetColumns}
               />
             }
             resetControl={
               <GridResetControl
                 disabled={!isGridCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             }
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayInvites.length, infiniteScrollEnabled)}
           />
         }
-        footer={pagination}
+        footer={!infiniteScrollEnabled ? pagination : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={invites}
+          cardData={infiniteScrollEnabled ? displayInvites : undefined}
           getRowKey={(invite) => invite.id}
           loading={loading}
           emptyMessage="Nenhum convite encontrado."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading,
+          })}
           sort={grid.sort}
           sortDir={grid.sortDir}
           onSort={grid.toggleSort}

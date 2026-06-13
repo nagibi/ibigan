@@ -1,23 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
+import { useApprovalStatusFilterOptions } from '@/lib/grid-filter-options';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridFilters } from '@/hooks/use-grid-filters';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import {
   userApprovalsService,
   type UserApproval,
 } from '@/services/user-approvals.service';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
@@ -42,22 +52,10 @@ import { Textarea } from '@/components/ui/textarea';
 
 const GRID_COLUMNS_KEY = 'grid-columns:user-approvals';
 
-const STATUS_FILTER_OPTIONS = [
-  { label: 'Pendente', value: 'pending' },
-  { label: 'Aprovado', value: 'approved' },
-  { label: 'Rejeitado', value: 'rejected' },
-];
-
 const statusVariant: Record<UserApproval['status'], 'secondary' | 'default' | 'destructive'> = {
   pending: 'secondary',
   approved: 'default',
   rejected: 'destructive',
-};
-
-const statusLabel: Record<UserApproval['status'], string> = {
-  pending: 'Pendente',
-  approved: 'Aprovado',
-  rejected: 'Rejeitado',
 };
 
 function formatDateTime(value?: string | null) {
@@ -66,8 +64,20 @@ function formatDateTime(value?: string | null) {
 }
 
 export function UserApprovalsPage() {
+  const { t } = useTranslation();
+  const statusFilterOptions = useApprovalStatusFilterOptions();
+  const statusLabel = useMemo(
+    () => ({
+      pending: t('approvals.status.pending'),
+      approved: t('approvals.status.approved'),
+      rejected: t('approvals.status.rejected'),
+    }),
+    [t],
+  );
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showError } = useApiToolbarAlert();
+
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.userApprovals);
 
   const grid = useGrid();
   const columnFilters = useGridFilters(() => grid.setPage(1));
@@ -85,6 +95,19 @@ export function UserApprovalsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [approveTarget, setApproveTarget] = useState<UserApproval | null>(null);
 
+  const infiniteScroll = useGridInfiniteScroll<UserApproval>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -93,7 +116,9 @@ export function UserApprovalsPage() {
         grid.resolvePerPage(meta.total),
         columnFilters.activeFilterParams,
       );
-      setApprovals(res.data.result.data);
+      const pageApprovals = res.data.result.data;
+      setApprovals(pageApprovals);
+      infiniteScroll.receivePage(pageApprovals, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar aprovações.', error);
@@ -104,8 +129,11 @@ export function UserApprovalsPage() {
     grid.page,
     grid.perPage,
     columnFilters.activeFilterParams,
+    infiniteScroll.receivePage,
     showError,
   ]);
+
+  const displayApprovals = infiniteScrollEnabled ? infiniteScroll.items : approvals;
 
   loadRef.current = load;
 
@@ -218,7 +246,7 @@ export function UserApprovalsPage() {
           type: 'select',
           filterKey: 'status',
           placeholder: 'Pendente',
-          options: STATUS_FILTER_OPTIONS,
+          options: statusFilterOptions,
         },
         className: 'min-w-[120px]',
         render: (approval) => (
@@ -250,43 +278,35 @@ export function UserApprovalsPage() {
         ),
       },
     ],
-    [],
+    [statusFilterOptions, statusLabel],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    resetSettings: grid.resetSettings,
+  });
 
   const activeFilters = useMemo(() => {
     const items = [];
 
     const statusValue = columnFilters.filters.status?.trim();
     if (statusValue) {
+      const statusColumn = columnDefinitions.find((column) => column.id === 'status');
       items.push({
         id: 'status',
         label: 'Status',
-        value: STATUS_FILTER_OPTIONS.find((option) => option.value === statusValue)?.label ?? statusValue,
+        value: statusColumn?.filter
+          ? getColumnFilterDisplayValue(statusColumn.filter, statusValue)
+          : statusValue,
         onRemove: () => columnFilters.clearFilter('status'),
       });
     }
 
     return items;
-  }, [columnFilters.clearFilter, columnFilters.filters.status]);
-
-  function handleResetColumns() {
-    gridColumns.resetColumns();
-    showSuccess('Colunas restauradas ao padrão.');
-  }
-
-  function handleClearFilters() {
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
+  }, [columnDefinitions, columnFilters.clearFilter, columnFilters.filters.status]);
 
   const isGridCustomized = columnFilters.hasFilters || grid.isCustomized || gridColumns.isCustomized;
 
@@ -313,7 +333,7 @@ export function UserApprovalsPage() {
             isRefreshing={loading}
             filters={{
               active: activeFilters,
-              onClearAll: columnFilters.hasFilters ? handleClearFilters : undefined,
+              onClearAll: columnFilters.hasFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -335,26 +355,36 @@ export function UserApprovalsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={handleResetColumns}
+                onResetDefault={gridActions.handleResetColumns}
               />
             }
             resetControl={
               <GridResetControl
                 disabled={!isGridCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             }
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, displayApprovals.length, infiniteScrollEnabled)}
           />
         }
-        footer={pagination}
+        footer={!infiniteScrollEnabled ? pagination : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={approvals}
+          cardData={infiniteScrollEnabled ? displayApprovals : undefined}
           getRowKey={(approval) => approval.id}
           loading={loading}
           emptyMessage="Nenhuma aprovação encontrada."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading,
+          })}
           columnFilters={columnFilters.filters}
           onColumnFilterChange={columnFilters.setFilter}
           onColumnFilterClear={columnFilters.clearColumnFilter}

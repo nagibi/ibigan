@@ -15,6 +15,7 @@ use App\Http\Requests\Campaign\UpdateCampaignRequest;
 use App\Models\Campaign;
 use App\Services\CampaignService;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\GridFilter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,8 +38,14 @@ final class CampaignController extends Controller
         abort_unless($request->user()->can('campanha-visualizar'), Response::HTTP_FORBIDDEN);
 
         $campaigns = Campaign::query()
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
-            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')))
+            ->when(
+                $request->filled('status'),
+                fn ($q) => GridFilter::applyWhereInFromCsv($q, 'status', $request->string('status')->toString()),
+            )
+            ->when(
+                $request->filled('type'),
+                fn ($q) => GridFilter::applyWhereInFromCsv($q, 'type', $request->string('type')->toString()),
+            )
             ->latest()
             ->paginate($request->integer('per_page', 15));
 

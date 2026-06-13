@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
+import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { getColumnFilterDisplayValue, matchesSelectFilterValue } from '@/lib/grid-filter-display';
 import {
   dateRangeFilterFromKey,
   dateRangeFilterToKey,
@@ -21,13 +27,15 @@ import {
   getSubjectLabel,
 } from '@/lib/activity-log-utils';
 import { ActivityLogDetailDialog } from '@/components/activity-logs/activity-log-detail-dialog';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
-import { GridTable } from '@/components/grid/grid-table';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
 
@@ -60,7 +68,7 @@ function matchesColumnFilters(log: ActivityLog, filters: Record<string, string>)
   }
 
   const statusFilter = filters.description?.trim();
-  if (statusFilter && log.description !== statusFilter) return false;
+  if (statusFilter && !matchesSelectFilterValue(log.description, statusFilter)) return false;
 
   return true;
 }
@@ -76,7 +84,8 @@ function downloadActivityLog(log: ActivityLog) {
 }
 
 export function ActivityLogsPage() {
-  const { showSuccess, showError } = useApiToolbarAlert();
+  const { showError } = useApiToolbarAlert();
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.activityLogs);
   const grid = useGrid();
   const columnFilters = useGridFilters(() => grid.setPage(1));
 
@@ -90,6 +99,20 @@ export function ActivityLogsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
 
+  const infiniteScroll = useGridInfiniteScroll<ActivityLog>({
+    enabled: infiniteScrollEnabled,
+    page: grid.page,
+    setPage: grid.setPage,
+    loading,
+    perPage: grid.perPage,
+    meta,
+    resetDeps: [
+      grid.debouncedSearch,
+      columnFilters.activeFilterParams,
+      infiniteScrollEnabled,
+    ],
+  });
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -100,14 +123,16 @@ export function ActivityLogsPage() {
         date_from: filters[dateRangeFilterFromKey('created_at')] || undefined,
         date_to: filters[dateRangeFilterToKey('created_at')] || undefined,
       });
-      setLogs(res.data.result.data);
+      const pageLogs = res.data.result.data;
+      setLogs(pageLogs);
+      infiniteScroll.receivePage(pageLogs, grid.page);
       setMeta(res.data.result.meta);
     } catch (error) {
       showError('Erro ao carregar activity log.', error);
     } finally {
       setLoading(false);
     }
-  }, [columnFilters.activeFilterParams, grid.page, grid.perPage, grid.resolvePerPage, meta.total, showError]);
+  }, [columnFilters.activeFilterParams, grid.page, grid.perPage, grid.resolvePerPage, infiniteScroll.receivePage, meta.total, showError]);
 
   useEffect(() => {
     void load();
@@ -132,7 +157,7 @@ export function ActivityLogsPage() {
             actions={[
               {
                 label: 'Download',
-                icon: Download,
+                icon: GRID_DOWNLOAD_ICON,
                 onClick: () => downloadActivityLog(log),
               },
             ]}
@@ -204,6 +229,13 @@ export function ActivityLogsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: columnFilters.clearAllFilters,
+    clearSearch: grid.clearSearch,
+    resetSettings: grid.resetSettings,
+  });
+
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -236,11 +268,7 @@ export function ActivityLogsPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue = column.filter.type === 'select'
-        ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-        : column.filter.type === 'multi'
-          ? parseMultiFilterValue(value).join(', ')
-          : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,
@@ -262,24 +290,12 @@ export function ActivityLogsPage() {
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
 
-  function handleClearFilters() {
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    showSuccess('Filtros removidos.');
-  }
-
-  function handleResetGrid() {
-    gridColumns.resetColumns();
-    grid.clearSearch();
-    columnFilters.clearAllFilters();
-    grid.resetSettings();
-    showSuccess('Grid restaurado ao padrão.');
-  }
+  const displayLogs = infiniteScrollEnabled ? infiniteScroll.items : logs;
 
   const filteredLogs = useMemo(() => {
     const q = grid.debouncedSearch.trim().toLowerCase();
 
-    return logs.filter((log) => {
+    return displayLogs.filter((log) => {
       if (!matchesColumnFilters(log, columnFilters.debouncedFilters)) return false;
 
       if (!q) return true;
@@ -291,7 +307,7 @@ export function ActivityLogsPage() {
         || (log.causer_name?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [columnFilters.debouncedFilters, grid.debouncedSearch, logs]);
+  }, [columnFilters.debouncedFilters, displayLogs, grid.debouncedSearch]);
 
   usePageToolbar({
     title: 'Activity Log',
@@ -310,7 +326,7 @@ export function ActivityLogsPage() {
             searchPlaceholder="Buscar por recurso ou usuário..."
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -332,36 +348,43 @@ export function ActivityLogsPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={() => {
-                  gridColumns.resetColumns();
-                  showSuccess('Colunas restauradas ao padrão.');
-                }}
+                onResetDefault={gridActions.handleResetColumns}
               />
             )}
             resetControl={(
               <GridResetControl
                 disabled={!hasActiveFilters && !gridColumns.isCustomized && !grid.isCustomized}
-                onReset={handleResetGrid}
+                onReset={gridActions.handleResetGrid}
               />
             )}
-            recordCount={{ total: meta.total }}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(meta.total, filteredLogs.length, infiniteScrollEnabled)}
           />
         )}
-        footer={(
+        footer={!infiniteScrollEnabled ? (
           <GridPagination
             meta={meta}
             perPage={grid.perPage}
             onPageChange={grid.setPage}
             onPerPageChange={grid.setPerPage}
           />
-        )}
+        ) : undefined}
       >
-        <GridTable
+        <GridColumnDataView
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
-          data={filteredLogs}
+          data={infiniteScrollEnabled ? logs : filteredLogs}
+          cardData={infiniteScrollEnabled ? filteredLogs : undefined}
           getRowKey={(log) => log.id}
           loading={loading}
           emptyMessage="Nenhuma atividade registrada."
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading,
+          })}
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
           columnFilters={columnFilters.filters}
           onColumnFilterChange={columnFilters.setFilter}

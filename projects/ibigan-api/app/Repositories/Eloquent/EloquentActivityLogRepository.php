@@ -8,6 +8,7 @@ use App\Models\Menu;
 use App\Models\User;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\GridFilter;
 use Illuminate\Database\Eloquent\Builder;
 use InvalidArgumentException;
 use Spatie\Activitylog\Models\Activity;
@@ -52,7 +53,26 @@ final class EloquentActivityLogRepository implements ActivityLogRepositoryInterf
             )
             ->when(
                 isset($filters['subject_type']),
-                fn (Builder $q) => $q->where('subject_type', $this->resolveSubjectType($filters['subject_type']))
+                function (Builder $q) use ($filters): void {
+                    $types = GridFilter::csvValues((string) $filters['subject_type']);
+
+                    if ($types === []) {
+                        return;
+                    }
+
+                    $resolved = array_map(
+                        fn (string $type): string => $this->resolveSubjectType($type),
+                        $types,
+                    );
+
+                    if (count($resolved) === 1) {
+                        $q->where('subject_type', $resolved[0]);
+
+                        return;
+                    }
+
+                    $q->whereIn('subject_type', $resolved);
+                },
             )
             ->when(
                 isset($filters['causer_id']),

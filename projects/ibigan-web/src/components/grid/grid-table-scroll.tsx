@@ -223,7 +223,10 @@ export function GridTableScroll({
   return (
     <div
       className={cn(
-        'grid-table-scroll-host flex h-0 min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-hidden',
+        'grid-table-scroll-host flex w-full min-w-0 max-w-full flex-col',
+        isMobile
+          ? 'h-auto min-h-0 flex-none overflow-visible'
+          : 'h-0 min-h-0 flex-1 overflow-hidden',
         className,
       )}
       style={isMobile ? undefined : { maxHeight }}
@@ -240,8 +243,10 @@ export function GridTableScroll({
       <div
         ref={viewportRef}
         className={cn(
-          'grid-table-scroll grid-table-scroll-y min-h-0 min-w-0 w-full max-w-full flex-1 basis-0 overflow-y-auto',
-          isMobile ? 'overflow-x-auto' : 'grid-table-scroll-y-hide-x',
+          'grid-table-scroll grid-table-scroll-y min-w-0 w-full max-w-full',
+          isMobile
+            ? 'h-auto flex-none overflow-x-auto overflow-y-visible'
+            : 'min-h-0 flex-1 basis-0 overflow-y-auto grid-table-scroll-y-hide-x',
         )}
         onScroll={() => syncScrollLeft('viewport')}
       >

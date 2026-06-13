@@ -139,6 +139,20 @@
     overflow: hidden;
   }
 
+  @media (max-width: 1279px) {
+    .grid-table-scroll-host {
+      height: auto;
+      flex: none;
+      overflow: visible;
+    }
+
+    .grid-table-scroll-y {
+      height: auto;
+      flex: none;
+      overflow-y: visible;
+    }
+  }
+
   .grid-table-scroll-y {
     width: 100% !important;
     max-width: 100% !important;

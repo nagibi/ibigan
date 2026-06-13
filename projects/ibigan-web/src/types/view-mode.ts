@@ -8,6 +8,17 @@ export const VIEW_PREFERENCE_KEYS = {
   permissions: 'permissions.view',
   organizations: 'organizations.view',
   menus: 'menus.view',
+  reports: 'reports.view',
+  campaigns: 'campaigns.view',
+  messageTemplates: 'message-templates.view',
+  invites: 'invites.view',
+  webhooks: 'webhooks.view',
+  translations: 'translations.view',
+  myExecutions: 'reports.executions.view',
+  userApprovals: 'user-approvals.view',
+  activityLogs: 'activity-logs.view',
+  notifications: 'notifications.view',
+  centralUsers: 'central-users.view',
 } as const;
 
 export type ViewPreferenceKey = (typeof VIEW_PREFERENCE_KEYS)[keyof typeof VIEW_PREFERENCE_KEYS];

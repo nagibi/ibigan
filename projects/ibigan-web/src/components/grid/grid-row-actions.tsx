@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,12 @@ import {
 import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 import { cn } from '@/lib/utils';
 
+export type GridRowActionIcon = LucideIcon | ComponentType<{ className?: string }>;
+
 export interface GridRowAction {
   label: string;
   tooltip?: string;
-  icon: LucideIcon;
+  icon: GridRowActionIcon;
   onClick: () => void;
   disabled?: boolean;
   hidden?: boolean;

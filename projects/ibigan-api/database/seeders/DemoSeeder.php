@@ -258,9 +258,87 @@ class DemoSeeder extends Seeder
     {
         $reports = [
             [
+                'name'        => 'Relatório demonstrativo',
+                'description' => 'Exemplo com todos os tipos de parâmetro: seleção, texto, número e data',
+                'query'       => <<<'SQL'
+SELECT id, name, email, status, gender, created_at
+FROM users
+WHERE status = :status
+  AND gender = :gender
+  AND DATE(created_at) >= :date_from
+  AND DATE(created_at) <= :date_to
+  AND (
+    :search = ''
+    OR name LIKE CONCAT('%', :search, '%')
+    OR email LIKE CONCAT('%', :search, '%')
+  )
+ORDER BY created_at DESC
+LIMIT :limit
+SQL,
+                'parameters'  => [
+                    [
+                        'name'     => 'status',
+                        'type'     => 'select',
+                        'label'    => 'Status',
+                        'required' => true,
+                        'options'  => ['active', 'inactive', 'pending'],
+                    ],
+                    [
+                        'name'     => 'gender',
+                        'type'     => 'select',
+                        'label'    => 'Gênero',
+                        'required' => true,
+                        'options'  => ['male', 'female', 'other'],
+                    ],
+                    [
+                        'name'     => 'date_from',
+                        'type'     => 'date',
+                        'label'    => 'Cadastro de',
+                        'required' => true,
+                    ],
+                    [
+                        'name'     => 'date_to',
+                        'type'     => 'date',
+                        'label'    => 'Cadastro até',
+                        'required' => true,
+                    ],
+                    [
+                        'name'     => 'search',
+                        'type'     => 'text',
+                        'label'    => 'Buscar por nome ou e-mail',
+                        'required' => false,
+                    ],
+                    [
+                        'name'     => 'limit',
+                        'type'     => 'number',
+                        'label'    => 'Limite de registros',
+                        'required' => true,
+                    ],
+                ],
+                'columns'     => [
+                    ['key' => 'id', 'label' => 'ID', 'format' => 'number'],
+                    ['key' => 'name', 'label' => 'Nome', 'format' => 'text'],
+                    ['key' => 'email', 'label' => 'E-mail', 'format' => 'text'],
+                    ['key' => 'status', 'label' => 'Status', 'format' => 'text'],
+                    ['key' => 'gender', 'label' => 'Gênero', 'format' => 'text'],
+                    ['key' => 'created_at', 'label' => 'Cadastro', 'format' => 'datetime'],
+                ],
+                'is_active'   => true,
+                'created_by'  => $createdBy->id,
+            ],
+            [
                 'name'        => 'Usuários ativos por mês',
                 'description' => 'Lista todos os usuários ativos agrupados por mês de cadastro',
-                'query'       => 'SELECT DATE_FORMAT(created_at, "%Y-%m") as mes, COUNT(*) as total FROM users WHERE status = "active" GROUP BY mes ORDER BY mes DESC',
+                'query'       => 'SELECT DATE_FORMAT(created_at, "%Y-%m") as mes, COUNT(*) as total FROM users WHERE status = :status GROUP BY mes ORDER BY mes DESC',
+                'parameters'  => [
+                    [
+                        'name'     => 'status',
+                        'type'     => 'select',
+                        'label'    => 'Status',
+                        'required' => true,
+                        'options'  => ['active', 'inactive', 'pending'],
+                    ],
+                ],
                 'columns'     => [
                     ['key' => 'mes', 'label' => 'Mês', 'format' => 'text'],
                     ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
@@ -271,7 +349,16 @@ class DemoSeeder extends Seeder
             [
                 'name'        => 'Campanhas por status',
                 'description' => 'Resumo das campanhas agrupadas por status',
-                'query'       => 'SELECT status, COUNT(*) as total FROM campaigns GROUP BY status',
+                'query'       => 'SELECT status, COUNT(*) as total FROM campaigns WHERE (:status = \'all\' OR status = :status) GROUP BY status ORDER BY total DESC',
+                'parameters'  => [
+                    [
+                        'name'     => 'status',
+                        'type'     => 'select',
+                        'label'    => 'Status',
+                        'required' => true,
+                        'options'  => ['all', 'draft', 'scheduled', 'running', 'completed', 'cancelled', 'failed'],
+                    ],
+                ],
                 'columns'     => [
                     ['key' => 'status', 'label' => 'Status', 'format' => 'text'],
                     ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
@@ -282,7 +369,15 @@ class DemoSeeder extends Seeder
             [
                 'name'        => 'Entregas de campanha',
                 'description' => 'Total de entregas por campanha',
-                'query'       => 'SELECT c.name, COUNT(cd.id) as entregas FROM campaigns c LEFT JOIN campaign_deliveries cd ON cd.campaign_id = c.id GROUP BY c.id, c.name ORDER BY entregas DESC',
+                'query'       => 'SELECT c.name, COUNT(cd.id) as entregas FROM campaigns c LEFT JOIN campaign_deliveries cd ON cd.campaign_id = c.id GROUP BY c.id, c.name ORDER BY entregas DESC LIMIT :limit',
+                'parameters'  => [
+                    [
+                        'name'     => 'limit',
+                        'type'     => 'number',
+                        'label'    => 'Limite de campanhas',
+                        'required' => true,
+                    ],
+                ],
                 'columns'     => [
                     ['key' => 'name', 'label' => 'Campanha', 'format' => 'text'],
                     ['key' => 'entregas', 'label' => 'Entregas', 'format' => 'number'],
@@ -293,7 +388,7 @@ class DemoSeeder extends Seeder
         ];
 
         foreach ($reports as $report) {
-            ReportTemplate::firstOrCreate(
+            ReportTemplate::updateOrCreate(
                 ['name' => $report['name']],
                 $report
             );

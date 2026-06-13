@@ -15,7 +15,7 @@ export function useGridColumnLabels() {
     updatedAt: t('columns.updated_at'),
     updatedBy: t('columns.updated_by'),
     all: t('common.all'),
-    edit: t('common.edit'),
+    edit: t('common.view'),
     remove: t('common.remove'),
   }), [t]);
 }

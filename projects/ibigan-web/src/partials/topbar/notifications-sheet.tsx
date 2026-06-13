@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Archive,
+  BarChart2,
+  Bell,
+  CheckCheck,
+  ExternalLink,
+  LoaderCircle,
+  Settings,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Archive, BarChart2, Bell, CheckCheck, ExternalLink, LoaderCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   invalidateNotifications,
@@ -11,12 +19,12 @@ import {
   removeNotificationFromCache,
   upsertNotificationInCache,
 } from '@/lib/notification-cache';
-import { useCentralOnlySession } from '@/hooks/use-central-only-session';
-import { notificationsService } from '@/services/notifications.service';
 import { isReportNotification } from '@/lib/notification-utils';
-import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
-import { Button } from '@/components/ui/button';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
+import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
+import { notificationsService } from '@/services/notifications.service';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
@@ -73,8 +81,9 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
   });
 
   const notifications = data?.data.result.data ?? [];
-  const unread = data?.data.result.meta.unread
-    ?? notifications.filter((notification) => !notification.read_at).length;
+  const unread =
+    data?.data.result.meta.unread ??
+    notifications.filter((notification) => !notification.read_at).length;
   const unreadNotifications = useMemo(
     () => notifications.filter((notification) => !notification.read_at),
     [notifications],
@@ -92,7 +101,10 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
     return null;
   }
 
-  function renderNotifications(items: typeof notifications, emptyLabel = 'Nenhuma notificação') {
+  function renderNotifications(
+    items: typeof notifications,
+    emptyLabel = 'Nenhuma notificação',
+  ) {
     if (isLoading) {
       return (
         <div className="flex justify-center py-12">
@@ -131,7 +143,11 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
         <div className="relative">
           {trigger}
           {unread > 0 && (
-            <Badge className="absolute -right-1 -top-1 flex size-5 items-center justify-center bg-destructive p-0 text-[10px]">
+            <Badge
+              variant="destructive"
+              shape="circle"
+              className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-semibold leading-none"
+            >
               {unread > 9 ? '9+' : unread}
             </Badge>
           )}
@@ -144,8 +160,14 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
 
         <SheetBody className="min-h-0 grow p-0">
           <ScrollArea className="h-[calc(100dvh-11rem)] max-xl:h-[calc(100dvh-12rem)] sm:h-[calc(100vh-10.5rem)]">
-            <Tabs defaultValue="all" className="relative w-full min-w-0 max-w-full overflow-hidden">
-              <TabsList variant="line" className="mb-5 w-full min-w-0 max-w-full overflow-x-auto px-5">
+            <Tabs
+              defaultValue="all"
+              className="relative w-full min-w-0 max-w-full overflow-hidden"
+            >
+              <TabsList
+                variant="line"
+                className="mb-5 w-full min-w-0 max-w-full overflow-x-auto px-5"
+              >
                 <TabsTrigger value="all">Todas</TabsTrigger>
                 <TabsTrigger value="unread" className="relative">
                   Não lidas
@@ -181,7 +203,10 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
               </TabsContent>
 
               <TabsContent value="unread" className="mt-0">
-                {renderNotifications(unreadNotifications, 'Nenhuma notificação não lida')}
+                {renderNotifications(
+                  unreadNotifications,
+                  'Nenhuma notificação não lida',
+                )}
               </TabsContent>
 
               <TabsContent value="reports" className="mt-0">
@@ -189,14 +214,25 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
                   <p className="text-xs text-muted-foreground">
                     Relatórios concluídos com download direto.
                   </p>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-                    <Link to="/reports/executions" onClick={() => setOpen(false)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    asChild
+                  >
+                    <Link
+                      to="/reports/executions"
+                      onClick={() => setOpen(false)}
+                    >
                       <ExternalLink className="mr-1 size-3" />
                       Ver execuções
                     </Link>
                   </Button>
                 </div>
-                {renderNotifications(reportNotifications, 'Nenhuma notificação de relatório')}
+                {renderNotifications(
+                  reportNotifications,
+                  'Nenhuma notificação de relatório',
+                )}
               </TabsContent>
             </Tabs>
           </ScrollArea>
@@ -206,7 +242,9 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
           <Button
             variant="outline"
             onClick={() => {
-              const readIds = notifications.filter((notification) => notification.read_at).map((n) => n.id);
+              const readIds = notifications
+                .filter((notification) => notification.read_at)
+                .map((n) => n.id);
               if (readIds.length === 0) {
                 toast.info('Nenhuma notificação lida para arquivar.');
                 return;

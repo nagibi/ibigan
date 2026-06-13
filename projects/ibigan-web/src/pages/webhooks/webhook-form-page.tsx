@@ -67,7 +67,7 @@ export function WebhookFormPage() {
   const formPage = useFormPage({
     backPath: '/webhooks',
     newPath: '/webhooks/new',
-    entityLabel: 'webhook',
+    entityKey: 'webhook',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {

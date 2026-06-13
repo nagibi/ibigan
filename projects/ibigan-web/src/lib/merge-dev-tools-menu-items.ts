@@ -11,8 +11,19 @@ const DEV_TOOL_TRANSLATION_BY_PATH: Partial<Record<string, string>> = {
   [DEV_TOOLS_URLS.mailpit]: 'menu.mailpit',
 };
 
+const DEV_TOOL_PATH_BY_SLUG: Record<string, string> = {
+  'documentacao-api': DEV_TOOLS_URLS.apiDocs,
+  'horizon': DEV_TOOLS_URLS.horizon,
+  'phpmyadmin': DEV_TOOLS_URLS.phpMyAdmin,
+  'mailpit': DEV_TOOLS_URLS.mailpit,
+};
+
 function isDevToolsChild(item: MenuItem): boolean {
-  return Boolean(item.path && DEV_TOOLS_PATHS.has(item.path));
+  return Boolean(item.path && (
+    DEV_TOOLS_PATHS.has(item.path)
+    || item.path.includes('/docs/api')
+    || item.path.includes('/horizon')
+  ));
 }
 
 function isDevToolsGroup(item: MenuItem): boolean {
@@ -23,34 +34,77 @@ function extractDevToolsGroup(staticMenu: MenuConfig): MenuItem | null {
   return staticMenu.find(isDevToolsGroup) ?? null;
 }
 
+function syncDevToolChildPath(child: MenuItem): MenuItem {
+  const slug = (child as MenuItem & { slug?: string }).slug;
+  const syncedPath = slug && DEV_TOOL_PATH_BY_SLUG[slug]
+    ? DEV_TOOL_PATH_BY_SLUG[slug]
+    : child.path?.includes('/docs/api')
+      ? DEV_TOOLS_URLS.apiDocs
+      : child.path?.includes('/horizon')
+        ? DEV_TOOLS_URLS.horizon
+        : child.path?.includes('8080')
+          ? DEV_TOOLS_URLS.phpMyAdmin
+          : child.path?.includes('8025')
+            ? DEV_TOOLS_URLS.mailpit
+            : child.path;
+
+  return syncedPath ? { ...child, path: syncedPath, target: '_blank' as const } : child;
+}
+
 function localizeDevToolsGroup(group: MenuItem): MenuItem {
   return {
     ...group,
     title: i18n.t('menu.tools'),
-    children: group.children?.map((child) => ({
-      ...child,
-      title: child.path && DEV_TOOL_TRANSLATION_BY_PATH[child.path]
-        ? i18n.t(DEV_TOOL_TRANSLATION_BY_PATH[child.path])
-        : child.title,
-    })),
+    children: group.children?.map((child) => {
+      const synced = syncDevToolChildPath(child);
+
+      return {
+        ...synced,
+        title: synced.path && DEV_TOOL_TRANSLATION_BY_PATH[synced.path]
+          ? i18n.t(DEV_TOOL_TRANSLATION_BY_PATH[synced.path])
+          : synced.title,
+      };
+    }),
   };
 }
 
+function syncDevToolsInMenu(menu: MenuConfig): MenuConfig {
+  return menu.map((item) => {
+    if (isDevToolsGroup(item)) {
+      return localizeDevToolsGroup({
+        ...item,
+        children: item.children?.map(syncDevToolChildPath),
+      });
+    }
+
+    if (item.children?.length) {
+      return {
+        ...item,
+        children: syncDevToolsInMenu(item.children),
+      };
+    }
+
+    return item;
+  });
+}
+
 /**
- * Garante o grupo Ferramentas do menu estático quando o seed do tenant ainda não o inclui.
+ * Garante o grupo Ferramentas do menu estático e sincroniza URLs com o ambiente atual.
  */
 export function mergeDevToolsMenuItems(
   apiMenu: MenuConfig,
   staticMenu: MenuConfig,
 ): MenuConfig {
   const devTools = extractDevToolsGroup(staticMenu);
+  const syncedMenu = syncDevToolsInMenu(apiMenu);
+
   if (!devTools) {
-    return apiMenu;
+    return syncedMenu;
   }
 
-  if (apiMenu.some(isDevToolsGroup)) {
-    return apiMenu;
+  if (syncedMenu.some(isDevToolsGroup)) {
+    return syncedMenu;
   }
 
-  return [...apiMenu, localizeDevToolsGroup(devTools)];
+  return [...syncedMenu, localizeDevToolsGroup(devTools)];
 }

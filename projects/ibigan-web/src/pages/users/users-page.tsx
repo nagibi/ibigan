@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Activity, Pencil, ShieldCheck } from 'lucide-react';
+import { Activity, ShieldCheck } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
@@ -293,7 +295,7 @@ export function UsersPage() {
     (user: User): GridRowAction[] => [
       {
         label: cols.edit,
-        icon: Pencil,
+        icon: GRID_VIEW_ICON,
         onClick: () => navigate(`/users/${user.id}`),
       },
       {
@@ -598,12 +600,7 @@ export function UsersPage() {
       const value = columnFilters.filters[column.filter.filterKey]?.trim();
       if (!value) continue;
 
-      const displayValue =
-        column.filter.type === 'select'
-          ? column.filter.options?.find((option) => option.value === value)?.label ?? value
-          : column.filter.type === 'multi'
-            ? parseMultiFilterValue(value).join(', ')
-            : value;
+      const displayValue = getColumnFilterDisplayValue(column.filter, value);
 
       items.push({
         id: column.filter.filterKey,

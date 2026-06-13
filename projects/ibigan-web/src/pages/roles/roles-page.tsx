@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
@@ -203,7 +204,7 @@ export function RolesPage() {
     (role: Role): GridRowAction[] => [
       {
         label: cols.edit,
-        icon: Pencil,
+        icon: GRID_VIEW_ICON,
         onClick: () => handleEditRole(role.id),
       },
       ...(canManage && isRoleDeletable(role)

@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 
 export interface Webhook {
   id: number;
@@ -63,7 +64,10 @@ export const webhooksService = {
       if (!value.trim()) continue;
 
       if (key === 'status') {
-        params.filter_is_active = value === 'active' ? '1' : '0';
+        const values = parseMultiFilterValue(value);
+        if (values.length === 1) {
+          params.filter_is_active = values[0] === 'active' ? '1' : '0';
+        }
         continue;
       }
 

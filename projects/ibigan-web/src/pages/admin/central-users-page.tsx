@@ -3,20 +3,27 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildClientGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import {
   centralUsersService,
   type PlatformCentralUser,
 } from '@/services/central-users.service';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { PageBody } from '@/components/common/page-body';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
-import { GridTable } from '@/components/grid/grid-table';
-import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
+import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { Switch } from '@/components/ui/switch';
 
@@ -33,6 +40,7 @@ export function CentralUsersPage() {
   const [rowToggleId, setRowToggleId] = useState<number | null>(null);
   const loadRef = useRef<() => Promise<void>>(async () => {});
 
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.centralUsers);
   const grid = useGrid();
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -51,6 +59,17 @@ export function CentralUsersPage() {
       || user.email.toLowerCase().includes(query),
     );
   }, [grid.debouncedSearch, users]);
+
+  const clientInfinite = useClientGridInfiniteScroll({
+    items: filteredUsers,
+    page: grid.page,
+    perPage: grid.perPage,
+    setPage: grid.setPage,
+    enabled: infiniteScrollEnabled,
+    resetDeps: [grid.debouncedSearch, filteredUsers.length],
+  });
+
+  const displayUsers = infiniteScrollEnabled ? clientInfinite.displayItems : filteredUsers;
 
   const load = useCallback(async () => {
     await refetch();
@@ -86,61 +105,55 @@ export function CentralUsersPage() {
     }
   }
 
-  const columns = useGridColumns<PlatformCentralUser>({
-    storageKey: GRID_COLUMNS_KEY,
-    definitions: useMemo<GridColumnDef<PlatformCentralUser>[]>(() => [
-      {
-        id: 'name',
-        header: 'Nome',
-        accessorKey: 'name',
-        cell: ({ row }) => row.original.name,
-        enableSorting: false,
-      },
-      {
-        id: 'email',
-        header: 'E-mail',
-        accessorKey: 'email',
-        cell: ({ row }) => row.original.email,
-        enableSorting: false,
-      },
-      {
-        id: 'is_super_admin',
-        header: 'Super-admin',
-        accessorKey: 'is_super_admin',
-        cell: ({ row }) => {
-          const user = row.original;
-          const isSelf = user.id === currentUserId;
+  const columnDefinitions = useMemo<GridColumnDef<PlatformCentralUser>[]>(() => [
+    {
+      id: 'name',
+      label: 'Nome',
+      render: (user) => user.name,
+    },
+    {
+      id: 'email',
+      label: 'E-mail',
+      render: (user) => user.email,
+    },
+    {
+      id: 'is_super_admin',
+      label: 'Super-admin',
+      render: (user) => {
+        const isSelf = user.id === currentUserId;
 
-          return (
-            <Switch
-              checked={user.is_super_admin}
-              disabled={isSelf || rowToggleId === user.id}
-              onCheckedChange={(checked) => void handleToggleSuperAdmin(user, checked)}
-              aria-label={`Super-admin: ${user.name}`}
-            />
-          );
-        },
-        enableSorting: false,
+        return (
+          <Switch
+            checked={user.is_super_admin}
+            disabled={isSelf || rowToggleId === user.id}
+            onCheckedChange={(checked) => void handleToggleSuperAdmin(user, checked)}
+            aria-label={`Super-admin: ${user.name}`}
+          />
+        );
       },
-      {
-        id: 'is_active',
-        header: 'Ativo',
-        accessorKey: 'is_active',
-        cell: ({ row }) => (
-          <GridBadge variant={row.original.is_active ? 'success' : 'destructive'}>
-            {row.original.is_active ? 'Ativo' : 'Inativo'}
-          </GridBadge>
-        ),
-        enableSorting: false,
-      },
-      {
-        id: 'created_at',
-        header: 'Criado em',
-        accessorKey: 'created_at',
-        cell: ({ row }) => formatCreatedAt(row.original.created_at),
-        enableSorting: false,
-      },
-    ], [currentUserId, rowToggleId]),
+    },
+    {
+      id: 'is_active',
+      label: 'Ativo',
+      render: (user) => (
+        <GridBadge variant={user.is_active ? 'success' : 'destructive'}>
+          {user.is_active ? 'Ativo' : 'Inativo'}
+        </GridBadge>
+      ),
+    },
+    {
+      id: 'created_at',
+      label: 'Criado em',
+      render: (user) => formatCreatedAt(user.created_at),
+    },
+  ], [currentUserId, rowToggleId]);
+
+  const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+
+  const gridActions = useGridPageActions({
+    resetColumns: gridColumns.resetColumns,
+    clearAllFilters: () => {},
+    clearSearch: grid.clearSearch,
   });
 
   usePageToolbar({
@@ -150,23 +163,55 @@ export function CentralUsersPage() {
 
   return (
     <PageBody>
-      <GridPanel>
-        <GridPanelToolbar>
-          <StandardGridToolbar
-            search={grid.search}
-            onSearchChange={grid.setSearch}
-            loading={isLoading || isFetching}
+      <GridPanel
+        toolbar={(
+          <GridPanelToolbar
             onRefresh={() => void loadRef.current()}
-            leftSlot={<GridColumnsControl columns={columns} />}
-            rightSlot={<GridResetControl onReset={columns.resetColumns} />}
+            isRefreshing={isLoading || isFetching}
+            search={grid.search}
+            onSearch={grid.setSearch}
+            searchPlaceholder="Buscar por nome ou e-mail..."
+            columnsControl={(
+              <GridColumnsControl
+                columns={columnDefinitions}
+                order={gridColumns.order}
+                hidden={gridColumns.hidden}
+                visibleCount={gridColumns.visibleCount}
+                totalCount={gridColumns.totalCount}
+                isCustomized={gridColumns.isCustomized}
+                onOrderChange={gridColumns.setColumnOrder}
+                onSetVisibility={gridColumns.setColumnVisibility}
+                canHideColumn={gridColumns.canHideColumn}
+                onShowAll={gridColumns.showAllColumns}
+                onHideAll={gridColumns.hideAllColumns}
+                onResetDefault={gridActions.handleResetColumns}
+              />
+            )}
+            resetControl={(
+              <GridResetControl
+                disabled={!gridColumns.isCustomized}
+                onReset={gridActions.handleResetGrid}
+              />
+            )}
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
+            recordCount={getGridRecordCount(filteredUsers.length, displayUsers.length, infiniteScrollEnabled)}
           />
-        </GridPanelToolbar>
-
-        <GridTable
-          columns={columns.visibleColumns}
+        )}
+      >
+        <GridColumnDataView
+          viewMode={viewMode}
+          columns={gridColumns.visibleColumns}
           data={filteredUsers}
+          cardData={infiniteScrollEnabled ? displayUsers : undefined}
           loading={isLoading}
+          getRowKey={(user) => user.id}
           emptyMessage="Nenhum usuário central encontrado."
+          infiniteScroll={buildClientGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            clientInfinite,
+          })}
         />
       </GridPanel>
     </PageBody>

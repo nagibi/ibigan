@@ -6,16 +6,10 @@ import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter
 import { GridDateFilter } from '@/components/grid/grid-date-filter';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
 import { GridMultiValueFilter } from '@/components/grid/grid-multi-value-filter';
+import { GridSelectMultiFilter } from '@/components/grid/grid-select-multi-filter';
 import { MaskedInput } from '@/components/ui/masked-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface GridColumnFilterProps {
@@ -40,6 +34,10 @@ function isFilterActive(
   }
 
   if (filter.type === 'multi') {
+    return parseMultiFilterValue(value).length > 0;
+  }
+
+  if (filter.type === 'select') {
     return parseMultiFilterValue(value).length > 0;
   }
 
@@ -68,19 +66,12 @@ export function GridColumnFilter({
 
   if (filter.type === 'select') {
     control = (
-      <Select value={value || '__all__'} onValueChange={(v) => onChange(v === '__all__' ? '' : v)}>
-        <SelectTrigger className={inputClassName}>
-          <SelectValue placeholder={filter.placeholder ?? 'Todos'} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__all__">{filter.placeholder ?? 'Todos'}</SelectItem>
-          {filter.options?.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <GridSelectMultiFilter
+        value={value}
+        onChange={onChange}
+        options={filter.options ?? []}
+        placeholder={filter.placeholder ?? 'Todos'}
+      />
     );
   } else if (filter.type === 'multi') {
     control = (

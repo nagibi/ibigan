@@ -49,7 +49,20 @@ export function resolveToolbarAlert(alert: ToolbarAlertConfig): ToolbarAlertConf
   };
 }
 
-export function buildInactiveAlert(entityLabel = 'registro'): ToolbarAlertConfig {
+import type { EntityKey } from '@/lib/entity-i18n';
+import { entityLabelKey } from '@/lib/entity-i18n';
+
+export function buildInactiveAlert(entityKey: EntityKey = 'record'): ToolbarAlertConfig {
+  return {
+    variant: 'destructive',
+    title: i18n.t('toolbar.inactive_record', { entity: i18n.t(entityLabelKey(entityKey)) }),
+    autoDismissMs: false,
+    id: 'inactive',
+  };
+}
+
+/** @deprecated Use `buildInactiveAlert(entityKey)`. */
+export function buildInactiveAlertFromLabel(entityLabel = 'registro'): ToolbarAlertConfig {
   return {
     variant: 'destructive',
     title: i18n.t('toolbar.inactive_record', { entity: entityLabel }),

@@ -78,7 +78,7 @@ export function GridPanel({
           ) : null}
         </div>
       ) : null}
-      <div className="grid-panel-body flex h-0 min-h-0 w-full min-w-0 max-w-full flex-1 flex-col max-xl:h-auto max-xl:max-w-full max-xl:flex-none max-xl:overflow-visible xl:overflow-hidden">
+      <div className="grid-panel-body flex w-full min-w-0 max-w-full flex-col max-xl:h-auto max-xl:max-w-full max-xl:flex-none max-xl:overflow-visible xl:h-0 xl:min-h-0 xl:flex-1 xl:overflow-hidden">
         {children}
       </div>
       {footer ? (

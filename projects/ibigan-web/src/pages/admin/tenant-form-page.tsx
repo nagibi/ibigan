@@ -96,7 +96,7 @@ export function AdminTenantFormPage() {
   const formPage = useFormPage({
     backPath: '/admin/tenants',
     newPath: '/admin/tenants/nova',
-    entityLabel: 'empresa',
+    entityKey: 'tenant',
     notify: apiNotify,
     onDelete: isEditing
       ? async () => {
