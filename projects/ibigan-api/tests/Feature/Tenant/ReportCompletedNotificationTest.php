@@ -69,8 +69,10 @@ it('usa template de mensagem na notificacao de relatorio concluido', function ()
     $payload = $notification->toArray($this->user);
 
     expect($payload['subject'])->toBe('Relatório pronto: Usuários ativos');
+    expect($payload['body'])->toContain('Hello!');
     expect($payload['body'])->toContain('Usuários ativos');
-    expect($payload['body'])->toContain('42');
+    expect($payload['body'])->toContain('42 registros encontrados em 1500ms');
+    expect($payload['body'])->toContain('O resultado estará disponível por 7 dias.');
     expect($payload['slug'])->toBe(MessageTemplateSlugs::REPORT_COMPLETED);
 
     $storedTemplate = MessageTemplate::query()
@@ -116,4 +118,42 @@ it('envia notificacao de relatorio concluido com assunto do template', function 
     expect($databaseNotification)->not->toBeNull();
     expect($databaseNotification->data['subject'])->toBe('Relatório pronto: Vendas mensais');
     expect($databaseNotification->data['slug'])->toBe(MessageTemplateSlugs::REPORT_COMPLETED);
+});
+
+it('monta email padrao laravel com botao download', function (): void {
+    tenancy()->initialize($this->tenant);
+
+    $template = ReportTemplate::query()->create([
+        'name' => 'Campanhas por tenant',
+        'slug' => 'campanhas-por-tenant',
+        'query' => 'SELECT 1',
+        'parameters' => [],
+        'is_active' => true,
+        'created_by' => $this->user->id,
+    ]);
+
+    $execution = ReportExecution::query()->create([
+        'report_template_id' => $template->id,
+        'executed_by' => $this->user->id,
+        'parameters' => [],
+        'status' => 'completed',
+        'result_rows_count' => 3,
+        'duration_ms' => 2,
+        'result_expires_at' => now()->addDays(7),
+        'executed_at' => now(),
+    ]);
+
+    $execution->setRelation('template', $template);
+    URL::defaults(['tenant' => $this->tenant->id]);
+
+    $notification = new ReportCompletedNotification($execution, 'email');
+    $mail = $notification->toMail($this->user);
+
+    expect($mail)->toBeInstanceOf(\Illuminate\Notifications\Messages\MailMessage::class);
+    expect($mail->subject)->toBe('Relatório pronto: Campanhas por tenant');
+    expect($mail->greeting)->toBe('Hello!');
+    expect($mail->introLines)->toContain('Seu relatório Campanhas por tenant foi processado com sucesso.');
+    expect($mail->introLines)->toContain('3 registros encontrados em 2ms.');
+    expect($mail->actionText)->toBe('Download');
+    expect($mail->outroLines)->toContain('O resultado estará disponível por 7 dias.');
 });

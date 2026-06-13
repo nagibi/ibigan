@@ -22,6 +22,14 @@ final class TemplateMailService
     /**
      * @param  array<string, string>  $data
      */
+    public function replace(string $content, array $data): string
+    {
+        return $this->replaceTags($content, $data);
+    }
+
+    /**
+     * @param  array<string, string>  $data
+     */
     private function replaceTags(string $content, array $data): string
     {
         foreach ($data as $tag => $value) {

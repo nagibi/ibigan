@@ -8,6 +8,8 @@ use App\Models\MessageTemplate;
 
 final class SystemMessageTemplates
 {
+    public const REPORT_COMPLETED_ACTION_LABEL = 'Download';
+
     /**
      * @return list<array<string, mixed>>
      */
@@ -18,20 +20,18 @@ final class SystemMessageTemplates
                 'name'       => 'Relatório pronto',
                 'slug'       => MessageTemplateSlugs::REPORT_COMPLETED,
                 'subject'    => 'Relatório pronto: {{report_name}}',
-                'body'       => <<<'HTML'
-<p>Olá, {{name}}!</p>
-<p>Seu relatório <strong>{{report_name}}</strong> foi processado com sucesso.</p>
-<p>{{rows_count}} registros encontrados em {{duration_ms}}.</p>
-<p><a href="{{download_url}}">Baixar resultado</a></p>
-<p>O arquivo estará disponível até {{expires_at}}.</p>
-HTML,
+                'body'       => <<<'TEXT'
+Hello!
+
+Seu relatório {{report_name}} foi processado com sucesso.
+
+{{rows_summary}}.
+
+O resultado estará disponível por 7 dias.
+TEXT,
                 'merge_tags' => [
-                    '{{name}}',
                     '{{report_name}}',
-                    '{{rows_count}}',
-                    '{{duration_ms}}',
-                    '{{download_url}}',
-                    '{{expires_at}}',
+                    '{{rows_summary}}',
                 ],
                 'is_active'  => true,
             ],

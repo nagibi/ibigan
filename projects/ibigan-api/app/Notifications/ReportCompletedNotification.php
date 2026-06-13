@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Mail\TemplateMailable;
 use App\Models\MessageTemplate;
 use App\Models\ReportExecution;
 use App\Services\TemplateMailService;
 use App\Support\MessageTemplateSlugs;
+use App\Support\SystemMessageTemplates;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
@@ -36,14 +37,19 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
         };
     }
 
-    public function toMail(object $notifiable): TemplateMailable
+    public function toMail(object $notifiable): MailMessage
     {
+        $data = $this->mergeData($notifiable);
         $content = $this->resolvedContent($notifiable);
+        $parts = $this->bodyParts($content['body']);
 
-        return new TemplateMailable(
-            emailSubject: $content['subject'],
-            emailBody: $content['body'],
-        );
+        return (new MailMessage)
+            ->subject($content['subject'])
+            ->greeting($parts[0] ?? 'Hello!')
+            ->line($parts[1] ?? '')
+            ->line($parts[2] ?? '')
+            ->action(SystemMessageTemplates::REPORT_COMPLETED_ACTION_LABEL, $data['download_url'])
+            ->line($parts[3] ?? 'O resultado estará disponível por 7 dias.');
     }
 
     public function toArray(object $notifiable): array
@@ -87,22 +93,32 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
 
             return $this->resolvedContent = [
                 'subject' => $resolved['subject'],
-                'body' => $resolved['body'],
+                'body' => trim($resolved['body']),
                 'slug' => $template->slug,
             ];
         }
 
+        $service = app(TemplateMailService::class);
+        $defaults = SystemMessageTemplates::definitions()[0];
+
         return $this->resolvedContent = [
-            'subject' => "Relatório pronto: {$data['report_name']}",
-            'body' => <<<HTML
-<p>Olá, {$data['name']}!</p>
-<p>Seu relatório <strong>{$data['report_name']}</strong> foi processado com sucesso.</p>
-<p>{$data['rows_count']} registros encontrados em {$data['duration_ms']}.</p>
-<p><a href="{$data['download_url']}">Baixar resultado</a></p>
-<p>O arquivo estará disponível até {$data['expires_at']}.</p>
-HTML,
+            'subject' => $service->replace((string) $defaults['subject'], $data),
+            'body' => trim($service->replace((string) $defaults['body'], $data)),
             'slug' => MessageTemplateSlugs::REPORT_COMPLETED,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function bodyParts(string $body): array
+    {
+        $parts = preg_split("/\R(?:\s*\R)+/", trim($body)) ?: [];
+
+        return array_values(array_filter(
+            array_map(static fn (string $part): string => trim($part), $parts),
+            static fn (string $part): bool => $part !== '',
+        ));
     }
 
     /**
@@ -112,6 +128,7 @@ HTML,
     {
         $expiresAt = $this->execution->result_expires_at ?? now()->addDays(7);
         $rowsCount = (int) ($this->execution->result_rows_count ?? 0);
+        $durationMs = (int) ($this->execution->duration_ms ?? 0);
 
         $downloadUrl = URL::temporarySignedRoute(
             'reports.executions.download',
@@ -123,11 +140,14 @@ HTML,
             ],
         );
 
+        $rowsSummary = $rowsCount === 1
+            ? "1 registro encontrado em {$durationMs}ms"
+            : "{$rowsCount} registros encontrados em {$durationMs}ms";
+
         return [
             'name' => (string) ($notifiable->name ?? 'Usuário'),
             'report_name' => (string) $this->execution->template->name,
-            'rows_count' => (string) $rowsCount,
-            'duration_ms' => number_format((int) ($this->execution->duration_ms ?? 0), 0, ',', '.').'ms',
+            'rows_summary' => $rowsSummary,
             'download_url' => $downloadUrl,
             'expires_at' => $expiresAt->timezone(config('app.timezone'))->format('d/m/Y H:i'),
         ];
