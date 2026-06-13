@@ -11,6 +11,7 @@ use App\Models\ReportExecution;
 use App\Models\ReportTemplate;
 use App\Services\ReportService;
 use App\Support\ApiResponse;
+use App\Support\ReportCsvExporter;
 use App\Support\ReportResultStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -208,37 +209,13 @@ final class ReportController extends Controller
         abort_unless($request->user()->can('relatorio-visualizar'), Response::HTTP_FORBIDDEN);
         abort_unless($execution->report_template_id === $report->id, Response::HTTP_NOT_FOUND);
 
-        if (in_array($execution->status, ['pending', 'queued', 'running'], true)) {
-            return ApiResponse::error(
-                'report.execution_in_progress',
-                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
-            );
+        $resolved = $this->resolveExecutionResult($report, $execution);
+
+        if ($resolved instanceof JsonResponse) {
+            return $resolved;
         }
 
-        if ($execution->result_expires_at?->isPast()) {
-            return ApiResponse::error(
-                'report.result_expired',
-                httpStatus: Response::HTTP_GONE,
-            );
-        }
-
-        $resultStorage = app(ReportResultStorage::class);
-        $rows = $resultStorage->load($execution->result_path);
-
-        if ($rows === null) {
-            if ($execution->status === 'failed') {
-                return ApiResponse::error(
-                    'report.execution_failed',
-                    params: ['error' => $execution->error_message],
-                    httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
-                );
-            }
-
-            return ApiResponse::error(
-                'report.result_not_found',
-                httpStatus: Response::HTTP_NOT_FOUND,
-            );
-        }
+        [$rows] = $resolved;
 
         $page = max(1, $request->integer('page', 1));
         $perPage = min(10_000, max(1, $request->integer('per_page', 50)));
@@ -256,6 +233,39 @@ final class ReportController extends Controller
                     'last_page' => max(1, (int) ceil($total / $perPage)),
                 ],
             ],
+        ]);
+    }
+
+    public function downloadCsv(string $tenant, int $report, int $execution): Response|JsonResponse
+    {
+        abort_unless(tenancy()->initialized, Response::HTTP_NOT_FOUND);
+
+        $template = ReportTemplate::query()->findOrFail($report);
+        $executionModel = ReportExecution::query()->findOrFail($execution);
+
+        abort_unless($executionModel->report_template_id === $template->id, Response::HTTP_NOT_FOUND);
+
+        $resolved = $this->resolveExecutionResult($template, $executionModel);
+
+        if ($resolved instanceof JsonResponse) {
+            return $resolved;
+        }
+
+        [$rows] = $resolved;
+
+        if ($rows === []) {
+            return ApiResponse::error(
+                'report.result_not_found',
+                httpStatus: Response::HTTP_NOT_FOUND,
+            );
+        }
+
+        $csv = ReportCsvExporter::toCsv($rows, $template->columns);
+        $fileName = ReportCsvExporter::sanitizeFileName($template->name);
+
+        return response($csv, Response::HTTP_OK, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'.csv"',
         ]);
     }
 
@@ -329,5 +339,45 @@ final class ReportController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * @return JsonResponse|array{0: array<int, array<string, mixed>>}
+     */
+    private function resolveExecutionResult(ReportTemplate $report, ReportExecution $execution): JsonResponse|array
+    {
+        if (in_array($execution->status, ['pending', 'queued', 'running'], true)) {
+            return ApiResponse::error(
+                'report.execution_in_progress',
+                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        if ($execution->result_expires_at?->isPast()) {
+            return ApiResponse::error(
+                'report.result_expired',
+                httpStatus: Response::HTTP_GONE,
+            );
+        }
+
+        $resultStorage = app(ReportResultStorage::class);
+        $rows = $resultStorage->load($execution->result_path);
+
+        if ($rows === null) {
+            if ($execution->status === 'failed') {
+                return ApiResponse::error(
+                    'report.execution_failed',
+                    params: ['error' => $execution->error_message],
+                    httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+                );
+            }
+
+            return ApiResponse::error(
+                'report.result_not_found',
+                httpStatus: Response::HTTP_NOT_FOUND,
+            );
+        }
+
+        return [$rows];
     }
 }

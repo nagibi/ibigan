@@ -323,3 +323,77 @@ it('permite baixar resultado salvo mesmo com status failed', function (): void {
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.data.0.total', 1);
 });
+
+it('permite download csv via url assinada sem autenticação', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'name' => 'Campanhas por status',
+        'columns' => [
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'total', 'label' => 'Total'],
+        ],
+        'is_active' => true,
+    ]));
+
+    $execution = $this->tenant->run(function () use ($template) {
+        $path = 'reports/email-download.json';
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            $path,
+            json_encode([
+                ['status' => 'active', 'total' => 2],
+                ['status' => 'paused', 'total' => 1],
+            ], JSON_THROW_ON_ERROR),
+        );
+
+        return \App\Models\ReportExecution::query()->create([
+            'report_template_id' => $template->id,
+            'executed_by' => $this->admin->id,
+            'parameters' => [],
+            'status' => 'completed',
+            'result_path' => $path,
+            'result_rows_count' => 2,
+            'result_expires_at' => now()->addDays(7),
+            'duration_ms' => 4,
+            'executed_at' => now(),
+        ]);
+    });
+
+    $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        'reports.executions.download',
+        now()->addDays(7),
+        [
+            'tenant' => $this->tenant->id,
+            'report' => $template->id,
+            'execution' => $execution->id,
+        ],
+    );
+
+    $this->get($url)
+        ->assertOk()
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8')
+        ->assertHeader('content-disposition', 'attachment; filename="Campanhas-por-status.csv"');
+
+    expect($this->get($url)->getContent())->toContain('Status')
+        ->and($this->get($url)->getContent())->toContain('active');
+});
+
+it('rejeita download csv com url não assinada', function (): void {
+    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'is_active' => true,
+    ]));
+
+    $execution = $this->tenant->run(fn () => \App\Models\ReportExecution::query()->create([
+        'report_template_id' => $template->id,
+        'executed_by' => $this->admin->id,
+        'parameters' => [],
+        'status' => 'completed',
+        'result_path' => null,
+        'result_rows_count' => 0,
+        'result_expires_at' => now()->addDays(7),
+        'executed_at' => now(),
+    ]));
+
+    $this->get("/api/v1/tenants/{$this->tenant->id}/reports/{$template->id}/executions/{$execution->id}/download")
+        ->assertForbidden();
+});

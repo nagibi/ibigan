@@ -15,12 +15,10 @@ import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { resolveMenuIcon } from '@/lib/menu-icons';
 import { I18N_LANGUAGES } from '@/i18n/config';
 import { getInitials } from '@/lib/helpers';
-import { resetEcho } from '@/lib/echo';
+import { logoutFromApp } from '@/lib/auth-logout';
 import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
-import { authService } from '@/services/auth.service';
-import { centralAuthService } from '@/services/central-auth.service';
 import { profileService } from '@/services/profile.service';
 import { useLanguage } from '@/providers/i18n-provider';
 import { useSettings } from '@/providers/settings-provider';
@@ -60,8 +58,8 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const intl = useIntl();
-  const { user, logout, isAuthenticated } = useAuthStore();
-  const { centralUser, centralLogout, impersonatedTenant } = useCentralAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const { centralUser, impersonatedTenant } = useCentralAuthStore();
   const isCentralOnly = useCentralOnlySession();
   const { currenLanguage, changeLanguage } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
@@ -116,27 +114,8 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const primaryRole = isCentralOnly ? 'super-admin' : user?.roles?.[0];
 
   async function handleLogout() {
-    if (isCentralOnly) {
-      try {
-        await centralAuthService.logout();
-      } catch {
-        // ignora erro de rede
-      } finally {
-        centralLogout();
-        navigate('/central/login');
-      }
-      return;
-    }
-
-    try {
-      await authService.logout();
-    } catch {
-      // ignora erro de rede
-    } finally {
-      resetEcho();
-      logout();
-      navigate('/auth/login');
-    }
+    const redirectTo = await logoutFromApp();
+    navigate(redirectTo);
   }
 
   function handleThemeToggle(checked: boolean) {

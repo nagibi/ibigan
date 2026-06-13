@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\Tenant\UserPreferenceController;
 use App\Http\Controllers\Api\V1\Tenant\TranslationController;
 use App\Http\Controllers\Api\V1\Tenant\WebhookController;
 use App\Http\Middleware\InitializeTenancyByHeader;
+use App\Http\Middleware\InitializeTenancyByRouteParameter;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +56,13 @@ Route::prefix('v1')->group(function () {
 
     Route::get('translations', [TranslationController::class, 'index'])
         ->middleware([InitializeTenancyByHeader::class]);
+
+    Route::get(
+        'tenants/{tenant}/reports/{report}/executions/{execution}/download',
+        [ReportController::class, 'downloadCsv'],
+    )
+        ->middleware(['signed', InitializeTenancyByRouteParameter::class, 'throttle:api'])
+        ->name('reports.executions.download');
 });
 
 // ─── Auth central (público) ───────────────────────────────────────────────

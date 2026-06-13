@@ -10,6 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\URL;
 
 final class ReportCompletedNotification extends Notification implements ShouldBroadcast
 {
@@ -31,11 +32,23 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
 
     public function toMail(object $notifiable): MailMessage
     {
+        $expiresAt = $this->execution->result_expires_at ?? now()->addDays(7);
+
+        $downloadUrl = URL::temporarySignedRoute(
+            'reports.executions.download',
+            $expiresAt,
+            [
+                'tenant' => tenant()->id,
+                'report' => $this->execution->report_template_id,
+                'execution' => $this->execution->id,
+            ],
+        );
+
         return (new MailMessage)
             ->subject("Relatório pronto: {$this->execution->template->name}")
-            ->line("Seu relatório **{$this->execution->template->name}** foi processado com sucesso.")
+            ->line("Seu relatório {$this->execution->template->name} foi processado com sucesso.")
             ->line("{$this->execution->result_rows_count} registros encontrados em {$this->execution->duration_ms}ms.")
-            ->action('Ver relatório', url("/reports/{$this->execution->report_template_id}/executar"))
+            ->action('Download', $downloadUrl)
             ->line('O resultado estará disponível por 7 dias.');
     }
 
