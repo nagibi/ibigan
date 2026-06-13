@@ -28,11 +28,19 @@ final class TenantController extends Controller
         $tenantUsers = $this->centralUserRepository->tenantsForUser($userId);
 
         $tenants = $tenantUsers
-            ->map(fn(TenantUser $tenantUser): TenantData => TenantData::fromModel(
+            ->map(fn (TenantUser $tenantUser): TenantData => TenantData::fromModel(
                 $tenantUser->tenant,
                 $tenantUser->is_default,
             ))
             ->values();
+
+        if ($tenants->isEmpty()) {
+            $currentTenant = tenant();
+
+            if ($currentTenant !== null) {
+                $tenants = collect([TenantData::fromModel($currentTenant, true)]);
+            }
+        }
 
         return response()->json([
             'status'  => 1,

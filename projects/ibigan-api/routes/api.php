@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
 use App\Http\Controllers\Api\V1\Tenant\ActivityLogController;
 use App\Http\Controllers\Api\V1\Tenant\CampaignController;
+use App\Http\Controllers\Api\V1\Tenant\DashboardController;
 use App\Http\Controllers\Api\V1\Tenant\GlobalSearchController;
 use App\Http\Controllers\Api\V1\Tenant\InviteController;
 use App\Http\Controllers\Api\V1\Tenant\MenuController;
@@ -109,6 +110,7 @@ Route::prefix('v1')
     ->middleware([InitializeTenancyByHeader::class, 'auth:sanctum', 'tenant', 'throttle:api'])
     ->group(function () {
         Route::get('search', GlobalSearchController::class)->name('search.global');
+        Route::get('dashboard/stats', [DashboardController::class, 'stats']);
 
         Route::prefix('auth')->group(function () {
             Route::get('me', [AuthController::class, 'me']);

@@ -48,7 +48,7 @@ export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobil
   const isImpersonating = Boolean(impersonatedTenant);
 
   const { data: tenants = [], isLoading } = useQuery<SwitchableTenant[]>({
-    queryKey: isImpersonating ? ['switch-all-tenants'] : ['tenants'],
+    queryKey: isImpersonating ? ['switch-all-tenants'] : ['tenants', tenantId],
     queryFn: async () => {
       if (isImpersonating) {
         const res = await adminTenantsService.list(1, 100);
@@ -59,7 +59,19 @@ export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobil
       return res.data.result;
     },
     staleTime: 5 * 60 * 1000,
-    enabled: !isCentralOnly,
+    enabled: !isCentralOnly && Boolean(tenantId),
+  });
+
+  const { data: authMe } = useQuery({
+    queryKey: ['auth-me', tenantId],
+    queryFn: async () => {
+      const res = await authService.me();
+      return res.data.result as {
+        tenant?: { id: string; slug: string; name: string | null };
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !isCentralOnly && Boolean(tenantId) && !isImpersonating,
   });
 
   if (isCentralOnly) {
@@ -68,9 +80,9 @@ export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobil
 
   const currentTenant = tenants.find((tenant) => tenant.id === tenantId);
   const currentLabel = tenantLabel(
-    impersonatedTenant?.name ?? currentTenant?.name,
-    currentTenant?.slug ?? impersonatedTenant?.name ?? '',
-    tenantId ?? '',
+    impersonatedTenant?.name ?? currentTenant?.name ?? authMe?.tenant?.name,
+    currentTenant?.slug ?? authMe?.tenant?.slug ?? impersonatedTenant?.name ?? '',
+    tenantId ?? authMe?.tenant?.id ?? '',
   );
   const canSwitch = tenants.length > 1;
   const busy = Boolean(switchingId) || Boolean(impersonatingId);
@@ -107,9 +119,11 @@ export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobil
     }
   }
 
-  const tenantTooltip = canSwitch
-    ? t('header.tooltip.tenant_switch')
-    : t('header.tooltip.tenant_current', { name: currentLabel });
+  const tenantTooltip = currentLabel
+    ? canSwitch
+      ? `${t('header.tooltip.tenant_current', { name: currentLabel })} · ${t('header.tooltip.tenant_switch')}`
+      : t('header.tooltip.tenant_current', { name: currentLabel })
+    : t('header.tooltip.tenant_switch');
 
   const trigger = (
     <Button
@@ -128,7 +142,7 @@ export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobil
           )}
         />
         <span className={cn('truncate', showLabelOnMobile ? 'text-sm' : 'hidden sm:inline')}>
-          {isLoading ? '...' : currentLabel}
+          {isLoading && !authMe?.tenant?.name ? '...' : currentLabel || tenantId}
         </span>
       </span>
       {busy ? (
