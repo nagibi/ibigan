@@ -152,12 +152,18 @@ it('faz upload de avatar', function (): void {
 
     $avatar = UploadedFile::fake()->image('avatar.jpg', 200, 200);
 
-    $this->post('/api/v1/profile/avatar', ['avatar' => $avatar], [
+    $response = $this->post('/api/v1/profile/avatar', ['avatar' => $avatar], [
         'X-Tenant-ID' => $this->tenant->id,
         'Accept' => 'application/json',
-    ])
+    ]);
+
+    $response
         ->assertOk()
         ->assertJsonPath('status', 1);
+
+    $avatarUrl = $response->json('result.avatar_url');
+    expect($avatarUrl)->toBeString()->not->toBeEmpty();
+    expect($avatarUrl)->toContain('?v=');
 });
 
 it('nega upload de avatar sem arquivo', function (): void {

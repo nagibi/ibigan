@@ -232,10 +232,12 @@ final class UserController extends Controller
             ->addMediaFromRequest('avatar')
             ->toMediaCollection('avatar');
 
+        $model->refresh()->load('roles', 'media');
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000425',
-            'result' => UserData::fromModel($model->fresh()),
+            'result' => UserData::fromModel($model),
         ]);
     }
 }

@@ -9,7 +9,6 @@ import {
   BellOff,
   ExternalLink,
   LayoutList,
-  Loader2,
   Mail,
   Menu,
   MessageCircle,
@@ -56,6 +55,7 @@ import { dashboardService, type DashboardStats } from '@/services/dashboard.serv
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { DashboardAnalyticsSection } from '@/pages/dashboard/dashboard-analytics-section';
+import { DashboardPageSkeleton } from '@/pages/dashboard/dashboard-page-skeleton';
 import {
   getDefaultDashboardDateRange,
   type DashboardDateRange,
@@ -383,13 +383,7 @@ export function DashboardPage() {
   });
 
   if (isLoading) {
-    return (
-      <PageBody>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="text-muted-foreground size-6 animate-spin" />
-        </div>
-      </PageBody>
-    );
+    return <DashboardPageSkeleton />;
   }
 
   if (isError || !data) {

@@ -75,10 +75,12 @@ final class ProfileController extends Controller
         $user->addMediaFromRequest('avatar')
             ->toMediaCollection('avatar');
 
+        $user->refresh()->load('roles', 'media');
+
         return response()->json([
             'status' => 1,
             'message' => 'MSG000425',
-            'result' => UserData::fromModel($user->fresh()->load('roles')),
+            'result' => UserData::fromModel($user),
         ]);
     }
 

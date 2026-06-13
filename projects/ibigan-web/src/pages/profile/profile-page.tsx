@@ -46,7 +46,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { ProfilePageSkeleton, ProfileTenantListSkeleton } from '@/pages/profile/profile-page-skeleton';
 
 const USER_PROFILE_FALLBACK = {
   name: '',
@@ -186,8 +186,9 @@ export function ProfilePage() {
 
   const avatarMutation = useMutation({
     mutationFn: (file: File) => profileService.uploadAvatar(file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    onSuccess: (res) => {
+      queryClient.setQueryData(['profile'], res);
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
       setAvatarPreview(null);
       apiNotify.showSuccess('Avatar atualizado!');
     },
@@ -375,15 +376,7 @@ export function ProfilePage() {
   }
 
   if (isLoading) {
-    return (
-      <FormPageSkeleton
-        panels={[
-          { titleWidth: 'w-28', fields: 1 },
-          { titleWidth: 'w-32', fields: 6 },
-          { titleWidth: 'w-28', fields: 3 },
-        ]}
-      />
-    );
+    return <ProfilePageSkeleton />;
   }
 
   return (
@@ -465,9 +458,7 @@ export function ProfilePage() {
 
       <FormPanel title="Empresas">
         {isLoadingTenants ? (
-          <div className="flex justify-center py-6">
-            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-          </div>
+          <ProfileTenantListSkeleton count={2} />
         ) : tenants.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma empresa vinculada à sua conta.</p>
         ) : (

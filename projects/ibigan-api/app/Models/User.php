@@ -78,7 +78,24 @@ class User extends Authenticatable implements HasMedia
     {
         $this->addMediaCollection('avatar')
             ->singleFile()
+            ->useDisk('public')
             ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
+    }
+
+    public function avatarUrl(): ?string
+    {
+        $media = $this->getFirstMedia('avatar');
+
+        if ($media === null) {
+            return null;
+        }
+
+        $url = $media->getUrl();
+        $version = $media->updated_at?->getTimestamp() ?? $media->id;
+
+        return str_contains($url, '?')
+            ? "{$url}&v={$version}"
+            : "{$url}?v={$version}";
     }
 
     public function creator(): BelongsTo
@@ -109,7 +126,7 @@ class User extends Authenticatable implements HasMedia
             'type' => 'user',
             'title' => $this->name,
             'email' => $this->email,
-            'avatar_url' => $this->getFirstMediaUrl('avatar') ?: null,
+            'avatar_url' => $this->avatarUrl(),
             'searchable_by' => 'usuario-visualizar',
         ];
     }

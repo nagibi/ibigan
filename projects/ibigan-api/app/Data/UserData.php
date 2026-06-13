@@ -46,7 +46,7 @@ final class UserData extends Data
             gender: $user->gender,
             bio: $user->bio,
             status: $user->status,
-            avatar_url: $user->getFirstMediaUrl('avatar') ?: null,
+            avatar_url: $user->avatarUrl(),
             is_active: (bool) $user->is_active,
             last_login_at: $user->last_login_at?->toIso8601String(),
             last_login_ip: $user->last_login_ip,
