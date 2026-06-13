@@ -203,7 +203,7 @@ export function AdminTenantsPage() {
   const getTenantRowActions = useCallback(
     (tenant: AdminTenant): GridRowAction[] => [
       {
-        label: 'Entrar na empresa',
+        label: 'Entrar',
         icon: LogIn,
         disabled: Boolean(impersonatingId),
         onClick: () => void handleImpersonate(tenant),
