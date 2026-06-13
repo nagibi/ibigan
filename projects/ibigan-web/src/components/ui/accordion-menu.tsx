@@ -282,6 +282,7 @@ function AccordionMenuSub({
 function AccordionMenuSubTrigger({
   className,
   children,
+  ...props
 }: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>) {
   const { classNames } = React.useContext(AccordionMenuContext);
   return (
@@ -293,6 +294,7 @@ function AccordionMenuSubTrigger({
           classNames?.subTrigger,
           className,
         )}
+        {...props}
       >
         <>
           {children}

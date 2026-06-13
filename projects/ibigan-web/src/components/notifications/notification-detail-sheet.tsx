@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BarChart2, Bell, Check, Download, ExternalLink, LoaderCircle, Mail, Trash2 } from 'lucide-react';
+import { BarChart2, Bell, CheckCircle, Download, ExternalLink, LoaderCircle, Mail, Trash2 } from 'lucide-react';
 import {
   getNotificationTitle,
   getNotificationType,
@@ -10,7 +10,7 @@ import {
   isReportNotification,
 } from '@/lib/notification-utils';
 import { type AppNotification } from '@/services/notifications.service';
-import { downloadReportResultCsv } from '@/services/reports.service';
+import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -72,7 +72,7 @@ export function NotificationDetailSheet({
 
     setDownloading(true);
     try {
-      await downloadReportResultCsv(
+      await downloadReportResultCsvWithToast(
         reportMeta.templateId,
         reportMeta.executionId,
         reportMeta.templateName,
@@ -164,7 +164,7 @@ export function NotificationDetailSheet({
               size="sm"
               onClick={() => onMarkRead(notification.id)}
             >
-              <Check className="mr-1 size-3.5" />
+              <CheckCircle className="mr-1 size-3.5" />
               Marcar como lida
             </Button>
           ) : null}

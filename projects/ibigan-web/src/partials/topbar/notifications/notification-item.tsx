@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart2,
-  Check,
   CheckCircle,
   LoaderCircle,
   Mail,
@@ -14,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { type AppNotification } from '@/services/notifications.service';
 import { getReportDownloadMeta } from '@/lib/notification-utils';
-import { downloadReportResultCsv } from '@/services/reports.service';
+import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { getInitials } from '@/lib/helpers';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -182,11 +181,10 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
 
     setDownloading(true);
     try {
-      await downloadReportResultCsv(templateId, executionId, templateName);
-      toast.success('Download iniciado.');
+      await downloadReportResultCsvWithToast(templateId, executionId, templateName);
       if (isUnread) onMarkRead(notification.id);
     } catch {
-      toast.error('Não foi possível baixar o relatório.');
+      // Toast de erro já exibido pelo helper de download.
     } finally {
       setDownloading(false);
     }
@@ -203,7 +201,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
           onClick={() => onMarkRead(notification.id)}
           title="Marcar como lida"
         >
-          <Check className="size-3" />
+          <CheckCircle className="size-3.5" />
         </Button>
       ) : onMarkUnread ? (
         <Button
@@ -234,7 +232,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
     const { templateId, templateName, fileName, fileMeta } = getReportDownloadMeta(notification);
 
     return (
-      <div className={cn('flex grow items-start gap-2.5 px-5', isUnread && 'bg-primary/5')}>
+      <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>
         <NotificationAvatar className="bg-green-500/10 text-green-700">
           <BarChart2 className="size-4" />
         </NotificationAvatar>
@@ -300,7 +298,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
     const userId = data.user_id;
 
     return (
-      <div className={cn('flex grow items-start gap-2.5 px-5', isUnread && 'bg-primary/5')}>
+      <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>
         <NotificationAvatar className="bg-primary/10 text-primary">
           {getInitials(userName, 2)}
         </NotificationAvatar>
@@ -343,7 +341,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
     const body = data.body ? String(data.body) : '';
 
     return (
-      <div className={cn('flex grow items-start gap-2.5 px-5', isUnread && 'bg-primary/5')}>
+      <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>
         <NotificationAvatar className="bg-blue-500/10 text-blue-600">
           <Mail className="size-4" />
         </NotificationAvatar>
@@ -364,7 +362,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
   }
 
   return (
-    <div className={cn('flex grow items-start gap-2.5 px-5', isUnread && 'bg-primary/5')}>
+    <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>
       <NotificationAvatar className="border border-green-500/20 bg-green-500/10 text-green-600">
         <CheckCircle className="size-4" />
       </NotificationAvatar>

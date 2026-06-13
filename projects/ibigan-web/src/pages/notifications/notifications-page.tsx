@@ -34,7 +34,7 @@ import {
   type NotificationQuickFilter,
 } from '@/services/notifications.service';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-import { downloadReportResultCsv } from '@/services/reports.service';
+import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { NotificationDetailSheet } from '@/components/notifications/notification-detail-sheet';
 import { PageBody } from '@/components/common/page-body';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
@@ -214,18 +214,17 @@ export function NotificationsPage() {
 
     try {
       setDownloadingId(notification.id);
-      await downloadReportResultCsv(templateId, executionId, templateName);
+      await downloadReportResultCsvWithToast(templateId, executionId, templateName);
       if (!notification.read_at) {
         const response = await notificationsService.markAsRead(notification.id);
         upsertNotificationInCache(queryClient, response.data.result);
       }
-      showSuccess('Download iniciado.');
     } catch {
-      showError('Erro ao baixar relatório.');
+      // Toast de erro já exibido pelo helper de download.
     } finally {
       setDownloadingId(null);
     }
-  }, [queryClient, showError, showSuccess]);
+  }, [queryClient, showError]);
 
   const handleMarkSelectedRead = useCallback(async () => {
     const ids = selectedRef.current;

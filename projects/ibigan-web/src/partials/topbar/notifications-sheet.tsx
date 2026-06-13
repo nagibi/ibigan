@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BarChart2, Bell, CheckCheck, ExternalLink, LoaderCircle, Settings } from 'lucide-react';
+import { Archive, BarChart2, Bell, CheckCheck, ExternalLink, LoaderCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   invalidateNotifications,
@@ -111,17 +111,15 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
     }
 
     return (
-      <div className="flex flex-col gap-5 overflow-y-auto pb-5">
-        {items.map((notification, index) => (
-          <Fragment key={notification.id}>
-            <NotificationItem
-              notification={notification}
-              onMarkRead={(id) => markAsReadMutation.mutate(id)}
-              onMarkUnread={(id) => markAsUnreadMutation.mutate(id)}
-              onDelete={(id) => deleteMutation.mutate(id)}
-            />
-            {index < items.length - 1 && <div className="border-b border-border" />}
-          </Fragment>
+      <div className="flex flex-col divide-y divide-border overflow-y-auto">
+        {items.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onMarkRead={(id) => markAsReadMutation.mutate(id)}
+            onMarkUnread={(id) => markAsUnreadMutation.mutate(id)}
+            onDelete={(id) => deleteMutation.mutate(id)}
+          />
         ))}
       </div>
     );
@@ -221,6 +219,7 @@ export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
                 .catch(() => toast.error('Erro ao arquivar notificações.'));
             }}
           >
+            <Archive className="mr-1 size-4" />
             Arquivar lidas
           </Button>
           <Button

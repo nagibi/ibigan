@@ -35,7 +35,7 @@ function tenantLabel(name: string | null | undefined, slug: string, id: string) 
   return name ?? slug ?? id;
 }
 
-export function TenantSwitcher() {
+export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobile?: boolean }) {
   const { t } = useTranslation();
   const { tenantId } = useAuthStore();
   const isCentralOnly = useCentralOnlySession();
@@ -76,10 +76,13 @@ export function TenantSwitcher() {
   const busy = Boolean(switchingId) || Boolean(impersonatingId);
 
   const triggerClassName = cn(
-    'h-8 max-w-9 shrink-0 justify-center gap-0 px-1.5 sm:h-9 sm:max-w-[160px] sm:justify-between sm:gap-1.5 sm:px-2 md:max-w-[220px]',
+    'h-8 min-w-0 justify-between gap-1.5 px-2 sm:h-9',
+    showLabelOnMobile
+      ? 'max-w-full flex-1 font-normal'
+      : 'max-w-9 shrink-0 justify-center gap-0 px-1.5 sm:max-w-[160px] md:max-w-[220px]',
     isImpersonating
       ? 'border-amber-400 bg-amber-50 font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20'
-      : 'sm:max-w-[200px] border-dashed font-normal',
+      : cn('border-dashed font-normal', !showLabelOnMobile && 'sm:max-w-[200px]'),
   );
 
   async function handleSelect(nextTenantId: string) {
@@ -124,7 +127,7 @@ export function TenantSwitcher() {
             isImpersonating ? 'text-amber-800 dark:text-amber-300' : 'text-primary',
           )}
         />
-        <span className="hidden truncate sm:inline">
+        <span className={cn('truncate', showLabelOnMobile ? 'text-sm' : 'hidden sm:inline')}>
           {isLoading ? '...' : currentLabel}
         </span>
       </span>
@@ -133,14 +136,19 @@ export function TenantSwitcher() {
       ) : (
         <span className="flex shrink-0 items-center gap-1">
           {isImpersonating ? (
-            <span className="hidden rounded bg-amber-400/30 px-1 text-[10px] uppercase tracking-wide sm:inline">
+            <span
+              className={cn(
+                'rounded bg-amber-400/30 px-1 text-[10px] uppercase tracking-wide',
+                !showLabelOnMobile && 'hidden sm:inline',
+              )}
+            >
               plataforma
             </span>
           ) : null}
           {canSwitch ? (
             <ChevronsUpDown
               className={cn(
-                'size-3.5',
+                'size-3.5 shrink-0',
                 isImpersonating
                   ? 'text-amber-800/70 dark:text-amber-300/70'
                   : 'text-muted-foreground',
@@ -152,7 +160,7 @@ export function TenantSwitcher() {
     </Button>
   );
 
-  const triggerWithTooltip = isMobile ? (
+  const triggerWithTooltip = isMobile && !showLabelOnMobile ? (
     trigger
   ) : (
     <Tooltip>
@@ -169,7 +177,7 @@ export function TenantSwitcher() {
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
-      {isMobile ? (
+      {isMobile && !showLabelOnMobile ? (
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       ) : (
         <Tooltip>

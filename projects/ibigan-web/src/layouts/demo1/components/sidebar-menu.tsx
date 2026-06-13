@@ -23,6 +23,40 @@ import { MenuBadge } from '@/lib/menu-badge';
 import { NOTIFICATION_PREFERENCES_PATH } from '@/lib/notification-preferences-path';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 
+function menuPathMatches(pathname: string, path: string): boolean {
+  if (!path) return false;
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function findActiveMenuPath(pathname: string, items: MenuConfig): string | null {
+  let best: string | null = null;
+
+  const walk = (menuItems: MenuConfig) => {
+    for (const item of menuItems) {
+      if (item.path && menuPathMatches(pathname, item.path)) {
+        if (!best || item.path.length > best.length) {
+          best = item.path;
+        }
+      }
+      if (item.children?.length) {
+        walk(item.children);
+      }
+    }
+  };
+
+  walk(items);
+  return best;
+}
+
+function menuGroupIsActive(item: MenuItem, activePath: string | null): boolean {
+  if (!activePath) return false;
+  if (item.path && (item.path === activePath || activePath.startsWith(`${item.path}/`))) {
+    return true;
+  }
+
+  return item.children?.some((child) => menuGroupIsActive(child, activePath)) ?? false;
+}
+
 function MenuIcon({ icon }: { icon?: LucideIcon }) {
   const Icon = icon ?? LayoutGrid;
   return <Icon data-slot="accordion-menu-icon" />;
@@ -40,12 +74,15 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
   const { isOpen: preferencesOpen } = useNotificationPreferencesSheet();
   const selectedValue = preferencesOpen ? NOTIFICATION_PREFERENCES_PATH : pathname;
 
-  // Memoize matchPath to prevent unnecessary re-renders
+  const activeMenuPath = findActiveMenuPath(pathname, menu);
+
   const matchPath = useCallback(
-    (path: string): boolean =>
-      path === pathname || (path.length > 1 && pathname.startsWith(path)),
-    [pathname],
+    (path: string): boolean => Boolean(path && path === activeMenuPath),
+    [activeMenuPath],
   );
+
+  const selectedMenuClass =
+    'data-[selected=true]:bg-primary/10 data-[selected=true]:font-semibold data-[selected=true]:text-primary data-[selected=true]:before:absolute data-[selected=true]:before:inset-y-1 data-[selected=true]:before:start-0 data-[selected=true]:before:w-0.5 data-[selected=true]:before:rounded-full data-[selected=true]:before:bg-primary';
 
   // Global classNames for consistent styling
   const classNames: AccordionMenuClassNames = {
@@ -54,10 +91,15 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
     label:
       'uppercase text-xs font-medium text-muted-foreground/70 pt-2.25 pb-px',
     separator: '',
-    item: 'h-8 hover:bg-transparent text-accent-foreground hover:text-primary data-[selected=true]:text-primary data-[selected=true]:bg-muted data-[selected=true]:font-medium',
+    item: cn(
+      'relative h-8 hover:bg-transparent text-accent-foreground hover:text-primary',
+      selectedMenuClass,
+    ),
     sub: '',
-    subTrigger:
-      'h-8 hover:bg-transparent text-accent-foreground hover:text-primary data-[selected=true]:text-primary data-[selected=true]:bg-muted data-[selected=true]:font-medium',
+    subTrigger: cn(
+      'relative h-8 hover:bg-transparent text-accent-foreground hover:text-primary',
+      selectedMenuClass,
+    ),
     subContent: 'py-0',
     indicator: '',
   };
@@ -78,7 +120,10 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
     if (item.children) {
       return (
         <AccordionMenuSub key={index} value={item.path || `root-${index}`}>
-          <AccordionMenuSubTrigger className="text-sm font-medium">
+          <AccordionMenuSubTrigger
+            className="text-sm font-medium"
+            data-selected={menuGroupIsActive(item, activeMenuPath) ? 'true' : undefined}
+          >
             <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
             <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
@@ -162,7 +207,10 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
           key={index}
           value={item.path || `child-${level}-${index}`}
         >
-          <AccordionMenuSubTrigger className="text-[13px]">
+          <AccordionMenuSubTrigger
+            className="text-[13px]"
+            data-selected={menuGroupIsActive(item, activeMenuPath) ? 'true' : undefined}
+          >
             {item.collapse ? (
               <span className="text-muted-foreground">
                 <span className="hidden [[data-state=open]>span>&]:inline">

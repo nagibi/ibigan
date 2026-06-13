@@ -25,7 +25,7 @@ import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
 import {
-  downloadReportResultCsv,
+  downloadReportResultCsvWithToast,
   reportsService,
   type MyReportExecution,
 } from '@/services/reports.service';
@@ -154,17 +154,17 @@ export function MyExecutionsPage() {
   const handleDownload = useCallback(async (execution: MyReportExecution) => {
     try {
       setDownloadingId(execution.id);
-      await downloadReportResultCsv(
+      await downloadReportResultCsvWithToast(
         execution.template_id,
         execution.id,
         `${execution.template_name}-${execution.id}`,
       );
     } catch {
-      showError('Erro ao baixar resultado.');
+      // Toast de erro já exibido pelo helper de download.
     } finally {
       setDownloadingId(null);
     }
-  }, [showError]);
+  }, []);
 
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['my-executions'] });

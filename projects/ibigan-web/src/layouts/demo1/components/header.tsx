@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
 import { type MenuMode } from '@/config/types';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ export function Header() {
   const { pathname } = useLocation();
   const { settings } = useSettings();
   const mobileMode = useIsMobile();
+  const isCentralOnly = useCentralOnlySession();
   const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
   const isHorizontalMenu = menuMode === 'horizontal';
 
@@ -117,6 +119,12 @@ export function Header() {
               )}
             </div>
           </div>
+
+          {mobileMode && !isCentralOnly && (
+            <div className="flex min-w-0 flex-1 items-center overflow-hidden xl:hidden">
+              <TenantSwitcher showLabelOnMobile />
+            </div>
+          )}
 
           {isHorizontalMenu && !mobileMode && (
             <Link to="/" className="hidden shrink-0 items-center xl:flex">

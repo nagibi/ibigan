@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import { toast } from 'sonner';
 
 export interface ReportParameter {
   name: string;
@@ -161,7 +162,10 @@ export async function downloadReportResultCsv(
 ) {
   const { data } = await reportsService.result(reportId, executionId, 1, 10000);
   const rows = data.result.data;
-  if (rows.length === 0) return;
+
+  if (rows.length === 0) {
+    throw new Error('Relatório sem dados para exportar.');
+  }
 
   const cols = columns?.length
     ? columns
@@ -179,4 +183,25 @@ export async function downloadReportResultCsv(
   a.download = `${fileName}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export async function downloadReportResultCsvWithToast(
+  reportId: number,
+  executionId: number,
+  fileName: string,
+  columns?: ReportColumn[] | null,
+) {
+  try {
+    await downloadReportResultCsv(reportId, executionId, fileName, columns);
+    toast.success('Download iniciado.', {
+      classNames: {
+        title: 'text-foreground font-medium',
+        icon: '!text-green-600',
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.';
+    toast.error(message);
+    throw error;
+  }
 }
