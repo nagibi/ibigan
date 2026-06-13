@@ -18,7 +18,6 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useRegisterPageRefresh } from '@/providers/page-refresh-provider';
 import { cn } from '@/lib/utils';
 import {
   formatToolbarSelectedCount,
@@ -320,7 +319,6 @@ export function GridPanelToolbar({
 }: GridPanelToolbarProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  useRegisterPageRefresh(onRefresh, isRefreshing);
   const resolvedSelectAllLabel = selectAllLabel ?? t('grid.select_all');
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('grid.search_placeholder');
   const selectionAlert = buildSelectionAlert(selectedCount, onClearSelection);

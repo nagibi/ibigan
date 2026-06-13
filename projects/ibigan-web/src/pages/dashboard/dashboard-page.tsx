@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -32,7 +32,6 @@ import {
 } from 'recharts';
 import { useImpersonationEntryAlert } from '@/hooks/use-impersonation-entry-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
-import { useRegisterPageRefresh } from '@/providers/page-refresh-provider';
 import { PageBody } from '@/components/common/page-body';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -331,18 +330,12 @@ export function DashboardPage() {
 
   const [dateRange, setDateRange] = useState<DashboardDateRange>(getDefaultDashboardDateRange);
 
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['dashboard-stats', tenantId, dateRange.date_from, dateRange.date_to],
     queryFn: () => dashboardService.stats(dateRange).then((r) => r.data.result),
     staleTime: 1000 * 60 * 5,
     enabled: Boolean(tenantId),
   });
-
-  const handleRefresh = useCallback(() => {
-    void refetch();
-  }, [refetch]);
-
-  useRegisterPageRefresh(tenantId ? handleRefresh : undefined, isRefetching);
 
   const periodLabel = useMemo(() => {
     if (!dateRange.date_from && !dateRange.date_to) {

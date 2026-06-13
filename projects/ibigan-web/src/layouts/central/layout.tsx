@@ -7,8 +7,6 @@ import { type MenuMode } from '@/config/types';
 import { useMenu } from '@/hooks/use-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
-import { MobilePullToRefresh } from '@/components/common/mobile-pull-to-refresh';
-import { PageRefreshProvider } from '@/providers/page-refresh-provider';
 import {
   PageToolbarProvider,
   useClearPageToolbarAlertOnNavigate,
@@ -33,7 +31,6 @@ function CentralLayoutContent() {
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="content">
           <PageScrollContainer className="page-content-scroll flex min-h-0 min-w-0 flex-1 flex-col">
-            <MobilePullToRefresh />
             <ScrollTopAnchor />
             <PageContentHeader
               menuSource="central"
@@ -132,11 +129,9 @@ export function CentralLayout() {
 
       {!isMobile && isSidebarMode ? <CentralSidebar /> : null}
 
-      <PageRefreshProvider>
-        <PageToolbarProvider>
+      <PageToolbarProvider>
           <CentralLayoutContent />
         </PageToolbarProvider>
-      </PageRefreshProvider>
     </>
   );
 }

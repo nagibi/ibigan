@@ -20,7 +20,6 @@ import {
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useRegisterPageRefresh } from '@/providers/page-refresh-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -174,7 +173,6 @@ export function FormToolbar({
 }: FormToolbarProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  useRegisterPageRefresh(onRefresh, isRefreshing);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
