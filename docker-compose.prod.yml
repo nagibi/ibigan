@@ -12,6 +12,8 @@ services:
         INSTALL_XDEBUG: 0
     container_name: ibigan_app
     restart: unless-stopped
+    environment:
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
@@ -30,6 +32,8 @@ services:
     image: nginx:1.27-alpine
     container_name: ibigan_nginx
     restart: unless-stopped
+    environment:
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     ports:
       - "80:80"
       - "443:443"
@@ -53,10 +57,12 @@ services:
     ports:
       - "127.0.0.1:3306:3306"
     environment:
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ibigan_central}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command: ["mysqld", "--default-time-zone=-03:00"]
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -95,6 +101,8 @@ services:
         INSTALL_XDEBUG: 0
     container_name: ibigan_horizon
     restart: unless-stopped
+    environment:
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
@@ -117,6 +125,8 @@ services:
         INSTALL_XDEBUG: 0
     container_name: ibigan_scheduler
     restart: unless-stopped
+    environment:
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
@@ -139,6 +149,8 @@ services:
         INSTALL_XDEBUG: 0
     container_name: ibigan_reverb
     restart: unless-stopped
+    environment:
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     ports:
       - "8082:8080"
     volumes:

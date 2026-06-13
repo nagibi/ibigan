@@ -18,6 +18,7 @@ use App\Repositories\Eloquent\EloquentUserRepository;
 use App\Models\Central\CentralUser;
 use App\Support\DevToolsAccess;
 use App\Support\SentryContext;
+use App\Support\TimezoneResolver;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Illuminate\Queue\Events\JobProcessing;
@@ -28,6 +29,8 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 use SocialiteProviders\Apple\Provider as AppleProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
+use Stancl\Tenancy\Events\TenancyEnded;
+use Stancl\Tenancy\Events\TenancyInitialized;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -50,6 +53,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        TimezoneResolver::applyDefault();
+
         Sanctum::usePersonalAccessTokenModel(MultiTenantPersonalAccessToken::class);
 
         Scramble::registerUiRoute('docs/api');
@@ -79,6 +84,18 @@ class AppServiceProvider extends ServiceProvider
             return DevToolsAccess::userCanAccess(
                 CentralUser::query()->find((int) $centralUserId),
             );
+        });
+
+        Event::listen(TenancyInitialized::class, function (TenancyInitialized $event): void {
+            $timezone = $event->tenancy->tenant->timezone ?? null;
+
+            if (is_string($timezone) && $timezone !== '') {
+                TimezoneResolver::apply($timezone);
+            }
+        });
+
+        Event::listen(TenancyEnded::class, function (): void {
+            TimezoneResolver::applyDefault();
         });
 
         Event::listen(JobProcessing::class, function (): void {
