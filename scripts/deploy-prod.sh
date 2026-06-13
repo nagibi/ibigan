@@ -33,7 +33,7 @@ echo "==> Migrations e caches Laravel"
 "${DC[@]}" exec -T app php artisan view:cache
 "${DC[@]}" exec -T app php artisan storage:link
 
-echo "==> Horizon"
-"${DC[@]}" restart horizon
+echo "==> Horizon e Reverb"
+"${DC[@]}" restart horizon reverb
 
 echo "Deploy concluído com sucesso."

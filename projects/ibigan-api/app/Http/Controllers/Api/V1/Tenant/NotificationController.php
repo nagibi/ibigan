@@ -8,6 +8,7 @@ use App\Data\NotificationData;
 use App\Events\NotificationsInvalidated;
 use App\Events\NotificationStatusChanged;
 use App\Http\Controllers\Controller;
+use App\Support\Broadcaster;
 use App\Support\GridFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -64,7 +65,7 @@ final class NotificationController extends Controller
         $databaseNotification->markAsRead();
         $result = NotificationData::fromModel($databaseNotification->fresh());
 
-        broadcast(new NotificationStatusChanged($request->user()->id, $result));
+        Broadcaster::safe(new NotificationStatusChanged($request->user()->id, $result));
 
         return response()->json([
             'status' => 1,
@@ -88,7 +89,7 @@ final class NotificationController extends Controller
         $databaseNotification->forceFill(['read_at' => null])->save();
         $result = NotificationData::fromModel($databaseNotification->fresh());
 
-        broadcast(new NotificationStatusChanged($request->user()->id, $result));
+        Broadcaster::safe(new NotificationStatusChanged($request->user()->id, $result));
 
         return response()->json([
             'status' => 1,
@@ -106,7 +107,7 @@ final class NotificationController extends Controller
 
         $request->user()->unreadNotifications->markAsRead();
 
-        broadcast(new NotificationsInvalidated($request->user()->id));
+        Broadcaster::safe(new NotificationsInvalidated($request->user()->id));
 
         return response()->json([
             'status' => 1,
@@ -127,7 +128,7 @@ final class NotificationController extends Controller
             ->where('id', $notification)
             ->delete();
 
-        broadcast(new NotificationsInvalidated($request->user()->id));
+        Broadcaster::safe(new NotificationsInvalidated($request->user()->id));
 
         return response()->json([
             'status' => 1,

@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import api from '@/lib/axios';
 
 declare global {
   interface Window {
@@ -18,13 +19,16 @@ export function createEcho(): Echo {
     wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8082),
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
     enabledTransports: ['ws', 'wss'],
-    authEndpoint: `${import.meta.env.VITE_API_URL}/broadcasting/auth`,
-    auth: {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('ibigan_token')}`,
-        'X-Tenant-ID': localStorage.getItem('ibigan_tenant_id') ?? '',
+    authorizer: (channel: { name: string }) => ({
+      authorize: (socketId: string, callback: (error: Error | null, data?: unknown) => void) => {
+        api.post('/broadcasting/auth', {
+          socket_id: socketId,
+          channel_name: channel.name,
+        })
+          .then((response) => callback(null, response.data))
+          .catch((error: Error) => callback(error));
       },
-    },
+    }),
   });
 }
 
