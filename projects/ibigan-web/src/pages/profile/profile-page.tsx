@@ -4,6 +4,7 @@ import { useForm, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
+import { NOTIFICATION_PREFERENCES_TITLE } from '@/lib/notification-preferences-path';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { Bell, Building2, Camera, ChevronRight, LoaderCircle, Trash2 } from 'lucide-react';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
@@ -485,7 +486,7 @@ export function ProfilePage() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-medium">
-                {notificationPreferencesMenu?.title ?? 'Preferências de Notificação'}
+                {notificationPreferencesMenu?.title ?? NOTIFICATION_PREFERENCES_TITLE}
               </p>
               <p className="text-xs text-muted-foreground">Configurar canais e tipos de alerta.</p>
             </div>

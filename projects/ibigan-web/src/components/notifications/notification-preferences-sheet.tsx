@@ -14,7 +14,7 @@ import {
   SheetContent,
   SheetHeader,
 } from '@/components/ui/sheet';
-import { NOTIFICATION_PREFERENCES_PATH } from '@/lib/notification-preferences-path';
+import { NOTIFICATION_PREFERENCES_PATH, NOTIFICATION_PREFERENCES_TITLE } from '@/lib/notification-preferences-path';
 
 interface NotificationPreferencesSheetProps {
   open: boolean;
@@ -41,7 +41,7 @@ export function NotificationPreferencesSheet({
       <SheetContent className="mobile-side-panel-sheet gap-0 rounded-lg p-0 sm:inset-5 sm:start-auto sm:h-auto sm:max-h-[calc(100vh-2.5rem)] sm:w-[520px] sm:max-w-none [&_[data-slot=sheet-close]]:end-5 [&_[data-slot=sheet-close]]:top-4.5">
         <SheetHeader className="relative mb-0 border-b px-5 py-4 pe-14">
           <SheetPanelTitle icon={Settings2}>
-            {notificationsMenu?.title ?? 'Preferências de Notificação'}
+            {notificationsMenu?.title ?? NOTIFICATION_PREFERENCES_TITLE}
             <InfoHint
               content="Configure como deseja ser notificado para cada tipo de evento."
               side="bottom"
