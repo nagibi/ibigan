@@ -83,32 +83,20 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
         }
 
         $data = $this->mergeData($notifiable);
+        $canonical = SystemMessageTemplates::resolveReportCompleted($data);
+
         $template = MessageTemplate::query()
             ->where('slug', MessageTemplateSlugs::REPORT_COMPLETED)
             ->where('is_active', true)
             ->first();
 
-        if ($template !== null) {
-            $resolved = app(TemplateMailService::class)->resolve($template, $data);
-            $body = trim($resolved['body']);
-
-            if (self::containsHtml($body)) {
-                $body = SystemMessageTemplates::resolveReportCompleted($data)['body'];
-            }
-
-            return $this->resolvedContent = [
-                'subject' => $resolved['subject'],
-                'body' => $body,
-                'slug' => $template->slug,
-            ];
-        }
-
-        $service = app(TemplateMailService::class);
-        $defaults = SystemMessageTemplates::definitions()[0];
+        $subject = $template !== null
+            ? app(TemplateMailService::class)->replace($template->subject, $data)
+            : $canonical['subject'];
 
         return $this->resolvedContent = [
-            'subject' => $service->replace((string) $defaults['subject'], $data),
-            'body' => trim($service->replace((string) $defaults['body'], $data)),
+            'subject' => $subject,
+            'body' => $canonical['body'],
             'slug' => MessageTemplateSlugs::REPORT_COMPLETED,
         ];
     }
@@ -124,11 +112,6 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
             array_map(static fn (string $part): string => trim($part), $parts),
             static fn (string $part): bool => $part !== '',
         ));
-    }
-
-    private static function containsHtml(string $body): bool
-    {
-        return preg_match('/<\s*\/?\s*(p|a|div|span|h[1-6]|br|strong|em|ul|ol|li|table)\b/i', $body) === 1;
     }
 
     /**

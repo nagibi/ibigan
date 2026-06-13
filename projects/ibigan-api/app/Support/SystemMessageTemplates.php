@@ -59,7 +59,13 @@ TEXT,
         foreach (self::definitions() as $template) {
             MessageTemplate::updateOrCreate(
                 ['slug' => $template['slug']],
-                $template,
+                [
+                    'name' => $template['name'],
+                    'subject' => $template['subject'],
+                    'body' => $template['body'],
+                    'merge_tags' => $template['merge_tags'],
+                    'is_active' => $template['is_active'],
+                ],
             );
         }
     }

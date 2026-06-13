@@ -194,6 +194,49 @@ it('ignora corpo html legado do template na notificacao in-app', function (): vo
     $payload = $notification->toArray($this->user);
 
     expect($payload['body'])->toContain('Hello!');
+    expect($payload['body'])->toContain('Relatório mensal');
     expect($payload['body'])->toContain('5 registros encontrados em 120ms');
     expect($payload['body'])->not->toContain('<p>');
+    expect($payload['body'])->not->toContain('{{report_name}}');
+});
+
+it('substitui merge tags mesmo quando template no banco esta em uma linha', function (): void {
+    tenancy()->initialize($this->tenant);
+
+    MessageTemplate::query()
+        ->where('slug', MessageTemplateSlugs::REPORT_COMPLETED)
+        ->update([
+            'body' => 'Hello! Seu relatório {{report_name}} foi processado com sucesso. {{rows_summary}}. O resultado estará disponível por 7 dias.',
+        ]);
+
+    $template = ReportTemplate::query()->create([
+        'name' => 'Campanhas por tenant',
+        'slug' => 'campanhas-por-tenant',
+        'query' => 'SELECT 1',
+        'parameters' => [],
+        'is_active' => true,
+        'created_by' => $this->user->id,
+    ]);
+
+    $execution = ReportExecution::query()->create([
+        'report_template_id' => $template->id,
+        'executed_by' => $this->user->id,
+        'parameters' => [],
+        'status' => 'completed',
+        'result_rows_count' => 3,
+        'duration_ms' => 2,
+        'result_expires_at' => now()->addDays(7),
+        'executed_at' => now(),
+    ]);
+
+    $execution->setRelation('template', $template);
+    URL::defaults(['tenant' => $this->tenant->id]);
+
+    $notification = new ReportCompletedNotification($execution, 'app');
+    $payload = $notification->toArray($this->user);
+
+    expect($payload['body'])->toContain('Campanhas por tenant');
+    expect($payload['body'])->toContain('3 registros encontrados em 2ms');
+    expect($payload['body'])->not->toContain('{{report_name}}');
+    expect($payload['body'])->not->toContain('{{rows_summary}}');
 });

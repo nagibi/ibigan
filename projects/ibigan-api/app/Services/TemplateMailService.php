@@ -34,6 +34,11 @@ final class TemplateMailService
     {
         foreach ($data as $tag => $value) {
             $content = str_replace('{{'.$tag.'}}', $value, $content);
+            $content = preg_replace(
+                '/\{\{\s*'.preg_quote((string) $tag, '/').'\s*\}\}/',
+                $value,
+                $content,
+            ) ?? $content;
         }
 
         return $content;
