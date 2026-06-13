@@ -153,31 +153,33 @@ export function Header() {
                 open={isCommandPaletteOpen}
                 onOpenChange={setIsCommandPaletteOpen}
               />
-              <ToolbarTooltip content={t('header.tooltip.search')}>
-                <Button
-                  variant="ghost"
-                  mode="icon"
-                  shape="circle"
-                  className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
-                  onClick={() => setIsCommandPaletteOpen(true)}
-                >
-                  <Search className="size-4 sm:size-4.5!" />
-                </Button>
-              </ToolbarTooltip>
-              <NotificationsSheet
-                trigger={
-                  <ToolbarTooltip content={t('header.tooltip.notifications')}>
-                    <Button
-                      variant="ghost"
-                      mode="icon"
-                      shape="circle"
-                      className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
-                    >
-                      <Bell className="size-4 sm:size-4.5!" />
-                    </Button>
-                  </ToolbarTooltip>
-                }
-              />
+              <div className="flex items-center gap-0.5">
+                <ToolbarTooltip content={t('header.tooltip.search')}>
+                  <Button
+                    variant="ghost"
+                    mode="icon"
+                    shape="circle"
+                    className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
+                    onClick={() => setIsCommandPaletteOpen(true)}
+                  >
+                    <Search className="size-4 sm:size-4.5!" />
+                  </Button>
+                </ToolbarTooltip>
+                <NotificationsSheet
+                  trigger={
+                    <ToolbarTooltip content={t('header.tooltip.notifications')}>
+                      <Button
+                        variant="ghost"
+                        mode="icon"
+                        shape="circle"
+                        className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
+                      >
+                        <Bell className="size-4 sm:size-4.5!" />
+                      </Button>
+                    </ToolbarTooltip>
+                  }
+                />
+              </div>
               <div className="hidden shrink-0 items-center lg:flex">
                 <TenantSwitcher />
               </div>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Central\CentralUser;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
 
@@ -14,16 +15,54 @@ class MultiTenantPersonalAccessToken extends SanctumPersonalAccessToken
 
     public static function findToken($token)
     {
-        // Banco atual (tenant inicializado pelo middleware)
         $instance = parent::findToken($token);
         if ($instance) {
             return $instance;
         }
 
-        // Banco central (CentralUser tokens)
+        return self::findCentralUserToken($token);
+    }
+
+    public static function findTokenForDevTools(string $token, ?string $tenantId = null): ?self
+    {
+        $centralToken = self::findCentralUserToken($token);
+        if ($centralToken !== null) {
+            return $centralToken;
+        }
+
+        if ($tenantId !== null && $tenantId !== '') {
+            $tenant = Tenant::find($tenantId);
+            if ($tenant) {
+                tenancy()->initialize($tenant);
+
+                $instance = parent::findToken($token);
+                if ($instance !== null) {
+                    return $instance;
+                }
+            }
+        }
+
+        foreach (Tenant::query()->cursor() as $tenant) {
+            if ($tenantId !== null && $tenant->getTenantKey() === $tenantId) {
+                continue;
+            }
+
+            tenancy()->initialize($tenant);
+
+            $instance = parent::findToken($token);
+            if ($instance !== null) {
+                return $instance;
+            }
+        }
+
+        return null;
+    }
+
+    private static function findCentralUserToken(string $token): ?self
+    {
         try {
             $parts = explode('|', $token, 2);
-            $id    = $parts[0] ?? null;
+            $id = $parts[0] ?? null;
             $plain = $parts[1] ?? null;
             if (! $id || ! $plain) {
                 return null;

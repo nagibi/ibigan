@@ -59,30 +59,6 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
-            cd /opt/ibigan
-
-            chown -R 1000:1000 /opt/ibigan/projects/ibigan-api
-            chmod -R 775 /opt/ibigan/projects/ibigan-api/bootstrap/cache
-            chmod -R 775 /opt/ibigan/projects/ibigan-api/storage
-
-            DC="docker compose -f docker-compose.prod.yml --env-file /opt/ibigan/.env"
-
-            $DC run --rm app composer install --no-dev --optimize-autoloader --no-interaction
-
-            $DC up -d --build --force-recreate
-
-            sleep 15
-
-            $DC restart nginx
-
-            $DC exec -T app php artisan migrate --force
-            $DC exec -T app php artisan tenants:migrate
-            $DC exec -T app php artisan config:cache
-            $DC exec -T app php artisan route:cache
-            $DC exec -T app php artisan view:cache
-            $DC exec -T app php artisan storage:link
-
-            $DC restart horizon
-
-            echo "Deploy concluído com sucesso"
+            chmod +x /opt/ibigan/scripts/deploy-prod.sh
+            /opt/ibigan/scripts/deploy-prod.sh
           EOF

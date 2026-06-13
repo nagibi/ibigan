@@ -23,6 +23,16 @@ function resolveAccessToken(): string | null {
     ?? localStorage.getItem('ibigan_central_token');
 }
 
+function resolveTenantId(token: string): string | null {
+  const tenantToken = localStorage.getItem('ibigan_token');
+
+  if (tenantToken && tenantToken === token) {
+    return localStorage.getItem('ibigan_tenant_id');
+  }
+
+  return null;
+}
+
 export function buildDevToolsHref(path: string): string {
   if (!isDevToolsPath(path)) {
     return path;
@@ -39,6 +49,11 @@ export function buildDevToolsHref(path: string): string {
     : new URL(path, window.location.origin);
 
   url.searchParams.set('access_token', token);
+
+  const tenantId = resolveTenantId(token);
+  if (tenantId) {
+    url.searchParams.set('tenant_id', tenantId);
+  }
 
   return url.toString();
 }

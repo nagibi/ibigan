@@ -56,13 +56,19 @@ export function GridViewModeControl({
             type="button"
             variant={viewMode === mode ? 'secondary' : 'ghost'}
             size="sm"
-            mode="icon"
+            mode={isMobile ? 'icon' : undefined}
             aria-label={t(labelKey)}
             aria-pressed={viewMode === mode}
             onClick={() => onViewModeChange(mode)}
-            className={cn('size-8', viewMode === mode && 'bg-muted')}
+            className={cn(
+              isMobile ? 'size-8' : 'h-8 gap-1.5 px-2',
+              viewMode === mode && 'bg-muted',
+            )}
           >
-            <Icon className="size-4" />
+            <Icon className="size-4 shrink-0" />
+            {!isMobile ? (
+              <span className="text-xs font-medium">{t(labelKey)}</span>
+            ) : null}
           </Button>
         </ToolbarTooltip>
       ))}

@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Central\CentralUser;
 use App\Models\MultiTenantPersonalAccessToken;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Support\DevToolsAccess;
 use Closure;
@@ -21,13 +22,17 @@ final class AuthenticateDevTools
             return $next($request);
         }
 
+        $this->initializeTenancyFromSession($request);
+
         if ($this->authenticateFromSanctumToken($request)) {
-            if ($request->query('access_token')) {
+            if ($this->shouldRedirectWithoutQuery($request)) {
                 return redirect()->to($request->url());
             }
 
             return $next($request);
         }
+
+        $this->initializeTenancyFromSession($request);
 
         $webUser = Auth::guard('web')->user();
 
@@ -44,6 +49,31 @@ final class AuthenticateDevTools
         abort(Response::HTTP_FORBIDDEN);
     }
 
+    private function shouldRedirectWithoutQuery(Request $request): bool
+    {
+        return $request->query('access_token') !== null
+            || $request->query('tenant_id') !== null;
+    }
+
+    private function initializeTenancyFromSession(Request $request): void
+    {
+        $tenantId = $request->query('tenant_id') ?? session('dev_tools_tenant_id');
+
+        if (! is_string($tenantId) || $tenantId === '') {
+            return;
+        }
+
+        if (tenancy()->initialized && tenancy()->tenant?->getTenantKey() === $tenantId) {
+            return;
+        }
+
+        $tenant = Tenant::find($tenantId);
+
+        if ($tenant) {
+            tenancy()->initialize($tenant);
+        }
+    }
+
     private function authenticateFromSanctumToken(Request $request): bool
     {
         $plainToken = $request->bearerToken() ?? $request->query('access_token');
@@ -52,7 +82,20 @@ final class AuthenticateDevTools
             return false;
         }
 
-        $accessToken = MultiTenantPersonalAccessToken::findToken($plainToken);
+        $tenantId = $request->query('tenant_id');
+
+        if (! is_string($tenantId) || $tenantId === '') {
+            $tenantId = session('dev_tools_tenant_id');
+        }
+
+        if (is_string($tenantId) && $tenantId !== '') {
+            $this->initializeTenancyFromSession($request);
+        }
+
+        $accessToken = MultiTenantPersonalAccessToken::findTokenForDevTools(
+            $plainToken,
+            is_string($tenantId) ? $tenantId : null,
+        );
 
         if ($accessToken === null) {
             return false;
@@ -68,11 +111,25 @@ final class AuthenticateDevTools
             Auth::guard('web')->login($tokenable);
             $request->setUserResolver(static fn () => $tokenable);
 
+            $resolvedTenantId = tenancy()->initialized ? tenancy()->tenant?->getTenantKey() : null;
+            if (is_string($resolvedTenantId) && $resolvedTenantId !== '') {
+                $request->session()->put('dev_tools_tenant_id', $resolvedTenantId);
+            } else {
+                $request->session()->forget('dev_tools_tenant_id');
+            }
+
+            $request->session()->forget('dev_tools_central_user_id');
+
             return true;
         }
 
         if ($tokenable instanceof CentralUser) {
+            if (tenancy()->initialized) {
+                tenancy()->end();
+            }
+
             $request->session()->put('dev_tools_central_user_id', $tokenable->id);
+            $request->session()->forget('dev_tools_tenant_id');
             $request->setUserResolver(static fn () => $tokenable);
 
             return true;
