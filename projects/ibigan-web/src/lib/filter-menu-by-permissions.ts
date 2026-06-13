@@ -1,4 +1,4 @@
-import { type MenuConfig, type MenuItem } from '@/config/types';
+import { isDevToolsChild } from '@/lib/merge-dev-tools-menu-items';
 
 const PATH_PERMISSIONS: Record<string, string> = {
   '/users': 'usuario-visualizar',
@@ -33,6 +33,10 @@ function pathPermission(path: string | undefined): string | undefined {
 }
 
 function isItemVisible(item: MenuItem, hasPermission: (permission: string) => boolean): boolean {
+  if (item.children?.some(isDevToolsChild)) {
+    return hasPermission('doc-visualizar');
+  }
+
   const required = pathPermission(item.path);
 
   if (required && !hasPermission(required)) {

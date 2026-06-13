@@ -18,7 +18,7 @@ const DEV_TOOL_PATH_BY_SLUG: Record<string, string> = {
   'mailpit': DEV_TOOLS_URLS.mailpit,
 };
 
-function isDevToolsChild(item: MenuItem): boolean {
+export function isDevToolsChild(item: MenuItem): boolean {
   return Boolean(item.path && (
     DEV_TOOLS_PATHS.has(item.path)
     || item.path.includes('/docs/api')
@@ -94,9 +94,15 @@ function syncDevToolsInMenu(menu: MenuConfig): MenuConfig {
 export function mergeDevToolsMenuItems(
   apiMenu: MenuConfig,
   staticMenu: MenuConfig,
+  includeDevTools = true,
 ): MenuConfig {
-  const devTools = extractDevToolsGroup(staticMenu);
   const syncedMenu = syncDevToolsInMenu(apiMenu);
+
+  if (!includeDevTools) {
+    return syncedMenu.filter((item) => !isDevToolsGroup(item));
+  }
+
+  const devTools = extractDevToolsGroup(staticMenu);
 
   if (!devTools) {
     return syncedMenu;

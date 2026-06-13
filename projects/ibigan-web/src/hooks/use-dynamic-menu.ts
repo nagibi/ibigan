@@ -46,6 +46,8 @@ export function useDynamicMenu(): MenuConfig {
       return fallbackMenu;
     }
 
+    const includeDevTools = hasPermission('doc-visualizar');
+
     const baseMenu = mergeDevToolsMenuItems(
       mergeAccountMenuItems(
         mergeSaasMenuItems(
@@ -55,6 +57,7 @@ export function useDynamicMenu(): MenuConfig {
         MENU_SIDEBAR,
       ),
       MENU_SIDEBAR,
+      includeDevTools,
     );
 
     return filterMenuForUser(baseMenu, isSuperAdmin);
