@@ -14,6 +14,12 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
+import {
+  buildReportExecuteDefaults,
+  reportParameterRules,
+} from '@/lib/report-execute-form';
 import {
   reportsService,
   type ReportColumn,
@@ -136,7 +142,11 @@ export function ReportExecutePage() {
     duration: number;
   } | null>(null);
 
-  const form = useForm<Record<string, string>>({ defaultValues: {} });
+  const form = useForm<Record<string, string>>({
+    defaultValues: {},
+    mode: 'onSubmit',
+  });
+  const formAlert = useFormToolbarAlert(form);
 
   const { data: reportData, isLoading, isFetched, isError: isReportError } = useQuery({
     queryKey: ['report', id],
@@ -180,7 +190,11 @@ export function ReportExecutePage() {
       void refetchExecutions();
       showSuccess('Relatório enviado para execução.');
     },
-    onError: () => showError('Erro ao executar relatório.'),
+    onError: (error) => {
+      if (!applyApiFormErrors(form, error)) {
+        showError('Erro ao executar relatório.', error);
+      }
+    },
   });
 
   const executionStatus = executionStatusData?.data?.result?.status;
@@ -198,17 +212,7 @@ export function ReportExecutePage() {
       return;
     }
 
-    const defaults: Record<string, string> = {};
-    parameters.forEach((parameter) => {
-      if (parameter.type === 'date') {
-        if (parameter.name.includes('from') || parameter.name.includes('inicio') || parameter.name.includes('start')) {
-          defaults[parameter.name] = format(new Date(new Date().getFullYear(), 0, 1), 'yyyy-MM-dd');
-        } else if (parameter.name.includes('to') || parameter.name.includes('fim') || parameter.name.includes('end')) {
-          defaults[parameter.name] = format(new Date(), 'yyyy-MM-dd');
-        }
-      }
-    });
-    form.reset(defaults);
+    form.reset(buildReportExecuteDefaults(parameters));
   }, [form, parameters]);
 
   const loadResults = useCallback(async (executionId: number, durationMs = 0) => {
@@ -296,9 +300,10 @@ export function ReportExecutePage() {
   const pageAlert = useMemo(
     () => mergeToolbarAlerts(
       apiAlert,
+      formAlert,
       isReportInactive ? buildInactiveAlert('report') : null,
     ),
-    [apiAlert, isReportInactive],
+    [apiAlert, formAlert, isReportInactive],
   );
 
   const toolbarActions = useMemo(
@@ -392,6 +397,7 @@ export function ReportExecutePage() {
                     <FormField
                       control={form.control}
                       name={parameter.name}
+                      rules={reportParameterRules(parameter)}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel required={parameter.required}>{parameter.label}</FormLabel>

@@ -6,6 +6,7 @@ import {
   upsertNotificationInCache,
 } from '@/lib/notification-cache';
 import { getEcho } from '@/lib/echo';
+import { showAlertToast } from '@/lib/show-alert-toast';
 import { type AppNotification } from '@/services/notifications.service';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -43,8 +44,14 @@ export function useNotifications() {
       const type = notification.type?.split('\\').pop() ?? '';
 
       if (type === 'ReportCompletedNotification') {
-        toast.success('Relatório pronto', {
-          description: `${notification.template_name ?? 'Relatório'} — ${notification.rows_count ?? 0} registros`,
+        const templateName = notification.template_name ?? 'Relatório';
+        const rowsCount = notification.rows_count ?? 0;
+        const records = rowsCount === 1 ? '1 registro' : `${rowsCount} registros`;
+
+        showAlertToast({
+          title: 'Relatório pronto',
+          description: `${templateName} — ${records}`,
+          variant: 'success',
         });
         return;
       }

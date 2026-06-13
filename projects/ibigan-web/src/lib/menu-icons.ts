@@ -92,7 +92,7 @@ lookup.byPath.set('/message-templates', Icons.MessageSquare);
 lookup.byTitle.set('Templates de Mensagem', Icons.MessageSquare);
 lookup.bySlug.set('templates-mensagem', Icons.MessageSquare);
 lookup.byPath.set('/reports', Icons.BarChart2);
-lookup.byTitle.set('Relatórios', Icons.BarChart2);
+lookup.byTitle.set('Modelos de Relatório', Icons.BarChart2);
 lookup.bySlug.set('templates-relatorio', Icons.BarChart2);
 lookup.byPath.set('/reports/executions', Icons.FileBarChart);
 

@@ -110,7 +110,7 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Relatórios',
+            'title' => 'Modelos de Relatório',
             'slug' => 'templates-relatorio',
             'icon' => 'BarChart2',
             'path' => '/reports',
