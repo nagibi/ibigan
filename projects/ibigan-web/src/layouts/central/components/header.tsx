@@ -26,7 +26,7 @@ export function CentralHeader() {
   }, [pathname]);
 
   return (
-    <header className="header fixed top-0 z-10 start-0 flex shrink-0 items-stretch border-b border-border bg-background end-0 pe-[var(--removed-body-scroll-bar-size,0px)]">
+    <header className="header relative z-20 flex w-full shrink-0 items-stretch border-b border-border bg-background">
       <Container className="flex w-full grow items-stretch justify-between gap-4">
         <div className="flex min-w-0 items-stretch gap-5">
           <div className="flex items-center gap-2.5 lg:hidden">

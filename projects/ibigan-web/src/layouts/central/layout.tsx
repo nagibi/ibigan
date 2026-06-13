@@ -25,7 +25,7 @@ function CentralLayoutContent() {
 
   return (
     <PageScrollProvider>
-      <div className="wrapper flex min-h-dvh min-w-0 grow flex-col overflow-y-hidden">
+      <div className="wrapper flex h-dvh min-w-0 grow flex-col overflow-y-hidden">
         <CentralHeader />
         <PageToolbarBar />
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import {
   mergeToolbarAlerts,
   ToolbarAlertOverlay,
@@ -38,12 +38,12 @@ export function PageToolbarBar() {
     dismissPageAlert();
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.toggle('toolbar-visible', showBar);
     return () => document.body.classList.remove('toolbar-visible');
   }, [showBar]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const toolbar = toolbarRef.current;
     if (!showBar || !toolbar) {
       document.documentElement.style.removeProperty('--page-toolbar-measured-height');
@@ -76,8 +76,8 @@ export function PageToolbarBar() {
     <div
       ref={toolbarRef}
         className={cn(
-        'page-toolbar fixed z-[9] flex shrink-0 overflow-x-auto overflow-y-visible border-b border-border bg-background end-0 start-0',
-        'top-[var(--header-height)] min-h-[var(--toolbar-height)] max-xl:min-h-0',
+        'page-toolbar relative z-0 flex w-full shrink-0 overflow-x-auto overflow-y-visible border-b border-border bg-background',
+        'min-h-[var(--toolbar-height)] max-xl:min-h-0',
       )}
     >
       <Container

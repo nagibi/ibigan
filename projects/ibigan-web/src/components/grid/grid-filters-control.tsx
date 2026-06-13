@@ -256,7 +256,7 @@ function MobileFiltersSheetContent({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
+    <div className="flex flex-col gap-5 px-4 py-4 pb-2">
       {onSearch && (
         <section className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -284,8 +284,6 @@ function MobileFiltersSheetContent({
           showClearAll={false}
         />
       )}
-
-      <div className="h-2 shrink-0" aria-hidden />
     </div>
   );
 }
@@ -329,6 +327,7 @@ export function GridFiltersControl({
           showCloseButton
           className={cn(
             'grid-filters-mobile-panel w-[calc(100vw-2rem)] max-w-md gap-0 overflow-hidden rounded-xl border p-0',
+            'max-xl:fixed max-xl:translate-x-[-50%] max-xl:translate-y-0',
           )}
         >
           <DialogHeader className="mb-0 shrink-0 space-y-0 border-b border-border px-4 py-3 pe-12 text-start">
@@ -345,7 +344,7 @@ export function GridFiltersControl({
               searchPlaceholder={searchPlaceholder}
             />
           </DialogBody>
-          <DialogFooter className="grid-filters-mobile-footer shrink-0 flex-col gap-2 border-t border-border bg-background px-4 pt-3 sm:flex-col sm:space-x-0">
+          <DialogFooter className="grid-filters-mobile-footer shrink-0 flex-col gap-2 border-t border-border bg-background px-4 pb-0 pt-3 sm:flex-col sm:space-x-0">
             {hasAnyFilters && onClearAll && (
               <ClearFiltersButton onClick={onClearAll} className="h-9 w-full" />
             )}

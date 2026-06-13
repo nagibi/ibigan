@@ -8,6 +8,7 @@ import { useCentralMenu } from '@/hooks/use-central-menu';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { cn } from '@/lib/utils';
 import { MENU_NAV_GROUP_SELECTED_CLASS } from '@/lib/menu-nav-link-styles';
+import { findActiveMenuPath } from '@/lib/menu-active-path';
 import {
   AccordionMenu,
   AccordionMenuClassNames,
@@ -23,31 +24,6 @@ import { MenuNavLink } from '@/components/navigation/menu-nav-link';
 import { MenuBadge } from '@/lib/menu-badge';
 import { NOTIFICATION_PREFERENCES_PATH } from '@/lib/notification-preferences-path';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-
-function menuPathMatches(pathname: string, path: string): boolean {
-  if (!path) return false;
-  return pathname === path || pathname.startsWith(`${path}/`);
-}
-
-function findActiveMenuPath(pathname: string, items: MenuConfig): string | null {
-  let best: string | null = null;
-
-  const walk = (menuItems: MenuConfig) => {
-    for (const item of menuItems) {
-      if (item.path && menuPathMatches(pathname, item.path)) {
-        if (!best || item.path.length > best.length) {
-          best = item.path;
-        }
-      }
-      if (item.children?.length) {
-        walk(item.children);
-      }
-    }
-  };
-
-  walk(items);
-  return best;
-}
 
 function menuGroupIsActive(item: MenuItem, activePath: string | null): boolean {
   if (!activePath) return false;
@@ -90,8 +66,8 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
 
   // Global classNames for consistent styling
   const classNames: AccordionMenuClassNames = {
-    root: 'lg:ps-1 space-y-3',
-    group: 'gap-px',
+    root: 'w-full min-w-0 max-w-full overflow-x-hidden lg:ps-1 space-y-3',
+    group: 'gap-px w-full min-w-0 max-w-full',
     label:
       'uppercase text-xs font-medium text-muted-foreground/70 pt-2.25 pb-px',
     separator: '',
@@ -130,7 +106,7 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
           >
             <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
-            <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
+            <MenuBadge badge={item.badge} className="ms-auto shrink-0" />
           </AccordionMenuSubTrigger>
           <AccordionMenuSubContent
             type="single"
@@ -158,11 +134,11 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
           <MenuNavLink
             path={item.path}
             target={item.target}
-            className="flex w-full items-center gap-2"
+            className="flex w-full min-w-0 max-w-full items-center gap-2"
           >
             <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
-            <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
+            <MenuBadge badge={item.badge} className="ms-auto shrink-0" />
           </MenuNavLink>
         </AccordionMenuItem>
       );
@@ -182,7 +158,7 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
         <MenuIcon icon={item.icon} />
         <span data-slot="accordion-menu-title">{item.title}</span>
         {item.disabled && (
-          <Badge variant="secondary" size="sm" className="ms-auto me-[-10px]">
+          <Badge variant="secondary" size="sm" className="ms-auto shrink-0">
             Soon
           </Badge>
         )}
@@ -267,11 +243,11 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
           <MenuNavLink
             path={item.path}
             target={item.target}
-            className="flex w-full items-center gap-2"
+            className="flex w-full min-w-0 max-w-full items-center gap-2"
           >
             <MenuIcon icon={item.icon} />
             <span data-slot="accordion-menu-title">{item.title}</span>
-            <MenuBadge badge={item.badge} className="ms-auto me-[-10px]" />
+            <MenuBadge badge={item.badge} className="ms-auto shrink-0" />
           </MenuNavLink>
         </AccordionMenuItem>
       );
@@ -291,7 +267,7 @@ export function SidebarMenu({ menuSource = 'tenant' }: SidebarMenuProps) {
       >
         <span data-slot="accordion-menu-title">{item.title}</span>
         {item.disabled && (
-          <Badge variant="secondary" size="sm" className="ms-auto me-[-10px]">
+          <Badge variant="secondary" size="sm" className="ms-auto shrink-0">
             Soon
           </Badge>
         )}

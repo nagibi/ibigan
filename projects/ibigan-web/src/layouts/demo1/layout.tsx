@@ -27,7 +27,7 @@ function Demo1LayoutContent() {
 
   return (
     <PageScrollProvider>
-      <div className="wrapper flex min-h-dvh min-w-0 grow flex-col overflow-y-hidden">
+      <div className="wrapper flex h-dvh min-w-0 grow flex-col overflow-y-hidden">
         <Header />
         <PageToolbarBar />
 

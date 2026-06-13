@@ -59,7 +59,7 @@ export function Header() {
   return (
     <header
       className={cn(
-        'header fixed inset-x-0 top-0 z-10 flex w-full shrink-0 items-stretch border-b border-border bg-background',
+        'header relative z-20 flex w-full shrink-0 items-stretch border-b border-border bg-background',
       )}
     >
       <Container className="flex h-full w-full items-center gap-x-2 lg:gap-x-4">

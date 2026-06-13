@@ -19,7 +19,7 @@ export function Sidebar() {
   return (
     <div
       className={cn(
-        'sidebar lg:border-e lg:border-border lg:fixed lg:top-0 lg:bottom-0 lg:z-20 lg:flex flex-col items-stretch shrink-0',
+        'sidebar lg:border-e lg:border-border lg:fixed lg:top-0 lg:bottom-0 lg:z-30 lg:flex flex-col items-stretch shrink-0 max-w-full',
         isTransparent
           ? 'bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60'
           : 'bg-background',
@@ -27,7 +27,7 @@ export function Sidebar() {
       )}
     >
       <SidebarHeader />
-      <div className="sidebar-wrapper flex min-h-0 grow overflow-hidden">
+      <div className="sidebar-wrapper flex min-h-0 min-w-0 max-w-full grow overflow-hidden">
         <SidebarMenu />
       </div>
     </div>

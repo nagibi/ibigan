@@ -19,7 +19,7 @@ export function CentralSidebar() {
   return (
     <div
       className={cn(
-        'sidebar lg:fixed lg:bottom-0 lg:top-0 lg:z-20 lg:flex lg:border-e lg:border-border flex shrink-0 flex-col items-stretch',
+        'sidebar lg:fixed lg:bottom-0 lg:top-0 lg:z-30 lg:flex lg:border-e lg:border-border flex shrink-0 flex-col items-stretch',
         isTransparent
           ? 'bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60'
           : 'bg-background',

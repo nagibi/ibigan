@@ -34,7 +34,7 @@ export const MenuNavLink = forwardRef<
         ref={ref as React.Ref<HTMLButtonElement>}
         type="button"
         className={cn(
-          'flex w-full items-center gap-2 text-left',
+          'flex w-full min-w-0 max-w-full items-center gap-2 text-left',
           preferencesOpen && MENU_NAV_LINK_ACTIVE_CLASS,
           className,
         )}

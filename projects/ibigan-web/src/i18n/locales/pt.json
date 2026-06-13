@@ -272,6 +272,8 @@
   "header.tooltip.profile": "Menu da conta",
   "header.tooltip.dark_mode_on": "Ativar modo escuro",
   "header.tooltip.dark_mode_off": "Desativar modo escuro",
+  "sidebar.tooltip.collapse": "Recolher menu",
+  "sidebar.tooltip.expand": "Expandir menu",
   "translation.created_successfully": "Tradução criada com sucesso.",
   "translation.updated_successfully": "Tradução atualizada com sucesso.",
   "columns.id": "Id",

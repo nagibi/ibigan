@@ -272,6 +272,8 @@
   "header.tooltip.profile": "Account menu",
   "header.tooltip.dark_mode_on": "Enable dark mode",
   "header.tooltip.dark_mode_off": "Disable dark mode",
+  "sidebar.tooltip.collapse": "Collapse menu",
+  "sidebar.tooltip.expand": "Expand menu",
   "translation.created_successfully": "Translation created successfully.",
   "translation.updated_successfully": "Translation updated successfully.",
   "columns.id": "Id",

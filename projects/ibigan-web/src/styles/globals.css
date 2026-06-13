@@ -177,26 +177,20 @@ body {
 /* Metronic Configs */
 @import './config.metronic.css';
 
-/* Mobile grid filters — top-aligned panel with scrollable body */
+/* Mobile grid filters — top/bottom anchored panel with scrollable body */
 @media (max-width: 1279px) {
   .grid-filters-mobile-panel {
     display: grid !important;
     grid-template-rows: auto minmax(0, 1fr) auto !important;
     box-sizing: border-box !important;
     top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
-    bottom: auto !important;
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)) !important;
     left: 50% !important;
     right: auto !important;
     width: calc(100vw - 2rem) !important;
     max-width: 28rem !important;
-    height: min(
-      85dvh,
-      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)
-    ) !important;
-    max-height: min(
-      85dvh,
-      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)
-    ) !important;
+    height: auto !important;
+    max-height: none !important;
     translate: -50% 0 !important;
     overflow: hidden !important;
     padding: 0 !important;

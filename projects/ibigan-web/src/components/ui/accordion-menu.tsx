@@ -194,7 +194,7 @@ function AccordionMenuSeparator({ className, ...props }: AccordionMenuSeparatorP
 }
 
 const itemVariants = cva(
-  'relative cursor-pointer select-none flex w-full text-start items-center text-foreground rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary disabled:opacity-50 disabled:bg-transparent focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 [&_a]:flex [&>a]:w-full [&>a]:items-center [&>a]:gap-2 data-[selected=true]:[&_svg]:opacity-100',
+  'relative max-w-full min-w-0 overflow-hidden cursor-pointer select-none flex w-full text-start items-center text-foreground rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary disabled:opacity-50 disabled:bg-transparent focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 [&_a]:flex [&>a]:w-full [&>a]:min-w-0 [&>a]:max-w-full [&>a]:items-center [&>a]:gap-2 data-[selected=true]:[&_svg]:opacity-100',
   {
     variants: {
       variant: {
@@ -226,7 +226,7 @@ function AccordionMenuItem({
   const isSelected = selected ?? (matchPath(props.value as string) || selectedValue === props.value);
 
   return (
-    <AccordionPrimitive.Item className="flex" {...props}>
+    <AccordionPrimitive.Item className="flex w-full min-w-0 max-w-full" {...props}>
       <AccordionPrimitive.Header className="flex w-full">
         <AccordionPrimitive.Trigger
           asChild={asChild}
@@ -277,7 +277,7 @@ function AccordionMenuSub({
 }: React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>) {
   const { classNames } = React.useContext(AccordionMenuContext);
   return (
-    <AccordionPrimitive.Item data-slot="accordion-menu-sub" className={cn(classNames?.sub, className)} {...props}>
+    <AccordionPrimitive.Item data-slot="accordion-menu-sub" className={cn('w-full min-w-0 max-w-full', classNames?.sub, className)} {...props}>
       {children}
     </AccordionPrimitive.Item>
   );
@@ -294,7 +294,7 @@ function AccordionMenuSubTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-menu-sub-trigger"
         className={cn(
-          'relative w-full flex items-center cursor-pointer select-none text-start rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([role=img]):not([class*=text-])]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 data-[selected=true]:[&_[data-slot=accordion-menu-icon]]:opacity-100',
+          'relative w-full max-w-full min-w-0 overflow-hidden flex items-center cursor-pointer select-none text-start rounded-lg gap-2 px-2 py-1.5 text-sm outline-hidden text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([role=img]):not([class*=text-])]:opacity-60 [&_svg:not([class*=size-])]:size-4 [&_svg]:shrink-0 data-[selected=true]:[&_[data-slot=accordion-menu-icon]]:opacity-100',
           classNames?.subTrigger,
           className,
         )}

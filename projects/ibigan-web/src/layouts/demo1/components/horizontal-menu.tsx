@@ -4,8 +4,16 @@ import { Link, useLocation } from 'react-router-dom';
 import { type MenuItem } from '@/config/types';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useHoverOpen } from '@/hooks/use-hover-open';
-import { useMenu } from '@/hooks/use-menu';
+import {
+  isMenuPathActive,
+  menuGroupContainsActivePath,
+} from '@/lib/menu-active-path';
 import { MenuBadge } from '@/lib/menu-badge';
+import {
+  MENU_HORIZONTAL_DROPDOWN_ACTIVE_CLASS,
+  MENU_HORIZONTAL_GROUP_ACTIVE_CLASS,
+  MENU_HORIZONTAL_LEAF_ACTIVE_CLASS,
+} from '@/lib/menu-nav-link-styles';
 import { isExternalMenuPath, resolveMenuLinkTarget } from '@/lib/menu-link';
 import { isNotificationPreferencesPath } from '@/lib/notification-preferences-path';
 import { cn } from '@/lib/utils';
@@ -21,14 +29,32 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const triggerClass = (active: boolean) =>
+const triggerBaseClass =
+  'inline-flex items-center gap-1.5 rounded-md px-2.5 h-9 text-sm font-medium shadow-none border-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=open]:ring-0';
+
+const groupTriggerClass = (groupActive: boolean, open: boolean) =>
   cn(
-    'inline-flex items-center gap-1.5 rounded-md px-2.5 h-9 text-sm font-medium shadow-none',
-    'border-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+    triggerBaseClass,
+    groupActive
+      ? MENU_HORIZONTAL_GROUP_ACTIVE_CLASS
+      : 'text-secondary-foreground hover:bg-muted/50 hover:text-foreground',
+    open && 'bg-muted/60 text-foreground',
+  );
+
+const leafTriggerClass = (active: boolean) =>
+  cn(
+    triggerBaseClass,
     active
-      ? 'bg-muted text-foreground'
-      : 'text-secondary-foreground hover:bg-muted/50 hover:text-primary',
-    'data-[state=open]:bg-muted data-[state=open]:text-foreground data-[state=open]:ring-0',
+      ? MENU_HORIZONTAL_LEAF_ACTIVE_CLASS
+      : 'text-secondary-foreground hover:bg-muted/50 hover:text-foreground',
+  );
+
+const dropdownItemClass = (active: boolean) =>
+  cn(
+    'flex w-full items-center gap-2 rounded-md px-2 py-2 cursor-pointer text-sm transition-colors outline-none',
+    active
+      ? MENU_HORIZONTAL_DROPDOWN_ACTIVE_CLASS
+      : 'text-foreground hover:bg-muted/50 hover:text-foreground',
   );
 
 function MenuIcon({ icon: Icon }: { icon?: MenuItem['icon'] }) {
@@ -73,13 +99,15 @@ function HorizontalMenuLink({
 
 function DropdownChildItems({
   items,
-  isActive,
-  hasActiveChild,
+  menu,
+  pathname,
+  isPathActive,
   onOpenPreferences,
 }: {
   items: MenuItem[];
-  isActive: (path: string | undefined) => boolean;
-  hasActiveChild: (children: MenuItem[] | undefined) => boolean;
+  menu: MenuItem[];
+  pathname: string;
+  isPathActive: (path: string | undefined) => boolean;
   onOpenPreferences: () => void;
 }) {
   return items.map((child, childIndex) => {
@@ -90,7 +118,8 @@ function DropdownChildItems({
         <DropdownMenuSub key={childIndex}>
           <DropdownMenuSubTrigger
             className={cn(
-              hasActiveChild(child.children) && 'bg-accent text-foreground',
+              menuGroupContainsActivePath(pathname, menu, child.children)
+                && MENU_HORIZONTAL_GROUP_ACTIVE_CLASS,
             )}
           >
             <MenuIcon icon={child.icon} />
@@ -100,8 +129,9 @@ function DropdownChildItems({
           <DropdownMenuSubContent className="min-w-48">
             <DropdownChildItems
               items={child.children}
-              isActive={isActive}
-              hasActiveChild={hasActiveChild}
+              menu={menu}
+              pathname={pathname}
+              isPathActive={isPathActive}
               onOpenPreferences={onOpenPreferences}
             />
           </DropdownMenuSubContent>
@@ -111,16 +141,13 @@ function DropdownChildItems({
 
     if (!child.path) return null;
 
-    const active = isActive(child.path);
+    const active = isPathActive(child.path);
 
     if (isNotificationPreferencesPath(child.path)) {
       return (
         <DropdownMenuItem
           key={childIndex}
-          className={cn(
-            'flex items-center gap-2 px-2 py-2 cursor-pointer',
-            active && 'bg-accent text-primary font-medium',
-          )}
+          className={cn('p-0 focus:bg-transparent', dropdownItemClass(active))}
           onClick={onOpenPreferences}
         >
           <MenuIcon icon={child.icon} />
@@ -131,14 +158,8 @@ function DropdownChildItems({
     }
 
     return (
-      <DropdownMenuItem key={childIndex} asChild>
-        <HorizontalMenuLink
-          item={child}
-          className={cn(
-            'flex items-center gap-2 px-2 py-2 cursor-pointer',
-            active && 'bg-accent text-primary font-medium',
-          )}
-        >
+      <DropdownMenuItem key={childIndex} asChild className="p-0 focus:bg-transparent">
+        <HorizontalMenuLink item={child} className={dropdownItemClass(active)}>
           <MenuIcon icon={child.icon} />
           <span className="grow">{child.title}</span>
           <MenuBadge badge={child.badge} />
@@ -151,29 +172,35 @@ function DropdownChildItems({
 function HorizontalMenuItem({
   item,
   index,
+  menu,
+  pathname,
 }: {
   item: MenuItem;
   index: number;
+  menu: MenuItem[];
+  pathname: string;
 }) {
-  const { pathname } = useLocation();
-  const { isActive, hasActiveChild, isItemActive } = useMenu(pathname);
   const { open: openPreferences, isOpen: preferencesOpen } = useNotificationPreferencesSheet();
   const { open, setOpen, hoverProps } = useHoverOpen();
-  const isActiveWithPreferences = (path: string | undefined) =>
-    isActive(path) || (preferencesOpen && isNotificationPreferencesPath(path));
+
+  const isPathActive = (path: string | undefined) =>
+    isMenuPathActive(pathname, path, menu)
+    || (preferencesOpen && isNotificationPreferencesPath(path));
 
   if (item.heading || item.disabled) {
     return null;
   }
 
-  const active = isItemActive(item);
   const children = item.children?.filter((child) => !child.heading && !child.disabled);
+  const groupActive = children?.length
+    ? menuGroupContainsActivePath(pathname, menu, children)
+    : false;
 
   if (children?.length) {
     return (
       <DropdownMenu key={index} open={open} onOpenChange={setOpen} modal={false}>
         <DropdownMenuTrigger asChild {...hoverProps}>
-          <Button variant="ghost" className={triggerClass(active)}>
+          <Button variant="ghost" className={groupTriggerClass(groupActive, open)}>
             <MenuIcon icon={item.icon} />
             {item.title}
             <MenuBadge badge={item.badge} />
@@ -188,8 +215,9 @@ function HorizontalMenuItem({
         >
           <DropdownChildItems
             items={children}
-            isActive={isActiveWithPreferences}
-            hasActiveChild={hasActiveChild}
+            menu={menu}
+            pathname={pathname}
+            isPathActive={isPathActive}
             onOpenPreferences={openPreferences}
           />
         </DropdownMenuContent>
@@ -206,7 +234,7 @@ function HorizontalMenuItem({
       <Button
         key={index}
         variant="ghost"
-        className={triggerClass(isActiveWithPreferences(item.path))}
+        className={leafTriggerClass(isPathActive(item.path))}
         onClick={openPreferences}
       >
         <MenuIcon icon={item.icon} />
@@ -220,7 +248,7 @@ function HorizontalMenuItem({
     <Button
       key={index}
       variant="ghost"
-      className={triggerClass(isActive(item.path))}
+      className={leafTriggerClass(isPathActive(item.path))}
       asChild
     >
       <HorizontalMenuLink
@@ -237,12 +265,19 @@ function HorizontalMenuItem({
 
 export function HorizontalMenu() {
   const menu = useDynamicMenu();
+  const { pathname } = useLocation();
 
   return (
     <div className="flex min-w-0 items-stretch">
       <nav className="flex list-none items-center gap-1">
         {menu.map((item, index) => (
-          <HorizontalMenuItem key={index} item={item} index={index} />
+          <HorizontalMenuItem
+            key={index}
+            item={item}
+            index={index}
+            menu={menu}
+            pathname={pathname}
+          />
         ))}
       </nav>
     </div>
