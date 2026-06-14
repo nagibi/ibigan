@@ -1,7 +1,19 @@
 function apiBaseUrl(): string {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost/api';
-  return apiUrl.replace(/\/api\/?$/, '');
+
+  if (/^https?:\/\//i.test(apiUrl)) {
+    return apiUrl.replace(/\/api\/?$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}`;
+  }
+
+  return 'http://localhost';
 }
+
+export { apiBaseUrl };
 
 export const DEV_TOOLS_URLS = {
   apiDocs:
@@ -15,3 +27,21 @@ export const DEV_TOOLS_URLS = {
   mailpit:
     import.meta.env.VITE_DEV_MAILPIT_URL || 'http://localhost:8025',
 } as const;
+
+export function resolveDevToolsUrl(path: string): string {
+  const base = apiBaseUrl().replace(/\/$/, '');
+
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const parsed = new URL(path);
+
+      return `${base}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return path;
+    }
+  }
+
+  const pathname = path.startsWith('/') ? path : `/${path}`;
+
+  return `${base}${pathname}`;
+}

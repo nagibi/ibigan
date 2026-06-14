@@ -1,4 +1,4 @@
-import { DEV_TOOLS_URLS } from '@/lib/dev-tools-urls';
+import { DEV_TOOLS_URLS, resolveDevToolsUrl } from '@/lib/dev-tools-urls';
 
 const DEV_TOOLS_PATHS = new Set<string>(Object.values(DEV_TOOLS_URLS));
 
@@ -8,7 +8,8 @@ function isDevToolsPath(path: string): boolean {
   }
 
   try {
-    const normalized = new URL(path).pathname.replace(/\/$/, '');
+    const normalized = new URL(path, 'http://localhost').pathname.replace(/\/$/, '');
+
     return normalized === '/docs/api'
       || normalized === '/horizon'
       || normalized === '/telescope'
@@ -42,21 +43,17 @@ export function buildDevToolsHref(path: string): string {
     return path;
   }
 
+  const url = new URL(resolveDevToolsUrl(path));
+
   const token = resolveAccessToken();
 
-  if (!token) {
-    return path;
-  }
+  if (token) {
+    url.searchParams.set('access_token', token);
 
-  const url = /^https?:\/\//i.test(path)
-    ? new URL(path)
-    : new URL(path, window.location.origin);
-
-  url.searchParams.set('access_token', token);
-
-  const tenantId = resolveTenantId(token);
-  if (tenantId) {
-    url.searchParams.set('tenant_id', tenantId);
+    const tenantId = resolveTenantId(token);
+    if (tenantId) {
+      url.searchParams.set('tenant_id', tenantId);
+    }
   }
 
   return url.toString();
