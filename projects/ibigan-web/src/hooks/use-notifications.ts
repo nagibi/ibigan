@@ -4,6 +4,7 @@ import {
   invalidateNotifications,
   upsertNotificationInCache,
 } from '@/lib/notification-cache';
+import { formatNotificationBody } from '@/lib/notification-utils';
 import { getEcho } from '@/lib/echo';
 import { showAppToast } from '@/lib/show-app-toast';
 import { type AppNotification } from '@/services/notifications.service';
@@ -48,7 +49,7 @@ export function useNotifications() {
           ? String(notification.subject)
           : 'Relatório pronto';
         const description = notification.body
-          ? String(notification.body).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)
+          ? formatNotificationBody(notification.body).slice(0, 120)
           : undefined;
 
         showAppToast({
@@ -71,7 +72,9 @@ export function useNotifications() {
       if (notification.subject) {
         showAppToast({
           title: String(notification.subject),
-          description: notification.body ? String(notification.body).substring(0, 80) : undefined,
+          description: notification.body
+            ? formatNotificationBody(notification.body).slice(0, 80)
+            : undefined,
           variant: 'info',
         });
         return;

@@ -1,7 +1,8 @@
 import { type ReactNode } from 'react';
 import { ChevronDown, LayoutGrid } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { type MenuItem } from '@/config/types';
+import { type MenuConfig, type MenuItem } from '@/config/types';
+import { useCentralMenu } from '@/hooks/use-central-menu';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useHoverOpen } from '@/hooks/use-hover-open';
 import {
@@ -265,8 +266,14 @@ function HorizontalMenuItem({
   );
 }
 
-export function HorizontalMenu() {
-  const menu = useDynamicMenu();
+type HorizontalMenuProps = {
+  menuSource?: 'tenant' | 'central';
+};
+
+export function HorizontalMenu({ menuSource = 'tenant' }: HorizontalMenuProps) {
+  const dynamicMenu = useDynamicMenu();
+  const centralMenu = useCentralMenu();
+  const menu: MenuConfig = menuSource === 'central' ? centralMenu : dynamicMenu;
   const { pathname } = useLocation();
 
   return (

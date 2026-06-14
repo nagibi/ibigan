@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
+import { type MenuMode } from '@/config/types';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSettings } from '@/providers/settings-provider';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,12 +16,16 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Container } from '@/components/common/container';
+import { HorizontalMenu } from '@/layouts/demo1/components/horizontal-menu';
 import { SidebarMenu } from '@/layouts/demo1/components/sidebar-menu';
 
 export function CentralHeader() {
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const { pathname } = useLocation();
   const mobileMode = useIsMobile();
+  const { settings } = useSettings();
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
+  const isHorizontalMenu = menuMode === 'horizontal';
 
   useEffect(() => {
     setIsSidebarSheetOpen(false);
@@ -28,7 +34,7 @@ export function CentralHeader() {
   return (
     <header className="header relative z-20 flex w-full shrink-0 items-stretch border-b border-border bg-background">
       <Container className="flex w-full grow items-stretch justify-between gap-4">
-        <div className="flex min-w-0 items-stretch gap-5">
+        <div className="flex min-w-0 flex-1 items-stretch gap-5">
           <div className="flex items-center gap-2.5 lg:hidden">
             <Link to="/admin/tenants" className="shrink-0">
               <img
@@ -64,6 +70,12 @@ export function CentralHeader() {
               Painel central
             </span>
           </Link>
+
+          {isHorizontalMenu && !mobileMode ? (
+            <div className="hidden min-w-0 flex-1 items-center overflow-hidden lg:flex">
+              <HorizontalMenu menuSource="central" />
+            </div>
+          ) : null}
         </div>
 
         <div className="relative z-20 flex shrink-0 items-center gap-3">

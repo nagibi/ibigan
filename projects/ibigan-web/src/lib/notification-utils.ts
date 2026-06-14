@@ -4,6 +4,13 @@ export function getNotificationType(notification: AppNotification): string {
   return notification.type.split('\\').pop() ?? notification.type;
 }
 
+export function formatNotificationBody(body: unknown): string {
+  return String(body ?? '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function isReportNotification(notification: AppNotification): boolean {
   const type = getNotificationType(notification);
   return type === 'ReportCompletedNotification' || Boolean(notification.data.template_id);

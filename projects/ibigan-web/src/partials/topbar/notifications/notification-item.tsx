@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { type AppNotification } from '@/services/notifications.service';
-import { getReportDownloadMeta } from '@/lib/notification-utils';
+import { getReportDownloadMeta, formatNotificationBody } from '@/lib/notification-utils';
 import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
 import { getInitials } from '@/lib/helpers';
@@ -317,7 +317,7 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
 
   if (type === 'TemplateNotification' || data.subject) {
     const subject = String(data.subject ?? 'Nova mensagem');
-    const body = data.body ? String(data.body) : '';
+    const body = data.body ? formatNotificationBody(data.body) : '';
 
     return (
       <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>

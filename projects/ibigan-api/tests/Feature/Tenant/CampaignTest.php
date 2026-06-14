@@ -374,6 +374,28 @@ it('nega toggle para viewer', function (): void {
 
 // --- ProcessCampaignJob ---
 
+it('resolveContent substitui tags da campanha no template', function (): void {
+    $template = $this->tenant->run(fn () => MessageTemplate::factory()->create([
+        'subject' => 'Olá {{name}}',
+        'body' => '<p>{{name}}, confira a nova campanha {{campaign}}.</p>',
+    ]));
+
+    $campaign = $this->tenant->run(fn () => Campaign::factory()->create([
+        'name' => 'teste',
+        'template_id' => $template->id,
+        'created_by' => $this->admin->id,
+    ]));
+
+    $content = $this->tenant->run(
+        fn () => app(\App\Services\CampaignService::class)->resolveContent($campaign, $this->admin),
+    );
+
+    expect($content['body'])
+        ->toContain($this->admin->name)
+        ->toContain('teste')
+        ->not->toContain('{{campaign}}');
+});
+
 it('ProcessCampaignJob resolve destinatários por role e cria deliveries', function (): void {
     Queue::fake();
 

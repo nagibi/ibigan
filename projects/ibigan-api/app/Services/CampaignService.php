@@ -197,6 +197,8 @@ final class CampaignService
                 'nome' => $user->name,
                 'name' => $user->name,
                 'email' => $user->email,
+                'campaign' => $campaign->name,
+                'campanha' => $campaign->name,
             ],
         );
 

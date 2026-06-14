@@ -8,6 +8,7 @@ import {
   getNotificationTitle,
   getNotificationType,
   getReportDownloadMeta,
+  formatNotificationBody,
   isReportNotification,
 } from '@/lib/notification-utils';
 import { type AppNotification } from '@/services/notifications.service';
@@ -119,7 +120,7 @@ export function NotificationDetailSheet({
 
               {notification.data.body ? (
                 <div className="rounded-lg border border-border bg-muted/40 p-3">
-                  <p className="text-sm whitespace-pre-wrap">{String(notification.data.body)}</p>
+                  <p className="text-sm whitespace-pre-wrap">{formatNotificationBody(notification.data.body)}</p>
                 </div>
               ) : null}
 

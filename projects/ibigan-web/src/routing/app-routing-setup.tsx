@@ -152,6 +152,7 @@ export function AppRoutingSetup() {
           <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
           <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
           <Route path="/admin/super-admins" element={<CentralUsersPage />} />
+          <Route path="/central-users" element={<Navigate to="/admin/super-admins" replace />} />
           <Route path="/admin/devtools" element={<AdminDevToolsPage />} />
         </Route>
       </Route>
