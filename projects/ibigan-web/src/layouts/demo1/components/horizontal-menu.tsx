@@ -14,6 +14,7 @@ import {
   MENU_HORIZONTAL_GROUP_ACTIVE_CLASS,
   MENU_HORIZONTAL_LEAF_ACTIVE_CLASS,
 } from '@/lib/menu-nav-link-styles';
+import { buildDevToolsHref, isDevToolsMenuPath } from '@/lib/dev-tools-link';
 import { isExternalMenuPath, resolveMenuLinkTarget } from '@/lib/menu-link';
 import { isNotificationPreferencesPath } from '@/lib/notification-preferences-path';
 import { cn } from '@/lib/utils';
@@ -76,11 +77,12 @@ function HorizontalMenuLink({
   }
 
   const linkTarget = resolveMenuLinkTarget(item.path, item.target);
+  const href = isDevToolsMenuPath(item.path) ? buildDevToolsHref(item.path) : item.path;
 
   if (isExternalMenuPath(item.path)) {
     return (
       <a
-        href={item.path}
+        href={href}
         target={linkTarget}
         rel={linkTarget === '_blank' ? 'noopener noreferrer' : undefined}
         className={className}

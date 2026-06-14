@@ -8,6 +8,8 @@ export const DEV_TOOLS_URLS = {
     import.meta.env.VITE_DEV_API_DOCS_URL || `${apiBaseUrl()}/docs/api`,
   horizon:
     import.meta.env.VITE_DEV_HORIZON_URL || `${apiBaseUrl()}/horizon`,
+  telescope:
+    import.meta.env.VITE_DEV_TELESCOPE_URL || `${apiBaseUrl()}/telescope`,
   phpMyAdmin:
     import.meta.env.VITE_DEV_PHPMYADMIN_URL || 'http://localhost:8080',
   mailpit:

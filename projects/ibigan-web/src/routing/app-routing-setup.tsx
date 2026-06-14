@@ -1,4 +1,5 @@
 import { CentralUsersPage } from '@/pages/admin/central-users-page';
+import { AdminDevToolsPage } from '@/pages/admin/admin-devtools-page';
 import { AdminTenantFormPage } from '@/pages/admin/tenant-form-page';
 import { AdminTenantsPage } from '@/pages/admin/tenants-page';
 import { ActivityLogsPage } from '@/pages/activity-logs/activity-logs-page';
@@ -151,6 +152,7 @@ export function AppRoutingSetup() {
           <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
           <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
           <Route path="/admin/super-admins" element={<CentralUsersPage />} />
+          <Route path="/admin/devtools" element={<AdminDevToolsPage />} />
         </Route>
       </Route>
 

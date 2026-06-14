@@ -7,6 +7,7 @@ const DEV_TOOLS_PATHS = new Set<string>(Object.values(DEV_TOOLS_URLS));
 const DEV_TOOL_TRANSLATION_BY_PATH: Partial<Record<string, string>> = {
   [DEV_TOOLS_URLS.apiDocs]: 'menu.api_docs',
   [DEV_TOOLS_URLS.horizon]: 'menu.horizon',
+  [DEV_TOOLS_URLS.telescope]: 'menu.telescope',
   [DEV_TOOLS_URLS.phpMyAdmin]: 'menu.phpmyadmin',
   [DEV_TOOLS_URLS.mailpit]: 'menu.mailpit',
 };
@@ -14,6 +15,7 @@ const DEV_TOOL_TRANSLATION_BY_PATH: Partial<Record<string, string>> = {
 const DEV_TOOL_PATH_BY_SLUG: Record<string, string> = {
   'documentacao-api': DEV_TOOLS_URLS.apiDocs,
   'horizon': DEV_TOOLS_URLS.horizon,
+  'telescope': DEV_TOOLS_URLS.telescope,
   'phpmyadmin': DEV_TOOLS_URLS.phpMyAdmin,
   'mailpit': DEV_TOOLS_URLS.mailpit,
 };
@@ -23,6 +25,7 @@ export function isDevToolsChild(item: MenuItem): boolean {
     DEV_TOOLS_PATHS.has(item.path)
     || item.path.includes('/docs/api')
     || item.path.includes('/horizon')
+    || item.path.includes('/telescope')
   ));
 }
 
@@ -42,7 +45,9 @@ function syncDevToolChildPath(child: MenuItem): MenuItem {
       ? DEV_TOOLS_URLS.apiDocs
       : child.path?.includes('/horizon')
         ? DEV_TOOLS_URLS.horizon
-        : child.path?.includes('8080')
+        : child.path?.includes('/telescope')
+          ? DEV_TOOLS_URLS.telescope
+          : child.path?.includes('8080')
           ? DEV_TOOLS_URLS.phpMyAdmin
           : child.path?.includes('8025')
             ? DEV_TOOLS_URLS.mailpit
@@ -88,6 +93,24 @@ function syncDevToolsInMenu(menu: MenuConfig): MenuConfig {
   });
 }
 
+function mergeDevToolsChildren(apiGroup: MenuItem, staticGroup: MenuItem): MenuItem {
+  const syncedApiChildren = (apiGroup.children ?? []).map(syncDevToolChildPath);
+  const staticChildren = (staticGroup.children ?? []).map(syncDevToolChildPath);
+
+  const apiPaths = new Set(
+    syncedApiChildren.map((child) => child.path).filter(Boolean),
+  );
+
+  const missing = staticChildren.filter(
+    (child) => child.path && !apiPaths.has(child.path),
+  );
+
+  return localizeDevToolsGroup({
+    ...apiGroup,
+    children: [...syncedApiChildren, ...missing],
+  });
+}
+
 /**
  * Garante o grupo Ferramentas do menu estático e sincroniza URLs com o ambiente atual.
  */
@@ -109,7 +132,9 @@ export function mergeDevToolsMenuItems(
   }
 
   if (syncedMenu.some(isDevToolsGroup)) {
-    return syncedMenu;
+    return syncedMenu.map((item) => (
+      isDevToolsGroup(item) ? mergeDevToolsChildren(item, devTools) : item
+    ));
   }
 
   return [...syncedMenu, localizeDevToolsGroup(devTools)];

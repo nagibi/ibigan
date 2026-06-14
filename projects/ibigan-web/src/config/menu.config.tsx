@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Shield,
   ShieldCheck,
+  Telescope,
   User,
   UserCheck,
   Users,
@@ -119,6 +120,12 @@ export const MENU_SIDEBAR: MenuConfig = [
         title: 'Horizon',
         icon: Gauge,
         path: DEV_TOOLS_URLS.horizon,
+        target: '_blank',
+      },
+      {
+        title: 'Telescope',
+        icon: Telescope,
+        path: DEV_TOOLS_URLS.telescope,
         target: '_blank',
       },
       {

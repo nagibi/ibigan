@@ -292,13 +292,26 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
+            'title' => 'Telescope',
+            'slug' => 'telescope',
+            'icon' => 'Telescope',
+            'path' => config('dev-tools.telescope_url'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 2,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
             'title' => 'phpMyAdmin',
             'slug' => 'phpmyadmin',
             'icon' => 'Database',
             'path' => config('dev-tools.phpmyadmin_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
-            'order' => 2,
+            'order' => 3,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -311,7 +324,7 @@ class MenuSeeder extends Seeder
             'path' => config('dev-tools.mailpit_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
-            'order' => 3,
+            'order' => 4,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -377,6 +390,7 @@ class MenuSeeder extends Seeder
             'ferramentas' => 'menu.tools',
             'documentacao-api' => 'menu.api_docs',
             'horizon' => 'menu.horizon',
+            'telescope' => 'menu.telescope',
             'phpmyadmin' => 'menu.phpmyadmin',
             'mailpit' => 'menu.mailpit',
             'configuracoes' => 'menu.settings',

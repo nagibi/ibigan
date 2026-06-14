@@ -11,10 +11,14 @@ function isDevToolsPath(path: string): boolean {
     const normalized = new URL(path).pathname.replace(/\/$/, '');
     return normalized === '/docs/api'
       || normalized === '/horizon'
+      || normalized === '/telescope'
       || normalized.endsWith('/docs/api')
-      || normalized.endsWith('/horizon');
+      || normalized.endsWith('/horizon')
+      || normalized.endsWith('/telescope');
   } catch {
-    return path.includes('/docs/api') || path.includes('/horizon');
+    return path.includes('/docs/api')
+      || path.includes('/horizon')
+      || path.includes('/telescope');
   }
 }
 

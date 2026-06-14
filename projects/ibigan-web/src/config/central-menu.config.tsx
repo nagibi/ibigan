@@ -1,4 +1,4 @@
-import { Building2, ShieldCheck } from 'lucide-react';
+import { Building2, ShieldCheck, Wrench } from 'lucide-react';
 import { type MenuConfig } from './types';
 
 export const CENTRAL_MENU_SIDEBAR: MenuConfig = [
@@ -14,5 +14,13 @@ export const CENTRAL_MENU_SIDEBAR: MenuConfig = [
     title: 'Super-admins',
     icon: ShieldCheck,
     path: '/admin/super-admins',
+  },
+  {
+    heading: 'FERRAMENTAS',
+  },
+  {
+    title: 'Ferramentas',
+    icon: Wrench,
+    path: '/admin/devtools',
   },
 ];

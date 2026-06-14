@@ -63,6 +63,10 @@ it('nega acesso anônimo ao Horizon', function (): void {
     $this->get('/horizon')->assertForbidden();
 });
 
+it('nega acesso anônimo ao Telescope', function (): void {
+    $this->get('/telescope')->assertForbidden();
+});
+
 it('permite admin do tenant com token e tenant_id', function (): void {
     $token = $this->tenant->run(fn (): string => $this->admin->createToken('api-token')->plainTextToken);
 
@@ -109,6 +113,9 @@ it('permite super-admin central com token', function (): void {
 
     $this->get("/horizon?access_token={$token}")
         ->assertRedirect('/horizon');
+
+    $this->get("/telescope?access_token={$token}")
+        ->assertRedirect('/telescope');
 });
 
 it('nega central user comum com token', function (): void {
