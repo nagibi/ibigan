@@ -30,6 +30,43 @@ final class CampaignService
         ProcessCampaignJob::dispatch($campaign->id);
     }
 
+    public function dispatchDueScheduledCampaigns(): int
+    {
+        $dispatched = 0;
+
+        $campaigns = Campaign::query()
+            ->where('status', CampaignStatus::Scheduled)
+            ->where('scheduled_at', '<=', now())
+            ->where(fn ($query) => $query->where('is_active', true)->orWhereNull('is_active'))
+            ->get();
+
+        foreach ($campaigns as $campaign) {
+            if ($this->dispatchDueScheduled($campaign)) {
+                $dispatched++;
+            }
+        }
+
+        return $dispatched;
+    }
+
+    public function dispatchDueScheduled(Campaign $campaign): bool
+    {
+        $claimed = Campaign::query()
+            ->whereKey($campaign->id)
+            ->where('status', CampaignStatus::Scheduled)
+            ->where('scheduled_at', '<=', now())
+            ->where(fn ($query) => $query->where('is_active', true)->orWhereNull('is_active'))
+            ->update(['status' => CampaignStatus::Sending]);
+
+        if ($claimed === 0) {
+            return false;
+        }
+
+        ProcessCampaignJob::dispatch($campaign->id);
+
+        return true;
+    }
+
     public function process(Campaign $campaign): void
     {
         $campaign->update([
@@ -172,29 +209,32 @@ final class CampaignService
             return;
         }
 
-        $pending = $campaign->deliveries()
-            ->where('status', DeliveryStatus::Queued)
-            ->count();
+        $updated = Campaign::query()
+            ->whereKey($campaign->id)
+            ->where('status', CampaignStatus::Sending)
+            ->whereDoesntHave('deliveries', function ($query): void {
+                $query->where('status', DeliveryStatus::Queued);
+            })
+            ->update([
+                'status' => CampaignStatus::Sent,
+                'finished_at' => now(),
+            ]);
 
-        if ($pending > 0) {
+        if ($updated === 0) {
             return;
         }
 
-        $this->finalizeCampaign($campaign);
+        $campaign->refresh()->update([
+            'stats' => $campaign->deliveryStats(),
+        ]);
     }
 
     private function finalizeCampaign(Campaign $campaign): void
     {
-        $sent = $campaign->deliveries()->where('status', DeliveryStatus::Sent)->count();
-        $failed = $campaign->deliveries()->where('status', DeliveryStatus::Failed)->count();
-
         $campaign->update([
             'status' => CampaignStatus::Sent,
             'finished_at' => now(),
-            'stats' => array_merge($campaign->stats ?? [], [
-                'sent' => $sent,
-                'failed' => $failed,
-            ]),
+            'stats' => $campaign->deliveryStats(),
         ]);
     }
 }

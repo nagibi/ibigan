@@ -231,7 +231,7 @@ final class CampaignController extends Controller
         $deliveries = $campaign->deliveries()
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('channel'), fn ($q) => $q->where('channel', $request->string('channel')))
-            ->latest()
+            ->latest('id')
             ->paginate($request->integer('per_page', 15));
 
         return response()->json([

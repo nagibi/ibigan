@@ -646,6 +646,10 @@ SQL,
                 $delivery->saveQuietly();
             }
         }
+
+        foreach ($campaigns as $campaign) {
+            $campaign->update(['stats' => $campaign->deliveryStats()]);
+        }
     }
 
     private function seedWebhookDeliveries(): void

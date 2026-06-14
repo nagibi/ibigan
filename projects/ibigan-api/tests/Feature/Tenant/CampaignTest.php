@@ -152,6 +152,26 @@ it('não dispara job ao criar campanha agendada', function (): void {
     Queue::assertNotPushed(\App\Jobs\ProcessCampaignJob::class);
 });
 
+it('dispara campanhas agendadas vencidas via comando', function (): void {
+    Queue::fake();
+
+    $this->tenant->run(function (): void {
+        Campaign::factory()->create([
+            'status' => CampaignStatus::Scheduled,
+            'scheduled_at' => now()->subMinute(),
+            'template_id' => $this->template->id,
+            'is_active' => true,
+        ]);
+    });
+
+    expect(Tenant::count())->toBe(1);
+
+    $this->artisan('campaigns:dispatch-scheduled')->assertSuccessful();
+
+    Queue::assertPushed(\App\Jobs\ProcessCampaignJob::class);
+    expect(Queue::pushed(\App\Jobs\ProcessCampaignJob::class))->toHaveCount(1);
+});
+
 it('nega criação para viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
@@ -275,6 +295,38 @@ it('lista deliveries da campanha', function (): void {
     $this->getJson("/api/v1/campaigns/{$campaign->id}/deliveries", campaignHeaders($this->tenant->id))
         ->assertOk()
         ->assertJsonPath('status', 1);
+});
+
+it('calcula stats da campanha a partir das entregas', function (): void {
+    $campaign = $this->tenant->run(function () {
+        $campaign = Campaign::factory()->sent()->create(['created_by' => $this->admin->id]);
+
+        $campaign->deliveries()->create([
+            'user_id' => $this->admin->id,
+            'channel' => 'email',
+            'status' => 'sent',
+            'recipient_email' => $this->admin->email,
+            'sent_at' => now(),
+        ]);
+
+        $campaign->deliveries()->create([
+            'user_id' => $this->admin->id,
+            'channel' => 'email',
+            'status' => 'failed',
+            'recipient_email' => $this->admin->email,
+            'error_message' => 'SMTP error',
+        ]);
+
+        return $campaign;
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson("/api/v1/campaigns/{$campaign->id}", campaignHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.stats.total', 2)
+        ->assertJsonPath('result.stats.sent', 1)
+        ->assertJsonPath('result.stats.failed', 1);
 });
 
 it('ativa registro', function (): void {

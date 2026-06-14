@@ -71,6 +71,10 @@ it('nega acesso anônimo ao Log Viewer', function (): void {
     $this->get('/log-viewer')->assertForbidden();
 });
 
+it('nega acesso anônimo ao Clockwork', function (): void {
+    $this->get('/clockwork')->assertForbidden();
+});
+
 it('permite admin do tenant com token e tenant_id', function (): void {
     $token = $this->tenant->run(fn (): string => $this->admin->createToken('api-token')->plainTextToken);
 
@@ -123,6 +127,9 @@ it('permite super-admin central com token', function (): void {
 
     $this->get("/log-viewer?access_token={$token}")
         ->assertRedirect('/log-viewer');
+
+    $this->get("/clockwork?access_token={$token}")
+        ->assertRedirect('/clockwork');
 });
 
 it('nega central user comum com token', function (): void {

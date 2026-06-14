@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,7 +9,12 @@ import { campaignsService } from '@/services/campaigns.service';
 import { PageBody } from '@/components/common/page-body';
 import { GridTableScroll } from '@/components/grid/grid-table-scroll';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { GridBadge } from '@/components/grid/grid-badge';
+import {
+  campaignStatusBadgeTone,
+  channelBadgeToneFor,
+  deliveryStatusBadgeTone,
+} from '@/lib/campaign-badges';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   TableBody,
@@ -38,14 +43,24 @@ export function CampaignDetailPage() {
     refetchInterval: 5000,
   });
 
-  const { data: deliveriesData, isLoading: loadingDeliveries } = useQuery({
+  const { data: deliveriesData, isLoading: loadingDeliveries, isFetching: fetchingDeliveries } = useQuery({
     queryKey: ['campaign-deliveries', id, page],
     queryFn: () => campaignsService.deliveries(Number(id), page),
   });
 
+  useEffect(() => {
+    setPage(1);
+  }, [id]);
+
   const campaign = campaignData?.data.result;
   const deliveries = deliveriesData?.data.result.data ?? [];
   const meta = deliveriesData?.data.result.meta;
+
+  useEffect(() => {
+    if (meta && meta.last_page > 0 && page > meta.last_page) {
+      setPage(meta.last_page);
+    }
+  }, [meta?.last_page, page]);
 
   if (loadingCampaign) {
     return (
@@ -66,9 +81,11 @@ export function CampaignDetailPage() {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold">{campaign?.name}</h1>
-            <Badge variant={campaign?.status === 'sent' ? 'primary' : 'secondary'}>
-              {campaign?.status}
-            </Badge>
+            {campaign?.status && (
+              <GridBadge tone={campaignStatusBadgeTone[campaign.status]}>
+                {campaign.status}
+              </GridBadge>
+            )}
           </div>
           {campaign?.description && (
             <p className="text-sm text-muted-foreground">{campaign.description}</p>
@@ -102,7 +119,9 @@ export function CampaignDetailPage() {
               <p className="text-muted-foreground">Canais</p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {campaign?.channels.map((ch) => (
-                  <Badge key={ch} variant="outline">{ch}</Badge>
+                  <GridBadge key={ch} tone={channelBadgeToneFor(ch)}>
+                    {ch}
+                  </GridBadge>
                 ))}
               </div>
             </div>
@@ -137,7 +156,7 @@ export function CampaignDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingDeliveries ? (
+                {loadingDeliveries || fetchingDeliveries ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center">
                       <LoaderCircle className="mx-auto size-5 animate-spin" />
@@ -146,18 +165,22 @@ export function CampaignDetailPage() {
                 ) : deliveries.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                      Nenhuma entrega registrada ainda.
+                      {meta && meta.total > 0
+                        ? 'Nenhuma entrega nesta página.'
+                        : 'Nenhuma entrega registrada ainda.'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   deliveries.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="text-sm">{d.recipient_email ?? `User #${d.user_id}`}</TableCell>
-                      <TableCell><Badge variant="outline">{d.channel}</Badge></TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <GridBadge tone={channelBadgeToneFor(d.channel)}>{d.channel}</GridBadge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
                           {statusIcon[d.status]}
-                          <span className="text-sm">{d.status}</span>
+                          <GridBadge tone={deliveryStatusBadgeTone[d.status]}>{d.status}</GridBadge>
                         </div>
                         {d.error_message && (
                           <p className="mt-0.5 text-xs text-destructive">{d.error_message}</p>
@@ -175,7 +198,7 @@ export function CampaignDetailPage() {
               </TableBody>
             </table>
           </GridTableScroll>
-          {meta && meta.last_page > 1 && (
+          {meta && meta.total > 0 && meta.last_page > 1 && (
             <div className="flex flex-wrap justify-center gap-2 p-4">
               <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
               <span className="flex items-center text-sm text-muted-foreground">Página {meta.current_page} de {meta.last_page}</span>

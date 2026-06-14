@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\CampaignStatus;
 use App\Enums\CampaignType;
+use App\Enums\DeliveryStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,5 +75,28 @@ class Campaign extends Model
     public function deliveries(): HasMany
     {
         return $this->hasMany(CampaignDelivery::class);
+    }
+
+    /**
+     * @return array{total: int, sent: int, failed: int, opened: int}
+     */
+    public function deliveryStats(): array
+    {
+        $query = $this->deliveries();
+
+        return [
+            'total' => (clone $query)->count(),
+            'sent' => (clone $query)->whereIn('status', [
+                DeliveryStatus::Sent,
+                DeliveryStatus::Delivered,
+                DeliveryStatus::Opened,
+                DeliveryStatus::Clicked,
+            ])->count(),
+            'failed' => (clone $query)->where('status', DeliveryStatus::Failed)->count(),
+            'opened' => (clone $query)->whereIn('status', [
+                DeliveryStatus::Opened,
+                DeliveryStatus::Clicked,
+            ])->count(),
+        ];
     }
 }

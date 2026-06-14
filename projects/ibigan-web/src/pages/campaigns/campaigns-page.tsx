@@ -5,6 +5,7 @@ import { BarChart3, Trash2, X } from 'lucide-react';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useCampaignStatusFilterOptions } from '@/lib/grid-filter-options';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useGridPageActions } from '@/hooks/use-grid-page-actions';
@@ -40,20 +41,13 @@ import {
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
+import { campaignStatusBadgeTone, channelBadgeToneFor } from '@/lib/campaign-badges';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const GRID_COLUMNS_KEY = 'grid-columns:campaigns';
 
 const DELETABLE_STATUSES: Campaign['status'][] = ['draft', 'cancelled'];
 const CANCELLABLE_STATUSES: Campaign['status'][] = ['draft', 'scheduled'];
-
-const statusVariant: Record<Campaign['status'], 'primary' | 'secondary' | 'outline' | 'destructive'> = {
-  draft: 'secondary',
-  scheduled: 'outline',
-  sending: 'primary',
-  sent: 'primary',
-  cancelled: 'destructive',
-};
 
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
@@ -343,7 +337,7 @@ export function CampaignsPage() {
         render: (campaign) => (
           <div className="flex flex-wrap gap-1">
             {campaign.channels.map((channel) => (
-              <GridBadge key={channel} variant="outline" className="text-xs">
+              <GridBadge key={channel} tone={channelBadgeToneFor(channel)} className="text-xs">
                 {channel}
               </GridBadge>
             ))}
@@ -363,7 +357,7 @@ export function CampaignsPage() {
         },
         className: 'w-[120px]',
         render: (campaign) => (
-          <GridBadge variant={statusVariant[campaign.status]}>
+          <GridBadge tone={campaignStatusBadgeTone[campaign.status]}>
             {statusLabel[campaign.status]}
           </GridBadge>
         ),

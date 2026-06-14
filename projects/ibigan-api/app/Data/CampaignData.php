@@ -46,9 +46,32 @@ final class CampaignData extends Data
             scheduled_at: $campaign->scheduled_at?->toIso8601String(),
             started_at: $campaign->started_at?->toIso8601String(),
             finished_at: $campaign->finished_at?->toIso8601String(),
-            stats: $campaign->stats,
+            stats: self::resolveStats($campaign),
             created_by: $campaign->created_by,
             created_at: $campaign->created_at->toIso8601String(),
         );
+    }
+
+    /**
+     * @return array{total: int, sent: int, failed: int, opened: int}
+     */
+    private static function resolveStats(Campaign $campaign): array
+    {
+        $stored = $campaign->stats;
+
+        if (
+            is_array($stored)
+            && array_key_exists('total', $stored)
+            && array_key_exists('sent', $stored)
+        ) {
+            return [
+                'total' => (int) $stored['total'],
+                'sent' => (int) $stored['sent'],
+                'failed' => (int) ($stored['failed'] ?? 0),
+                'opened' => (int) ($stored['opened'] ?? 0),
+            ];
+        }
+
+        return $campaign->deliveryStats();
     }
 }

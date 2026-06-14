@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\AuthenticateDevTools;
 use App\Repositories\Contracts\ActivityLogRepositoryInterface;
 use App\Repositories\Contracts\CentralUserRepositoryInterface;
 use App\Repositories\Contracts\InviteRepositoryInterface;
@@ -24,6 +25,7 @@ use Dedoc\Scramble\Support\Generator\Server;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 use SocialiteProviders\Apple\Provider as AppleProvider;
@@ -104,6 +106,32 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(function (SocialiteWasCalled $event): void {
             $event->extendSocialite('apple', AppleProvider::class);
+        });
+
+        $this->registerClockworkDevToolsMiddleware();
+    }
+
+    private function registerClockworkDevToolsMiddleware(): void
+    {
+        if (! class_exists(\Clockwork\Support\Laravel\ClockworkSupport::class)) {
+            return;
+        }
+
+        $this->app->booted(function (): void {
+            $middleware = ['web', AuthenticateDevTools::class];
+
+            foreach (Route::getRoutes() as $route) {
+                $uri = $route->uri();
+
+                if (! str_starts_with($uri, 'clockwork') && ! str_starts_with($uri, '__clockwork')) {
+                    continue;
+                }
+
+                $route->middleware(array_values(array_unique([
+                    ...$route->middleware(),
+                    ...$middleware,
+                ])));
+            }
         });
     }
 }
