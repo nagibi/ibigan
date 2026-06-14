@@ -10,8 +10,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
-  CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 
@@ -100,17 +98,21 @@ export function AdminDevToolsPage() {
           const href = buildDevToolsHref(tool.url);
 
           return (
-            <Card key={tool.id} className="flex flex-col">
-              <CardHeader>
-                <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="size-5" />
+            <Card key={tool.id} className="h-full">
+              <CardContent className="flex h-full flex-col gap-4 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="size-5" />
+                  </div>
+                  <div className="min-w-0 space-y-1">
+                    <CardTitle className="text-base">{t(tool.titleKey)}</CardTitle>
+                    <CardDescription className="text-sm leading-relaxed">
+                      {t(tool.descriptionKey)}
+                    </CardDescription>
+                  </div>
                 </div>
-                <CardTitle>{t(tool.titleKey)}</CardTitle>
-                <CardDescription>{t(tool.descriptionKey)}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1" />
-              <CardFooter>
-                <Button asChild className="w-full">
+
+                <Button asChild className="mt-auto w-full">
                   <a
                     href={href}
                     target="_blank"
@@ -120,7 +122,7 @@ export function AdminDevToolsPage() {
                     <ExternalLink className="ms-2 size-4" />
                   </a>
                 </Button>
-              </CardFooter>
+              </CardContent>
             </Card>
           );
         })}
