@@ -331,7 +331,7 @@ export function InvitesPage() {
         sortKey: 'email',
         filter: { type: 'text', filterKey: 'email', placeholder: 'E-mail' },
         className: 'min-w-[220px]',
-        render: (invite) => <span className="font-medium">{invite.email}</span>,
+        render: (invite) => <span>{invite.email}</span>,
       },
       {
         id: 'role',

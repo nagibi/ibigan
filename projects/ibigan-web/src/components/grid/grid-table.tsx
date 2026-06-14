@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/table';
 import {
   getGridColumnCellClassName,
+  GRID_BODY_CELL_CLASS,
   isGridCenteredColumn,
   resolveGridColumnLabel,
 } from '@/lib/grid-column-presets';
@@ -155,7 +156,7 @@ function SortableHeaderCell<T>({
           <ToolbarTooltip content={getSortTooltip(isActive, sortDir, t)}>
             <button
               type="button"
-              className="flex min-w-0 items-center gap-1 text-left text-xs font-medium hover:text-foreground"
+              className="flex min-w-0 items-center gap-1 text-left text-xs font-normal text-muted-foreground hover:text-foreground"
               onClick={() => onSort?.(sortKey)}
             >
               {resolveGridColumnLabel(column.id, column.label)}
@@ -163,7 +164,7 @@ function SortableHeaderCell<T>({
             </button>
           </ToolbarTooltip>
         ) : (
-          <span className="text-xs font-medium">{resolveGridColumnLabel(column.id, column.label)}</span>
+          <span className="text-xs font-normal text-muted-foreground">{resolveGridColumnLabel(column.id, column.label)}</span>
         )}
       </div>
     </TableHead>
@@ -201,7 +202,7 @@ function PinnedHeaderCell<T>({
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1 text-xs font-medium hover:text-foreground',
+              'flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground',
               isGridCenteredColumn(column.id) ? 'justify-center w-full' : 'text-left',
             )}
             onClick={() => onSort?.(sortKey)}
@@ -212,7 +213,7 @@ function PinnedHeaderCell<T>({
         </ToolbarTooltip>
       ) : (
         <span className={cn(
-          'text-xs font-medium',
+          'text-xs font-normal text-muted-foreground',
           isGridCenteredColumn(column.id) && 'flex justify-center',
         )}
         >
@@ -257,14 +258,14 @@ export function GridTableHeader<T>({
   return (
     <TableHeader
       className={cn(
-        'sticky top-0 z-10 bg-card',
+        'sticky top-0 z-20 bg-muted',
         hasFilterRow
-          ? '[&_tr]:border-0 [&_tr:last-child]:border-b'
+          ? 'shadow-[0_1px_0_0_var(--border)] [&_tr:first-child]:border-0'
           : 'shadow-[inset_0_-1px_0_0_var(--border)]',
         className,
       )}
     >
-      <TableRow className="border-0 bg-card hover:bg-card [&_th]:bg-card">
+      <TableRow className="border-0 bg-muted hover:bg-muted [&_th]:bg-muted">
         <SortableContext items={draggableIds} strategy={horizontalListSortingStrategy}>
           {columns.map((column) =>
             column.pinned ? (
@@ -289,12 +290,12 @@ export function GridTableHeader<T>({
         </SortableContext>
       </TableRow>
       {hasFilterRow && !isMobile && (
-        <TableRow className="bg-muted hover:bg-muted [&_th]:bg-muted [&_th]:align-middle">
+        <TableRow className="bg-background hover:bg-background [&_th]:bg-background [&_th]:align-middle">
           {columns.map((column) => (
             <TableHead
               key={`filter-${column.id}`}
               className={cn(
-                'overflow-visible bg-muted px-2 py-1.5',
+                'overflow-visible bg-background px-2 py-1.5',
                 getGridColumnCellClassName(column.id, column.className),
               )}
             >
@@ -426,7 +427,7 @@ export function GridTable<T>({
         {columns.map((column) => (
           <TableCell
             key={column.id}
-            className={cn('whitespace-nowrap', getGridColumnCellClassName(column.id, column.className))}
+            className={cn('whitespace-nowrap', GRID_BODY_CELL_CLASS, getGridColumnCellClassName(column.id, column.className))}
           >
             {isGridCenteredColumn(column.id) ? (
               <div className="flex justify-center">{column.render(row)}</div>
@@ -443,7 +444,7 @@ export function GridTable<T>({
   return (
     <GridTableScroll maxHeight={maxBodyHeight}>
       <GridTableColumnDndContext columns={columns} onColumnOrderChange={onColumnOrderChange}>
-        <table className="w-full min-w-full table-fixed caption-bottom text-sm text-foreground">
+        <table className="w-full min-w-full table-fixed caption-bottom text-sm font-normal text-muted-foreground">
           <GridTableHeader
             columns={columns}
             sort={sort}

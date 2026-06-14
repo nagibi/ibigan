@@ -254,7 +254,7 @@ export function MyExecutionsPage() {
         render: (execution) => (
           <div className="flex items-center gap-2">
             <StatusIcon status={execution.status} />
-            <span className="font-medium">{execution.template_name}</span>
+            <span>{execution.template_name}</span>
           </div>
         ),
       },

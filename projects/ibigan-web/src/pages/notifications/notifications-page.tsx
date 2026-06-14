@@ -393,7 +393,7 @@ export function NotificationsPage() {
         filter: { type: 'text', filterKey: 'title', placeholder: 'Notificação' },
         render: (notification) => (
           <div className="min-w-0">
-            <p className={`truncate text-sm ${notification.read_at ? 'text-muted-foreground' : 'font-medium'}`}>
+            <p className={`truncate text-sm ${notification.read_at ? 'text-muted-foreground' : 'text-foreground'}`}>
               {getNotificationTitle(notification)}
             </p>
             <p className="text-xs text-muted-foreground">

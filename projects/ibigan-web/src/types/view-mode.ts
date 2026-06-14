@@ -19,6 +19,8 @@ export const VIEW_PREFERENCE_KEYS = {
   activityLogs: 'activity-logs.view',
   notifications: 'notifications.view',
   centralUsers: 'central-users.view',
+  platformMessageTemplates: 'platform-message-templates.view',
+  platformReports: 'platform-reports.view',
 } as const;
 
 export type ViewPreferenceKey = (typeof VIEW_PREFERENCE_KEYS)[keyof typeof VIEW_PREFERENCE_KEYS];

@@ -28,7 +28,7 @@ final class ActivityLogController extends Controller
 
         $logs = $this->activityLogRepository->paginate(
             perPage: $request->integer('per_page', 15),
-            filters: $request->only(['log_name', 'subject_type', 'causer_id', 'date_from', 'date_to']),
+            filters: $request->only(['log_name', 'subject_type', 'causer_id', 'date_from', 'date_to', 'filter_id']),
         );
 
         return response()->json([

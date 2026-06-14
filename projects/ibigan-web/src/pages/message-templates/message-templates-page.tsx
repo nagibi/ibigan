@@ -16,10 +16,10 @@ import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
-import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
+import { VIEW_PREFERENCE_KEYS, type ViewPreferenceKey } from '@/types/view-mode';
 import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import {
-  messageTemplatesService,
   type MessageChannel,
   type MessageTemplate,
 } from '@/services/message-templates.service';
@@ -44,6 +44,7 @@ import {
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
+import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -54,8 +55,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-
-const GRID_COLUMNS_KEY = 'grid-columns:message-templates';
 
 const CHANNEL_OPTIONS: { value: MessageChannel; label: string }[] = [
   { value: 'email', label: 'E-mail' },
@@ -80,15 +79,23 @@ function resetSendState() {
 export function MessageTemplatesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const catalog = usePlatformCatalogMode();
+  const { isPlatformCatalog, messageTemplates: catalogPaths } = catalog;
+  const templatesService = catalogPaths.service;
+  const listPath = catalogPaths.listPath;
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
 
-  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.messageTemplates);
+  const viewPreferenceKey = (isPlatformCatalog
+    ? VIEW_PREFERENCE_KEYS.platformMessageTemplates
+    : VIEW_PREFERENCE_KEYS.messageTemplates) as ViewPreferenceKey;
+
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(viewPreferenceKey);
 
   const grid = useGrid({
     onActivate: async (ids) => {
       try {
-        await Promise.all(ids.map((id) => messageTemplatesService.toggleActive(id, true)));
+        await Promise.all(ids.map((id) => templatesService.toggleActive(id, true)));
         showToggleActive(true, TOGGLE_ACTIVE_LABELS.template, ids.length);
         await loadRef.current();
       } catch (error) {
@@ -98,7 +105,7 @@ export function MessageTemplatesPage() {
     },
     onDeactivate: async (ids) => {
       try {
-        await Promise.all(ids.map((id) => messageTemplatesService.toggleActive(id, false)));
+        await Promise.all(ids.map((id) => templatesService.toggleActive(id, false)));
         showToggleActive(false, TOGGLE_ACTIVE_LABELS.template, ids.length);
         await loadRef.current();
       } catch (error) {
@@ -145,7 +152,7 @@ export function MessageTemplatesPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await messageTemplatesService.list(
+      const res = await templatesService.list(
         grid.page,
         grid.resolvePerPage(meta.total),
         grid.debouncedSearch,
@@ -183,10 +190,12 @@ export function MessageTemplatesPage() {
 
   const sendMutation = useMutation({
     mutationFn: () =>
-      messageTemplatesService.send(sendTemplate!.id, {
-        recipients: sendRecipients,
-        channels: sendChannels,
-      }),
+      ('send' in templatesService
+        ? templatesService.send(sendTemplate!.id, {
+          recipients: sendRecipients,
+          channels: sendChannels,
+        })
+        : Promise.reject(new Error('send-unavailable'))),
     onSuccess: () => {
       showSuccess('Mensagem enfileirada com sucesso!');
       closeSendDialog();
@@ -196,7 +205,7 @@ export function MessageTemplatesPage() {
 
   const handleEditSelected = useCallback(() => {
     if (!grid.singleSelection) return;
-    navigate(`/message-templates/${grid.selected[0]}`);
+    navigate(catalogPaths.getEditPath(grid.selected[0]));
   }, [grid.singleSelection, grid.selected, navigate]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -225,22 +234,35 @@ export function MessageTemplatesPage() {
 
   useGridKeyboard({
     canEdit: grid.singleSelection,
-    canDelete: grid.hasSelection,
+    canDelete: !isPlatformCatalog && grid.hasSelection,
     onEdit: handleEditSelected,
     onDelete: handleDeleteSelected,
     onEscape: handleEscape,
   });
 
   async function handleDelete() {
-    if (grid.deleteIds.length === 0) return;
+    if (isPlatformCatalog || grid.deleteIds.length === 0) return;
+
+    const deletableIds = grid.deleteIds.filter((id) => {
+      const template = templates.find((item) => item.id === id);
+      return template && !template.is_system;
+    });
+
+    if (deletableIds.length === 0) {
+      showError('Templates de plataforma não podem ser removidos.');
+      grid.clearDeleteRequest();
+      return;
+    }
 
     try {
       setIsDeleting(true);
-      await Promise.all(grid.deleteIds.map((id) => messageTemplatesService.destroy(id)));
+      await Promise.all(deletableIds.map((id) => ('destroy' in templatesService
+        ? templatesService.destroy(id)
+        : Promise.resolve())));
       showSuccess(
-        grid.deleteIds.length === 1
+        deletableIds.length === 1
           ? 'Template removido.'
-          : `${grid.deleteIds.length} templates removidos.`,
+          : `${deletableIds.length} templates removidos.`,
       );
       grid.clearDeleteRequest();
       grid.clearSelection();
@@ -253,16 +275,17 @@ export function MessageTemplatesPage() {
   }
 
   const handleEditTemplate = useCallback(
-    (templateId: number) => navigate(`/message-templates/${templateId}`),
-    [navigate],
+    (templateId: number) => navigate(catalogPaths.getEditPath(templateId)),
+    [catalogPaths, navigate],
   );
 
   async function handleDuplicate(templateId: number) {
+    if (isPlatformCatalog || !('duplicate' in templatesService)) return;
     try {
       setDuplicatingId(templateId);
-      const res = await messageTemplatesService.duplicate(templateId);
+      const res = await templatesService.duplicate(templateId);
       showSuccess('Template duplicado com sucesso!');
-      navigate(`/message-templates/${res.data.result.id}`);
+      navigate(catalogPaths.getEditPath(res.data.result.id));
     } catch (error) {
       showError('Erro ao duplicar template.', error);
     } finally {
@@ -275,7 +298,7 @@ export function MessageTemplatesPage() {
 
     try {
       setRowStatusId(template.id);
-      await messageTemplatesService.toggleActive(template.id, active);
+      await templatesService.toggleActive(template.id, active);
       showToggleActive(active, TOGGLE_ACTIVE_LABELS.template);
       void load();
     } catch (error) {
@@ -341,6 +364,7 @@ export function MessageTemplatesPage() {
         label: 'Id',
         sortable: true,
         sortKey: 'id',
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (template) => template.id,
       },
@@ -355,12 +379,13 @@ export function MessageTemplatesPage() {
               {
                 label: 'Enviar',
                 icon: Send,
-                hidden: !template.is_active,
+                hidden: isPlatformCatalog || !template.is_active,
                 onClick: () => openSendDialog(template),
               },
               {
                 label: 'Duplicar',
                 icon: Copy,
+                hidden: isPlatformCatalog,
                 disabled: duplicatingId === template.id,
                 onClick: () => void handleDuplicate(template.id),
               },
@@ -400,7 +425,12 @@ export function MessageTemplatesPage() {
         sortKey: 'name',
         filter: { type: 'text', filterKey: 'name', placeholder: 'Nome' },
         className: 'min-w-[200px]',
-        render: (template) => <span className="font-medium">{template.name}</span>,
+        render: (template) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate">{template.name}</span>
+            {template.is_system || isPlatformCatalog ? <PlatformCatalogBadge /> : null}
+          </div>
+        ),
       },
       {
         id: 'slug',
@@ -436,11 +466,12 @@ export function MessageTemplatesPage() {
       grid.selected,
       grid.toggleSelect,
       handleEditTemplate,
+      isPlatformCatalog,
       rowStatusId,
     ],
   );
 
-  const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+  const gridColumns = useGridColumns(catalogPaths.gridColumnsKey, columnDefinitions);
 
   const { handleExport, isExporting } = useGridExport({
     filename: 'templates-mensagem',
@@ -498,11 +529,11 @@ export function MessageTemplatesPage() {
   const toolbarActions = useMemo(
     () => (
       <StandardGridToolbar
-        onNew={() => navigate('/message-templates/new')}
+        onNew={isPlatformCatalog ? undefined : () => navigate(`${listPath}/new`)}
         onEdit={handleEditSelected}
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
-        onDelete={handleDeleteSelected}
+        onDelete={isPlatformCatalog ? undefined : handleDeleteSelected}
         onExport={handleExport}
         isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
@@ -521,12 +552,16 @@ export function MessageTemplatesPage() {
       handleEditSelected,
       handleExport,
       isExporting,
+      isPlatformCatalog,
+      listPath,
     ],
   );
 
   usePageToolbar({
-    title: 'Templates de Mensagem',
-    description: 'Gerencie templates de mensagens.',
+    title: isPlatformCatalog ? 'Templates de mensagem' : 'Templates de Mensagem',
+    description: isPlatformCatalog
+      ? 'Edite os templates padrão propagados para todos os tenants.'
+      : 'Gerencie templates de mensagens.',
     actions: toolbarActions,
   });
 
@@ -624,7 +659,7 @@ export function MessageTemplatesPage() {
         />
       </GridPanel>
 
-      <Dialog open={!!sendTemplate} onOpenChange={(open) => !open && closeSendDialog()}>
+      <Dialog open={!isPlatformCatalog && !!sendTemplate} onOpenChange={(open) => !open && closeSendDialog()}>
         <DialogContent>
           <DialogHeader>
             <DialogPanelTitle icon={Send}>Enviar mensagem</DialogPanelTitle>
@@ -713,6 +748,7 @@ export function MessageTemplatesPage() {
         </DialogContent>
       </Dialog>
 
+      {!isPlatformCatalog ? (
       <AlertDialog
         open={grid.deleteIds.length > 0}
         onOpenChange={(open) => !open && grid.clearDeleteRequest()}
@@ -740,6 +776,7 @@ export function MessageTemplatesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      ) : null}
     </PageBody>
   );
 }

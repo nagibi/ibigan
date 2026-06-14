@@ -1,4 +1,4 @@
-import { Building2, ShieldCheck, Wrench } from 'lucide-react';
+import { BarChart2, Building2, MessageSquare, ShieldCheck, Wrench } from 'lucide-react';
 import { type MenuConfig } from './types';
 
 export const CENTRAL_MENU_SIDEBAR: MenuConfig = [
@@ -14,6 +14,19 @@ export const CENTRAL_MENU_SIDEBAR: MenuConfig = [
     title: 'Super-admins',
     icon: ShieldCheck,
     path: '/admin/super-admins',
+  },
+  {
+    heading: 'CATÁLOGO',
+  },
+  {
+    title: 'Templates de mensagem',
+    icon: MessageSquare,
+    path: '/admin/message-templates',
+  },
+  {
+    title: 'Relatórios padrão',
+    icon: BarChart2,
+    path: '/admin/reports',
   },
   {
     heading: 'FERRAMENTAS',

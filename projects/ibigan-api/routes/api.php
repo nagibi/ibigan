@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\Central\CentralProfileController;
 use App\Http\Controllers\Api\V1\Central\CentralSocialAuthController;
 use App\Http\Controllers\Api\V1\Central\CentralTwoFactorController;
 use App\Http\Controllers\Api\V1\Central\CentralUserController;
+use App\Http\Controllers\Api\V1\Central\PlatformMessageTemplateController;
+use App\Http\Controllers\Api\V1\Central\PlatformReportTemplateController;
 use App\Http\Controllers\Api\V1\Central\TenantAdminController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
 use App\Http\Controllers\Api\V1\Central\TenantSettingsController;
@@ -126,6 +128,12 @@ Route::prefix('central/v1')
             Route::put('central-users/{centralUser}', [CentralUserController::class, 'update']);
             Route::patch('central-users/{centralUser}/toggle-active', [CentralUserController::class, 'toggleActive']);
             Route::patch('central-users/{centralUser}/toggle-super-admin', [CentralUserController::class, 'toggleSuperAdmin']);
+
+            Route::post('platform-catalog/sync', [PlatformMessageTemplateController::class, 'sync']);
+            Route::patch('platform/message-templates/{platformMessageTemplate}/toggle-active', [PlatformMessageTemplateController::class, 'toggleActive']);
+            Route::apiResource('platform/message-templates', PlatformMessageTemplateController::class)->only(['index', 'show', 'update']);
+            Route::patch('platform/report-templates/{platformReportTemplate}/toggle-active', [PlatformReportTemplateController::class, 'toggleActive']);
+            Route::apiResource('platform/report-templates', PlatformReportTemplateController::class)->only(['index', 'show', 'update']);
         });
     });
 

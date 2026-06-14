@@ -17,6 +17,7 @@ use App\Http\Requests\MessageTemplate\UpdateMessageTemplateRequest;
 use App\Jobs\SendTemplateEmailJob;
 use App\Jobs\SendTemplateNotificationJob;
 use App\Models\MessageTemplate;
+use App\Support\PlatformCatalogGuard;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -47,7 +48,7 @@ final class MessageTemplateController extends Controller
 
         $messageTemplates = $this->messageTemplateRepository->paginate(
             perPage: $request->integer('per_page', 15),
-            filters: $request->only(['search', 'is_active', 'filter_name', 'filter_slug']),
+            filters: $request->only(['search', 'is_active', 'filter_id', 'filter_name', 'filter_slug']),
         );
 
         return response()->json([
@@ -106,6 +107,8 @@ final class MessageTemplateController extends Controller
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
 
+        PlatformCatalogGuard::ensureCanEdit($messageTemplate);
+
         $updatedMessageTemplate = $this->updateMessageTemplateAction->execute($messageTemplate, $request);
 
         return response()->json([
@@ -160,6 +163,8 @@ final class MessageTemplateController extends Controller
     public function destroy(Request $request, MessageTemplate $messageTemplate): JsonResponse
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
+
+        PlatformCatalogGuard::ensureCanDelete($messageTemplate);
 
         $this->messageTemplateRepository->delete($messageTemplate);
 

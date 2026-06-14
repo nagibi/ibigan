@@ -15,7 +15,10 @@ import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridExport } from '@/hooks/use-grid-export';
+import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseGridUrlState } from '@/lib/grid-url-state';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { matchesIdFilter } from '@/components/grid/grid-multi-value-filter';
 import {
   clearRolesUserFilterParams,
   parseRolesUserFilter,
@@ -76,6 +79,7 @@ export function RolesPage() {
   const canManage = hasPermission('permissao-gerenciar');
   const initialUrlState = useRef(parseGridUrlState(searchParams)).current;
   const grid = useGrid({ defaultSearch: initialUrlState.search });
+  const columnFilters = useGridFilters();
   const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.roles);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -113,6 +117,10 @@ export function RolesPage() {
         : [];
     }
 
+    if (columnFilters.debouncedFilters.id?.trim()) {
+      result = result.filter((role) => matchesIdFilter(role.id, columnFilters.debouncedFilters.id));
+    }
+
     const q = grid.debouncedSearch.trim().toLowerCase();
     if (!q) return result;
 
@@ -120,7 +128,7 @@ export function RolesPage() {
       role.name.toLowerCase().includes(q)
       || formatRoleName(role.name).toLowerCase().includes(q),
     );
-  }, [grid.debouncedSearch, roles, userFilter]);
+  }, [columnFilters.debouncedFilters.id, grid.debouncedSearch, roles, userFilter]);
 
   const isMobile = useIsMobile();
   const infiniteScrollEnabled = shouldUseGridInfiniteScroll(isMobile, viewMode);
@@ -241,6 +249,7 @@ export function RolesPage() {
       {
         id: 'id',
         label: cols.id,
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (role) => role.id,
       },
@@ -259,7 +268,7 @@ export function RolesPage() {
         className: 'min-w-[180px]',
         render: (role) => (
           <div>
-            <p className="font-medium">{formatRoleName(role.name)}</p>
+            <p>{formatRoleName(role.name)}</p>
             <p className="text-xs text-muted-foreground">{role.name}</p>
           </div>
         ),
@@ -327,10 +336,23 @@ export function RolesPage() {
       });
     }
 
-    return items;
-  }, [clearUserFilter, cols.search, grid.clearSearch, grid.search, t, userFilter]);
+    const idFilter = columnFilters.filters.id?.trim();
+    if (idFilter) {
+      items.push({
+        id: 'id',
+        label: cols.id,
+        value: getColumnFilterDisplayValue(
+          { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+          idFilter,
+        ),
+        onRemove: () => columnFilters.clearFilter('id'),
+      });
+    }
 
-  const hasActiveFilters = activeFilters.length > 0;
+    return items;
+  }, [clearUserFilter, cols.id, cols.search, columnFilters.clearFilter, columnFilters.filters.id, grid.clearSearch, grid.search, t, userFilter]);
+
+  const hasActiveFilters = activeFilters.length > 0 || columnFilters.hasFilters;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   const emptyMessage = userFilter
@@ -341,6 +363,7 @@ export function RolesPage() {
 
   function handleClearFilters() {
     grid.clearSearch();
+    columnFilters.clearAllFilters();
     clearUserFilter();
     gridToasts.filtersCleared();
   }
@@ -349,6 +372,7 @@ export function RolesPage() {
     gridColumns.resetColumns();
     grid.resetSettings();
     grid.clearSearch();
+    columnFilters.clearAllFilters();
     clearUserFilter();
     grid.clearSelection();
     gridToasts.gridRestored();
@@ -402,6 +426,13 @@ export function RolesPage() {
             filters={{
               active: activeFilters,
               onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
             }}
             columnsControl={(
               <GridColumnsControl
@@ -455,6 +486,10 @@ export function RolesPage() {
               loading={isLoading}
               emptyMessage={emptyMessage}
               onColumnOrderChange={gridColumns.reorderDraggableColumns}
+              columnFilters={columnFilters.filters}
+              onColumnFilterChange={columnFilters.setFilter}
+              onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+              onColumnFilterClear={columnFilters.clearColumnFilter}
               isRowSelected={(role) => grid.selected.includes(role.id)}
               onRowClick={(role, event) => {
                 if (!canManage) {

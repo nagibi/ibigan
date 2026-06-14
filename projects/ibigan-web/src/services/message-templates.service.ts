@@ -9,6 +9,7 @@ export interface MessageTemplate {
   body: string;
   merge_tags: string[] | null;
   is_active: boolean;
+  is_system: boolean;
   created_at: string;
 }
 

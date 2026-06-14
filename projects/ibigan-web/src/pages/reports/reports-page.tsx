@@ -17,8 +17,9 @@ import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
-import { reportsService, type ReportTemplate } from '@/services/reports.service';
-import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
+import { type ReportTemplate } from '@/services/reports.service';
+import { VIEW_PREFERENCE_KEYS, type ViewPreferenceKey } from '@/types/view-mode';
 import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
@@ -29,6 +30,7 @@ import { PageBody } from '@/components/common/page-body';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
+import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
 import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
@@ -43,8 +45,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
-const GRID_COLUMNS_KEY = 'grid-columns:reports';
-
 const STATUS_FILTER_OPTIONS = [
   { label: 'Ativo', value: 'active' },
   { label: 'Inativo', value: 'inactive' },
@@ -57,9 +57,16 @@ function formatAuditDate(value?: string | null) {
 
 export function ReportsPage() {
   const navigate = useNavigate();
+  const catalog = usePlatformCatalogMode();
+  const { isPlatformCatalog, reports: catalogPaths } = catalog;
+  const reportsService = catalogPaths.service;
+  const listPath = catalogPaths.listPath;
   const loadRef = useRef<() => Promise<void>>(async () => {});
   const { showSuccess, showToggleActive, showError } = useApiToolbarAlert();
-  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.reports);
+  const viewPreferenceKey = (isPlatformCatalog
+    ? VIEW_PREFERENCE_KEYS.platformReports
+    : VIEW_PREFERENCE_KEYS.reports) as ViewPreferenceKey;
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(viewPreferenceKey);
 
   const grid = useGrid({
     onActivate: async (ids) => {
@@ -154,7 +161,7 @@ export function ReportsPage() {
 
   const handleEditSelected = useCallback(() => {
     if (!grid.singleSelection) return;
-    navigate(`/reports/${grid.selected[0]}`);
+    navigate(catalogPaths.getEditPath(grid.selected[0]));
   }, [grid.singleSelection, grid.selected, navigate]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -178,22 +185,35 @@ export function ReportsPage() {
 
   useGridKeyboard({
     canEdit: grid.singleSelection,
-    canDelete: grid.hasSelection,
+    canDelete: !isPlatformCatalog && grid.hasSelection,
     onEdit: handleEditSelected,
     onDelete: handleDeleteSelected,
     onEscape: handleEscape,
   });
 
   async function handleDelete() {
-    if (grid.deleteIds.length === 0) return;
+    if (isPlatformCatalog || grid.deleteIds.length === 0) return;
+
+    const deletableIds = grid.deleteIds.filter((id) => {
+      const report = reports.find((item) => item.id === id);
+      return report && !report.is_system;
+    });
+
+    if (deletableIds.length === 0) {
+      showError('Relatórios de plataforma não podem ser removidos.');
+      grid.clearDeleteRequest();
+      return;
+    }
 
     try {
       setIsDeleting(true);
-      await Promise.all(grid.deleteIds.map((id) => reportsService.destroy(id)));
+      await Promise.all(deletableIds.map((id) => ('destroy' in reportsService
+        ? reportsService.destroy(id)
+        : Promise.resolve())));
       showSuccess(
-        grid.deleteIds.length === 1
+        deletableIds.length === 1
           ? 'Relatório removido.'
-          : `${grid.deleteIds.length} relatórios removidos.`,
+          : `${deletableIds.length} relatórios removidos.`,
       );
       grid.clearDeleteRequest();
       grid.clearSelection();
@@ -206,8 +226,8 @@ export function ReportsPage() {
   }
 
   const handleEditReport = useCallback(
-    (reportId: number) => navigate(`/reports/${reportId}`),
-    [navigate],
+    (reportId: number) => navigate(catalogPaths.getEditPath(reportId)),
+    [catalogPaths, navigate],
   );
 
   async function handleRowStatusChange(report: ReportTemplate, active: boolean) {
@@ -261,7 +281,7 @@ export function ReportsPage() {
               {
                 label: 'Executar',
                 icon: Play,
-                hidden: !report.is_active,
+                hidden: isPlatformCatalog || !report.is_active,
                 onClick: () => navigate(`/reports/${report.id}/execute`),
               },
               {
@@ -273,6 +293,7 @@ export function ReportsPage() {
                 label: 'Remover',
                 icon: Trash2,
                 tone: 'destructive',
+                hidden: isPlatformCatalog || report.is_system,
                 onClick: () => grid.requestDelete([report.id]),
               },
             ]}
@@ -306,7 +327,12 @@ export function ReportsPage() {
         sortKey: 'name',
         filter: { type: 'text', filterKey: 'name', placeholder: 'Nome' },
         className: 'min-w-[200px]',
-        render: (report) => <span className="font-medium">{report.name}</span>,
+        render: (report) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate">{report.name}</span>
+            {report.is_system || isPlatformCatalog ? <PlatformCatalogBadge /> : null}
+          </div>
+        ),
       },
       {
         id: 'description',
@@ -340,11 +366,12 @@ export function ReportsPage() {
       grid.toggleSelect,
       handleEditReport,
       navigate,
+      isPlatformCatalog,
       rowStatusId,
     ],
   );
 
-  const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+  const gridColumns = useGridColumns(catalogPaths.gridColumnsKey, columnDefinitions);
 
   const { handleExport, isExporting } = useGridExport({
     filename: 'relatorios',
@@ -402,11 +429,11 @@ export function ReportsPage() {
   const toolbarActions = useMemo(
     () => (
       <StandardGridToolbar
-        onNew={() => navigate('/reports/new')}
+        onNew={isPlatformCatalog ? undefined : () => navigate(`${listPath}/new`)}
         onEdit={handleEditSelected}
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
-        onDelete={handleDeleteSelected}
+        onDelete={isPlatformCatalog ? undefined : handleDeleteSelected}
         onExport={handleExport}
         isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
@@ -429,8 +456,10 @@ export function ReportsPage() {
   );
 
   usePageToolbar({
-    title: 'Relatórios',
-    description: 'Execute e gerencie relatórios dinâmicos.',
+    title: isPlatformCatalog ? 'Relatórios padrão' : 'Relatórios',
+    description: isPlatformCatalog
+      ? 'Edite os relatórios padrão propagados para todos os tenants.'
+      : 'Execute e gerencie relatórios dinâmicos.',
     actions: toolbarActions,
   });
 
@@ -530,6 +559,7 @@ export function ReportsPage() {
         />
       </GridPanel>
 
+      {!isPlatformCatalog ? (
       <AlertDialog
         open={grid.deleteIds.length > 0}
         onOpenChange={(open) => !open && grid.clearDeleteRequest()}
@@ -555,6 +585,7 @@ export function ReportsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      ) : null}
     </PageBody>
   );
 }

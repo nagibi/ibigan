@@ -17,11 +17,13 @@ final class ReportTemplate extends Model
 
     protected $fillable = [
         'name',
+        'platform_key',
         'description',
         'query',
         'parameters',
         'columns',
         'is_active',
+        'is_system',
         'created_by',
     ];
 
@@ -29,6 +31,7 @@ final class ReportTemplate extends Model
         'parameters' => 'array',
         'columns'    => 'array',
         'is_active'  => 'boolean',
+        'is_system'  => 'boolean',
     ];
 
     public function creator(): BelongsTo

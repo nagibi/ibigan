@@ -6,13 +6,29 @@ import { mapApiMenusToConfig } from '@/lib/menu-mapper';
 import { filterMenuForUser } from '@/lib/filter-menu-for-user';
 import { filterMenuByPermissions } from '@/lib/filter-menu-by-permissions';
 import { mergeAccountMenuItems } from '@/lib/merge-account-menu-items';
+import { mergeCentralPlatformMenuItems } from '@/lib/merge-central-platform-menu-items';
 import { mergeDevToolsMenuItems } from '@/lib/merge-dev-tools-menu-items';
 import { mergeSaasMenuItems } from '@/lib/merge-saas-menu-items';
 import { MENU_SIDEBAR } from '@/config/menu.config';
 import { SUPER_ADMIN_ROLE } from '@/config/routing';
 import { type MenuConfig } from '@/config/types';
+import { useCanAccessCentralFromTenant } from '@/hooks/use-can-access-central-from-tenant';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
+
+function buildTenantMenu(
+  menu: MenuConfig,
+  isSuperAdmin: boolean,
+  hasPermission: (permission: string) => boolean,
+  canAccessCentralFromTenant: boolean,
+): MenuConfig {
+  const filtered = filterMenuForUser(menu, isSuperAdmin);
+
+  return mergeCentralPlatformMenuItems(
+    filterMenuByPermissions(filtered, hasPermission),
+    canAccessCentralFromTenant,
+  );
+}
 
 export function useDynamicMenu(): MenuConfig {
   const { t } = useTranslation();
@@ -20,6 +36,7 @@ export function useDynamicMenu(): MenuConfig {
   const isTenantSuperAdmin = useAuthStore((state) => state.hasRole(SUPER_ADMIN_ROLE));
   const isCentralSuperAdmin = useCentralAuthStore((state) => state.centralUser?.is_super_admin);
   const isSuperAdmin = Boolean(isCentralSuperAdmin || isTenantSuperAdmin);
+  const canAccessCentralFromTenant = useCanAccessCentralFromTenant();
 
   const hasPermission = useAuthStore((state) => state.hasPermission);
 
@@ -31,9 +48,11 @@ export function useDynamicMenu(): MenuConfig {
   });
 
   return useMemo(() => {
-    const fallbackMenu = filterMenuByPermissions(
-      filterMenuForUser(MENU_SIDEBAR, isSuperAdmin),
+    const fallbackMenu = buildTenantMenu(
+      MENU_SIDEBAR,
+      isSuperAdmin,
       hasPermission,
+      canAccessCentralFromTenant,
     );
 
     if (isPending) {
@@ -60,6 +79,14 @@ export function useDynamicMenu(): MenuConfig {
       includeDevTools,
     );
 
-    return filterMenuForUser(baseMenu, isSuperAdmin);
-  }, [data, hasPermission, isPending, isSuccess, isSuperAdmin, t]);
+    return buildTenantMenu(baseMenu, isSuperAdmin, hasPermission, canAccessCentralFromTenant);
+  }, [
+    canAccessCentralFromTenant,
+    data,
+    hasPermission,
+    isPending,
+    isSuccess,
+    isSuperAdmin,
+    t,
+  ]);
 }

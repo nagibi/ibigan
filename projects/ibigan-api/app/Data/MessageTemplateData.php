@@ -18,6 +18,7 @@ final class MessageTemplateData extends Data
         /** @var array<int, string>|null */
         public ?array $merge_tags,
         public bool $is_active,
+        public bool $is_system,
         public string $created_at,
     ) {}
 
@@ -31,6 +32,7 @@ final class MessageTemplateData extends Data
             body: $messageTemplate->body,
             merge_tags: $messageTemplate->merge_tags,
             is_active: $messageTemplate->is_active,
+            is_system: (bool) $messageTemplate->is_system,
             created_at: $messageTemplate->created_at->toIso8601String(),
         );
     }

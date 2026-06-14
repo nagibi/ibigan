@@ -122,6 +122,7 @@ export function ActivityLogsPage() {
       const filters = columnFilters.activeFilterParams;
       const res = await activityLogsService.list(grid.page, {
         per_page: grid.resolvePerPage(meta.total),
+        filter_id: filters.id || undefined,
         subject_type: filters.subject_type || undefined,
         date_from: filters[dateRangeFilterFromKey('created_at')] || undefined,
         date_to: filters[dateRangeFilterToKey('created_at')] || undefined,
@@ -178,7 +179,7 @@ export function ActivityLogsPage() {
           options: SUBJECT_TYPE_OPTIONS,
         },
         render: (log) => (
-          <span className="text-sm font-medium">{getSubjectLabel(log.subject_type)}</span>
+          <span className="text-sm">{getSubjectLabel(log.subject_type)}</span>
         ),
       },
       {

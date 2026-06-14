@@ -38,7 +38,7 @@ final class InviteController extends Controller
 
         $invites = $this->inviteRepository->paginate(
             perPage: $request->integer('per_page', 15),
-            filters: $request->only(['search', 'status', 'role']),
+            filters: $request->only(['search', 'status', 'role', 'filter_id']),
         );
 
         return response()->json([

@@ -11,8 +11,39 @@ export function isGridCenteredColumn(columnId: string): boolean {
   return columnId === 'select' || columnId === 'actions';
 }
 
+const GRID_COLUMN_TYPOGRAPHY_CLASS =
+  /\b(text-(?:xs|sm|base|lg|xl|2xl|foreground|muted-foreground|primary|secondary)|font-(?:normal|medium|semibold|bold))\b/g;
+
+function normalizeGridColumnLayoutClass(className?: string): string | undefined {
+  if (!className) return undefined;
+
+  const normalized = className
+    .replace(GRID_COLUMN_TYPOGRAPHY_CLASS, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalized || undefined;
+}
+
+export const GRID_BODY_CELL_CLASS = 'text-sm font-normal text-muted-foreground';
+
 export function getGridColumnCellClassName(columnId: string, className?: string): string {
-  return [className, isGridCenteredColumn(columnId) ? 'text-center' : ''].filter(Boolean).join(' ');
+  const resolvedClassName = normalizeGridColumnLayoutClass(
+    resolveGridColumnWidthClass(columnId, className),
+  );
+
+  return [resolvedClassName, isGridCenteredColumn(columnId) ? 'text-center' : ''].filter(Boolean).join(' ');
+}
+
+function resolveGridColumnWidthClass(columnId: string, className?: string): string | undefined {
+  if (columnId === 'active' || columnId === 'is_active') {
+    if (!className || /\bw-\[80px\]/.test(className)) {
+      return (className ?? '').replace(/\bw-\[80px\]/g, '').trim()
+        + ' min-w-[100px] w-[100px]'.trim();
+    }
+  }
+
+  return className;
 }
 
 /** @deprecated Headers now use the same width classes as body cells with table-fixed layout. */

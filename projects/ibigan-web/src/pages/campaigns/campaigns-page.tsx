@@ -273,6 +273,7 @@ export function CampaignsPage() {
         label: 'Id',
         sortable: true,
         sortKey: 'id',
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (campaign) => campaign.id,
       },
@@ -321,7 +322,7 @@ export function CampaignsPage() {
         className: 'min-w-[200px]',
         render: (campaign) => (
           <div>
-            <span className="font-medium">{campaign.name}</span>
+            <span>{campaign.name}</span>
             {campaign.description && (
               <p className="text-xs text-muted-foreground truncate max-w-[240px]">
                 {campaign.description}

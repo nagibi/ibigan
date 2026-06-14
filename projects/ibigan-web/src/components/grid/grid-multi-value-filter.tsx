@@ -18,6 +18,16 @@ export function parseMultiFilterValue(value: string): string[] {
     .filter(Boolean);
 }
 
+export function matchesIdFilter(id: number | string, filterValue?: string): boolean {
+  const trimmed = filterValue?.trim();
+  if (!trimmed) return true;
+
+  const ids = parseMultiFilterValue(trimmed);
+  if (ids.length === 0) return true;
+
+  return ids.includes(String(id));
+}
+
 export function joinMultiFilterValue(items: string[]): string {
   return items.join(',');
 }

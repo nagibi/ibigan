@@ -11,7 +11,10 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridExport } from '@/hooks/use-grid-export';
+import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { matchesIdFilter } from '@/components/grid/grid-multi-value-filter';
 import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { buildClientGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
@@ -82,6 +85,8 @@ export function CentralUsersPage() {
     },
   });
 
+  const columnFilters = useGridFilters(() => grid.setPage(1));
+
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['central-users'],
     queryFn: () => centralUsersService.list(),
@@ -90,14 +95,20 @@ export function CentralUsersPage() {
   const users = data?.data.result.data ?? [];
 
   const filteredUsers = useMemo(() => {
-    const query = grid.debouncedSearch.trim().toLowerCase();
-    if (!query) return users;
+    let result = users;
 
-    return users.filter((user) =>
+    if (columnFilters.debouncedFilters.id?.trim()) {
+      result = result.filter((user) => matchesIdFilter(user.id, columnFilters.debouncedFilters.id));
+    }
+
+    const query = grid.debouncedSearch.trim().toLowerCase();
+    if (!query) return result;
+
+    return result.filter((user) =>
       user.name.toLowerCase().includes(query)
       || user.email.toLowerCase().includes(query),
     );
-  }, [grid.debouncedSearch, users]);
+  }, [columnFilters.debouncedFilters.id, grid.debouncedSearch, users]);
 
   const clientInfinite = useClientGridInfiniteScroll({
     items: filteredUsers,
@@ -216,6 +227,7 @@ export function CentralUsersPage() {
       id: 'id',
       label: 'Id',
       hideable: false,
+      filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
       className: 'w-[70px] text-sm text-muted-foreground tabular-nums',
       exportValue: (user) => user.id,
       render: (user) => user.id,
@@ -287,9 +299,40 @@ export function CentralUsersPage() {
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
-    clearAllFilters: () => {},
+    clearAllFilters: columnFilters.clearAllFilters,
     clearSearch: grid.clearSearch,
   });
+
+  const activeFilters = useMemo(() => {
+    const items = [];
+
+    if (grid.search.trim()) {
+      items.push({
+        id: 'search',
+        label: 'Busca',
+        value: grid.search.trim(),
+        onRemove: grid.clearSearch,
+      });
+    }
+
+    const idFilter = columnFilters.filters.id?.trim();
+    if (idFilter) {
+      items.push({
+        id: 'id',
+        label: 'Id',
+        value: getColumnFilterDisplayValue(
+          { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+          idFilter,
+        ),
+        onRemove: () => columnFilters.clearFilter('id'),
+      });
+    }
+
+    return items;
+  }, [columnFilters.clearFilter, columnFilters.filters.id, grid.clearSearch, grid.search]);
+
+  const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
+  const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   const toolbarActions = useMemo(
     () => (
@@ -337,6 +380,17 @@ export function CentralUsersPage() {
             isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
+            filters={{
+              active: activeFilters,
+              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
+            }}
             columnsControl={(
               <GridColumnsControl
                 columns={columnDefinitions}
@@ -355,7 +409,7 @@ export function CentralUsersPage() {
             )}
             resetControl={(
               <GridResetControl
-                disabled={!gridColumns.isCustomized}
+                disabled={!isGridCustomized}
                 onReset={gridActions.handleResetGrid}
               />
             )}
@@ -388,6 +442,10 @@ export function CentralUsersPage() {
             enabled: infiniteScrollEnabled,
             clientInfinite,
           })}
+          columnFilters={columnFilters.filters}
+          onColumnFilterChange={columnFilters.setFilter}
+          onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+          onColumnFilterClear={columnFilters.clearColumnFilter}
         />
       </GridPanel>
     </PageBody>

@@ -21,6 +21,7 @@ export const activityLogsService = {
     causer_id?: number;
     date_from?: string;
     date_to?: string;
+    filter_id?: string;
   }) =>
     api.get<{ status: number; result: { data: ActivityLog[]; meta: { total: number; current_page: number; last_page: number; per_page: number } } }>(
       '/v1/activity-logs', { params: { page, ...filters } },

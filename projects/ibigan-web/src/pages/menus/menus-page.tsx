@@ -397,7 +397,7 @@ function renderMenuTableCell(
         <div className="flex items-center gap-2 whitespace-nowrap" style={{ paddingLeft: `${depth * 20}px` }}>
           {depth > 0 && <ChevronRight className="size-3 text-muted-foreground" />}
           {Icon && <Icon className="size-4 text-muted-foreground" />}
-          <span className="font-medium">{menu.title}</span>
+          <span>{menu.title}</span>
         </div>
       );
     case 'path':

@@ -39,6 +39,10 @@ final class CampaignController extends Controller
 
         $campaigns = Campaign::query()
             ->when(
+                $request->filled('filter_id'),
+                fn ($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
+            )
+            ->when(
                 $request->filled('status'),
                 fn ($q) => GridFilter::applyWhereInFromCsv($q, 'status', $request->string('status')->toString()),
             )

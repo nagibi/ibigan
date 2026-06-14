@@ -11,6 +11,7 @@ import { formatFormPageTitle } from '@/lib/format-form-page-title';
 import { isHtmlContentEmpty } from '@/lib/is-html-content-empty';
 import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
 import { messageTemplatesService } from '@/services/message-templates.service';
+import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
@@ -24,6 +25,7 @@ import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-g
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -60,42 +62,48 @@ export function MessageTemplateFormPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const catalog = usePlatformCatalogMode();
+  const { isPlatformCatalog, messageTemplates: catalogPaths } = catalog;
+  const templatesService = catalogPaths.service;
+  const listPath = catalogPaths.listPath;
   const isEditing = Boolean(id);
   const [tagInput, setTagInput] = useState('');
 
   const { data: templateData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['message-template', id],
-    queryFn: () => messageTemplatesService.show(Number(id)),
+    queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id],
+    queryFn: () => templatesService.show(Number(id)),
     enabled: isEditing,
   });
 
   const template = templateData?.data.result;
   const isActive = template?.is_active ?? true;
+  const isReadOnly = !isPlatformCatalog && Boolean(template?.is_system);
 
   const apiNotify = useApiToolbarAlert();
 
   const formPage = useFormPage({
-    backPath: '/message-templates',
-    newPath: '/message-templates/new',
+    backPath: listPath,
+    newPath: `${listPath}/new`,
     entityKey: 'message_template',
     notify: apiNotify,
-    onDelete: isEditing
+    onDelete: isEditing && !isPlatformCatalog
       ? async () => {
-          await messageTemplatesService.destroy(Number(id));
+          if (!('destroy' in templatesService)) return;
+          await templatesService.destroy(Number(id));
           queryClient.invalidateQueries({ queryKey: ['message-templates'] });
         }
       : undefined,
     onToggleActive: isEditing
       ? async (active) => {
-          await messageTemplatesService.toggleActive(Number(id), active);
-          queryClient.invalidateQueries({ queryKey: ['message-template', id] });
+          await templatesService.toggleActive(Number(id), active);
+          queryClient.invalidateQueries({ queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id] });
           queryClient.invalidateQueries({ queryKey: ['message-templates'] });
         }
       : undefined,
-    onDuplicate: isEditing
+    onDuplicate: isEditing && !isPlatformCatalog && 'duplicate' in templatesService
       ? async () => {
-          const res = await messageTemplatesService.duplicate(Number(id));
-          navigate(`/message-templates/${res.data.result.id}`);
+          const res = await templatesService.duplicate(Number(id));
+          navigate(catalogPaths.getEditPath(res.data.result.id));
         }
       : undefined,
   });
@@ -127,28 +135,38 @@ export function MessageTemplateFormPage() {
   }, [template, form]);
 
   const saveMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      isEditing
-        ? messageTemplatesService.update(Number(id), data)
-        : messageTemplatesService.store({
-            ...data,
-            is_active: true,
-          } as Parameters<typeof messageTemplatesService.store>[0]),
+    mutationFn: (data: FormData) => {
+      if (!isEditing) {
+        if (!('store' in templatesService)) {
+          return Promise.reject(new Error('create-unavailable'));
+        }
+        return templatesService.store({
+          ...data,
+          is_active: true,
+        } as Parameters<typeof messageTemplatesService.store>[0]);
+      }
+
+      return templatesService.update(Number(id), data);
+    },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['message-templates'] });
       if (isEditing) {
-        queryClient.invalidateQueries({ queryKey: ['message-template', id] });
+        queryClient.invalidateQueries({ queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id] });
       }
-      apiNotify.showSuccess(isEditing ? 'Template atualizado!' : 'Template criado!');
+      apiNotify.showSuccess(
+        isPlatformCatalog
+          ? 'Template de plataforma atualizado e sincronizado nos tenants.'
+          : (isEditing ? 'Template atualizado!' : 'Template criado!'),
+      );
       if (!isEditing && formPage.saveMode === 'new') {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
       const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
-        listPath: '/message-templates',
-        newPath: '/message-templates/new',
-        getEditPath: (recordId) => `/message-templates/${recordId}`,
+        listPath,
+        newPath: `${listPath}/new`,
+        getEditPath: catalogPaths.getEditPath,
         isEditing,
         createdId,
       });
@@ -183,7 +201,7 @@ export function MessageTemplateFormPage() {
   const handlePrimarySave = handleSaveAndList;
 
   useFormKeyboard({
-    enabled: !isEditing || !isLoading,
+    enabled: (!isEditing || !isLoading) && !isReadOnly,
     onSave: handlePrimarySave,
     isSubmitting: saveMutation.isPending,
   });
@@ -245,6 +263,8 @@ export function MessageTemplateFormPage() {
     );
   }
 
+  const slugDisabled = isEditing && Boolean(template?.is_system || isPlatformCatalog);
+
   usePageToolbar({
     title: pageTitle,
     alert: pageAlert,
@@ -257,20 +277,20 @@ export function MessageTemplateFormPage() {
         isTogglingActive={formPage.isTogglingActive}
         isDeleting={formPage.isDeleting}
         isDuplicating={formPage.isDuplicating}
-        onSaveAndList={handleSaveAndList}
-        onSaveAndNew={handleSaveAndNew}
-        onSaveAndEdit={handleSaveAndEdit}
+        onSaveAndList={isReadOnly ? undefined : handleSaveAndList}
+        onSaveAndNew={isReadOnly ? undefined : handleSaveAndNew}
+        onSaveAndEdit={isReadOnly ? undefined : handleSaveAndEdit}
         onBack={formPage.handleBack}
-        onNew={isEditing ? formPage.handleNew : undefined}
-        onClear={() => form.reset()}
+        onNew={isEditing && !isReadOnly ? formPage.handleNew : undefined}
+        onClear={isReadOnly ? undefined : () => form.reset()}
         onRefresh={formRefresh.onRefresh}
         isRefreshing={formRefresh.isRefreshing}
         onToggleActive={isEditing && template
           ? () => formPage.handleToggleActive(isActive)
           : undefined
         }
-        onDelete={isEditing ? formPage.handleDelete : undefined}
-        onDuplicate={isEditing ? formPage.handleDuplicate : undefined}
+        onDelete={isEditing && template && !template.is_system && !isPlatformCatalog ? formPage.handleDelete : undefined}
+        onDuplicate={isEditing && !isPlatformCatalog ? formPage.handleDuplicate : undefined}
         entityLabel="template"
         recordLabel={template?.name}
       />
@@ -301,6 +321,16 @@ export function MessageTemplateFormPage() {
             title="Informações básicas"
             isActive={isEditing ? isActive : undefined}
           >
+            {template?.is_system || isPlatformCatalog ? (
+              <div className="mb-4 space-y-2">
+                <PlatformCatalogBadge />
+                {isReadOnly ? (
+                  <p className="text-sm text-muted-foreground">
+                    Este template é gerenciado pela plataforma. Duplique para personalizar.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <FormFieldGrid>
               {isEditing && id && (
                 <FormFieldGridItem>
@@ -311,7 +341,7 @@ export function MessageTemplateFormPage() {
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Nome</FormLabel>
-                    <FormControl><Input placeholder="Boas-vindas" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Boas-vindas" disabled={isReadOnly} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -320,7 +350,7 @@ export function MessageTemplateFormPage() {
                 <FormField control={form.control} name="slug" render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Slug</FormLabel>
-                    <FormControl><Input placeholder="boas-vindas" {...field} /></FormControl>
+                    <FormControl><Input placeholder="boas-vindas" disabled={slugDisabled} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -329,7 +359,7 @@ export function MessageTemplateFormPage() {
                 <FormField control={form.control} name="subject" render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Assunto</FormLabel>
-                    <FormControl><Input placeholder="Bem-vindo, {{nome}}!" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Bem-vindo, {{nome}}!" disabled={isReadOnly} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -348,7 +378,8 @@ export function MessageTemplateFormPage() {
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       placeholder="Olá {{nome}}, bem-vindo à {{empresa}}!"
-                      onImageUpload={handleImageUpload}
+                      onImageUpload={isReadOnly ? undefined : handleImageUpload}
+                      disabled={isReadOnly}
                     />
                     <FormDescription>
                       Editor HTML com suporte a imagens. Use {'{{variavel}}'} para merge tags.
@@ -364,6 +395,7 @@ export function MessageTemplateFormPage() {
                     <Input
                       placeholder="nome ou {{nome}}"
                       value={tagInput}
+                      disabled={isReadOnly}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -372,7 +404,7 @@ export function MessageTemplateFormPage() {
                         }
                       }}
                     />
-                    <Button type="button" variant="outline" onClick={addTag}>
+                    <Button type="button" variant="outline" onClick={addTag} disabled={isReadOnly}>
                       <Plus className="size-4" />
                     </Button>
                   </div>
@@ -380,9 +412,11 @@ export function MessageTemplateFormPage() {
                     {(form.watch('merge_tags') ?? []).map((tag) => (
                       <Badge key={tag} variant="secondary" className="font-mono gap-1">
                         {tag}
-                        <button type="button" onClick={() => removeTag(tag)}>
-                          <X className="size-3" />
-                        </button>
+                        {!isReadOnly ? (
+                          <button type="button" onClick={() => removeTag(tag)}>
+                            <X className="size-3" />
+                          </button>
+                        ) : null}
                       </Badge>
                     ))}
                   </div>

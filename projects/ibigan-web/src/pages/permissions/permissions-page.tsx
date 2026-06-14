@@ -12,11 +12,14 @@ import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridExport } from '@/hooks/use-grid-export';
+import { useGridFilters } from '@/hooks/use-grid-filters';
 import {
   formatPermissionAction,
   formatPermissionName,
   formatPermissionResource,
 } from '@/lib/role-permission-labels';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { matchesIdFilter } from '@/components/grid/grid-multi-value-filter';
 import { permissionsService, type Permission } from '@/services/permissions.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { PageBody } from '@/components/common/page-body';
@@ -61,6 +64,7 @@ export function PermissionsPage() {
   const { hasPermission } = useAuthStore();
   const canManage = hasPermission('permissao-gerenciar');
   const grid = useGrid();
+  const columnFilters = useGridFilters();
   const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.permissions);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -72,15 +76,21 @@ export function PermissionsPage() {
   const permissions = data?.data.result ?? [];
 
   const filteredPermissions = useMemo(() => {
-    const q = grid.debouncedSearch.trim().toLowerCase();
-    if (!q) return permissions;
+    let result = permissions;
 
-    return permissions.filter((permission) =>
+    if (columnFilters.debouncedFilters.id?.trim()) {
+      result = result.filter((permission) => matchesIdFilter(permission.id, columnFilters.debouncedFilters.id));
+    }
+
+    const q = grid.debouncedSearch.trim().toLowerCase();
+    if (!q) return result;
+
+    return result.filter((permission) =>
       permission.name.toLowerCase().includes(q)
       || formatPermissionName(permission.name).toLowerCase().includes(q)
       || permission.resource.toLowerCase().includes(q),
     );
-  }, [grid.debouncedSearch, permissions]);
+  }, [columnFilters.debouncedFilters.id, grid.debouncedSearch, permissions]);
 
   const isMobile = useIsMobile();
   const infiniteScrollEnabled = shouldUseGridInfiniteScroll(isMobile, viewMode);
@@ -193,6 +203,7 @@ export function PermissionsPage() {
       {
         id: 'id',
         label: cols.id,
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (permission) => permission.id,
       },
@@ -211,7 +222,7 @@ export function PermissionsPage() {
         className: 'min-w-[220px]',
         render: (permission) => (
           <div>
-            <p className="font-medium">{formatPermissionName(permission.name)}</p>
+            <p>{formatPermissionName(permission.name)}</p>
             <p className="text-xs text-muted-foreground">{permission.name}</p>
           </div>
         ),
@@ -247,21 +258,39 @@ export function PermissionsPage() {
   });
 
   const activeFilters = useMemo(() => {
-    if (!grid.search.trim()) return [];
+    const items = [];
 
-    return [{
-      id: 'search',
-      label: cols.search,
-      value: grid.search.trim(),
-      onRemove: grid.clearSearch,
-    }];
-  }, [cols.search, grid.clearSearch, grid.search]);
+    if (grid.search.trim()) {
+      items.push({
+        id: 'search',
+        label: cols.search,
+        value: grid.search.trim(),
+        onRemove: grid.clearSearch,
+      });
+    }
+
+    const idFilter = columnFilters.filters.id?.trim();
+    if (idFilter) {
+      items.push({
+        id: 'id',
+        label: cols.id,
+        value: getColumnFilterDisplayValue(
+          { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+          idFilter,
+        ),
+        onRemove: () => columnFilters.clearFilter('id'),
+      });
+    }
+
+    return items;
+  }, [cols.id, cols.search, columnFilters.clearFilter, columnFilters.filters.id, grid.clearSearch, grid.search]);
 
   const hasActiveFilters = activeFilters.length > 0;
   const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   function handleClearFilters() {
     grid.clearSearch();
+    columnFilters.clearAllFilters();
     gridToasts.filtersCleared();
   }
 
@@ -269,6 +298,7 @@ export function PermissionsPage() {
     gridColumns.resetColumns();
     grid.resetSettings();
     grid.clearSearch();
+    columnFilters.clearAllFilters();
     grid.clearSelection();
     gridToasts.gridRestored();
   }
@@ -321,6 +351,13 @@ export function PermissionsPage() {
             filters={{
               active: activeFilters,
               onClearAll: hasActiveFilters ? handleClearFilters : undefined,
+              columnFilters: {
+                columns: gridColumns.visibleColumns,
+                values: columnFilters.filters,
+                onFilterChange: columnFilters.setFilter,
+                onDateRangeChange: columnFilters.setDateRangeFilter,
+                onFilterClear: columnFilters.clearColumnFilter,
+              },
             }}
             columnsControl={(
               <GridColumnsControl
@@ -374,6 +411,10 @@ export function PermissionsPage() {
               loading={isLoading}
               emptyMessage={t('permissions.empty')}
               onColumnOrderChange={gridColumns.reorderDraggableColumns}
+              columnFilters={columnFilters.filters}
+              onColumnFilterChange={columnFilters.setFilter}
+              onDateRangeFilterChange={columnFilters.setDateRangeFilter}
+              onColumnFilterClear={columnFilters.clearColumnFilter}
               isRowSelected={(permission) => grid.selected.includes(permission.id)}
               onRowClick={(permission, event) => {
                 if (!canManage) {

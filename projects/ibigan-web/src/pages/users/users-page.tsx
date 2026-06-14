@@ -401,7 +401,7 @@ export function UsersPage() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-max">
-              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-sm">{user.name}</p>
               <p className="text-xs text-muted-foreground">{user.email}</p>
             </div>
           </div>

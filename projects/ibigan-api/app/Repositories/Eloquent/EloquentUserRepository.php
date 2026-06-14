@@ -58,6 +58,8 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
 
     protected function applyFilters(Builder $query, array $filters): Builder
     {
+        $query = parent::applyFilters($query, $filters);
+
         return $query
             ->with(['roles', 'creator', 'updater'])
             ->when(
@@ -70,19 +72,6 @@ final class EloquentUserRepository extends BaseRepository implements UserReposit
             ->when(
                 filled($filters['status'] ?? null),
                 fn (Builder $q) => $q->where('status', $filters['status'])
-            )
-            ->when(
-                filled($filters['filter_id'] ?? null),
-                function (Builder $q) use ($filters): void {
-                    $ids = array_values(array_filter(array_map(
-                        'trim',
-                        explode(',', (string) $filters['filter_id'])
-                    )));
-
-                    if ($ids !== []) {
-                        $q->whereIn('id', $ids);
-                    }
-                }
             )
             ->when(
                 filled($filters['filter_user'] ?? null),

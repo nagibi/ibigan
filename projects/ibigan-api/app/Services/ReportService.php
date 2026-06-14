@@ -56,6 +56,11 @@ final class ReportService
 
     private function validateQuery(string $query): void
     {
+        $this->validateQueryForTemplate($query);
+    }
+
+    public function validateQueryForTemplate(string $query): void
+    {
         $upper = strtoupper(trim($query));
 
         if (! str_starts_with($upper, 'SELECT')) {

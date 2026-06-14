@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\Repositories\Contracts\BaseRepositoryInterface;
+use App\Support\GridFilter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -51,6 +52,6 @@ abstract class BaseRepository implements BaseRepositoryInterface
 
     protected function applyFilters(Builder $query, array $filters): Builder
     {
-        return $query;
+        return GridFilter::whenId($query, $filters);
     }
 }

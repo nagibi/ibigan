@@ -191,6 +191,26 @@ export function FormToolbar({
   const hasAudit = isEditing && (createdBy || updatedBy || createdAt || updatedAt);
   const hasActivityLog = isEditing && Boolean(activityLog);
   const primarySaveTooltip = primarySaveTooltipProp ?? t('form.tooltip.save_and_list');
+  const hasNavigation = Boolean(onBack || onRefresh);
+
+  const backButton = onBack ? (
+    <FormButton
+      label={t('common.back')}
+      tooltip={t('form.tooltip.back')}
+      icon={ArrowLeft}
+      onClick={onBack}
+    />
+  ) : null;
+
+  const refreshButton = onRefresh && !isMobile ? (
+    <FormButton
+      label={t('grid.refresh')}
+      tooltip={t('grid.tooltip.refresh')}
+      icon={RefreshCw}
+      onClick={onRefresh}
+      loading={isRefreshing}
+    />
+  ) : null;
 
   return (
     <>
@@ -267,14 +287,7 @@ export function FormToolbar({
                 </DropdownMenu>
               )}
 
-              {backImmediatelyAfterPrimary && onBack && (
-                <FormButton
-                  label={t('common.back')}
-                  tooltip={t('form.tooltip.back')}
-                  icon={ArrowLeft}
-                  onClick={onBack}
-                />
-              )}
+              {backImmediatelyAfterPrimary && backButton}
             </GridToolbarGroup>
 
             {isEditing && onNew && (
@@ -287,14 +300,7 @@ export function FormToolbar({
               />
             )}
 
-            {!backImmediatelyAfterPrimary && onBack && (
-              <FormButton
-                label={t('common.back')}
-                tooltip={t('form.tooltip.back')}
-                icon={ArrowLeft}
-                onClick={onBack}
-              />
-            )}
+            {!backImmediatelyAfterPrimary && backButton}
 
             {onClear && (
               <FormButton
@@ -306,16 +312,15 @@ export function FormToolbar({
               />
             )}
 
-            {onRefresh && !isMobile && (
-              <FormButton
-                label={t('grid.refresh')}
-                tooltip={t('grid.tooltip.refresh')}
-                icon={RefreshCw}
-                onClick={onRefresh}
-                loading={isRefreshing}
-              />
-            )}
+            {refreshButton}
           </>
+        )}
+
+        {!hasSave && hasNavigation && (
+          <GridToolbarGroup>
+            {backButton}
+            {refreshButton}
+          </GridToolbarGroup>
         )}
 
         {hasLifecycle && (

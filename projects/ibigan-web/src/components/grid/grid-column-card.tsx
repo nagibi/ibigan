@@ -40,7 +40,7 @@ export function GridColumnCard<T>({
   return (
     <div className="flex h-full flex-col gap-4 p-4 max-xl:gap-4">
       {titleContent ? (
-        <div className="min-w-0 font-medium leading-snug [&_*]:truncate">{titleContent as ReactNode}</div>
+        <div className="min-w-0 leading-snug [&_*]:truncate">{titleContent as ReactNode}</div>
       ) : null}
 
       {contentColumns.length > 0 ? (

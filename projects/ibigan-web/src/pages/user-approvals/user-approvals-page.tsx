@@ -196,6 +196,7 @@ export function UserApprovalsPage() {
       {
         id: 'id',
         label: 'Id',
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (approval) => approval.id,
       },
@@ -234,7 +235,7 @@ export function UserApprovalsPage() {
         className: 'min-w-[220px]',
         render: (approval) => (
           <div>
-            <p className="font-medium">{approval.user_name}</p>
+            <p>{approval.user_name}</p>
             <p className="text-xs text-muted-foreground">{approval.user_email}</p>
           </div>
         ),

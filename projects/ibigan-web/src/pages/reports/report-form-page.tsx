@@ -9,6 +9,7 @@ import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import { formatFormPageTitle } from '@/lib/format-form-page-title';
 import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
 import { reportsService } from '@/services/reports.service';
+import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
@@ -22,6 +23,7 @@ import { FormFieldGrid, FormFieldGridItem, FormRepeatableRow, FormRepeatableRowA
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
 import { FormSwitchControl } from '@/components/grid/form-switch-control';
 import { SqlEditor } from '@/components/editor/sql-editor';
 import { Button } from '@/components/ui/button';
@@ -82,34 +84,40 @@ export function ReportFormPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const catalog = usePlatformCatalogMode();
+  const { isPlatformCatalog, reports: catalogPaths } = catalog;
+  const reportsApi = catalogPaths.service;
+  const listPath = catalogPaths.listPath;
   const isEditing = Boolean(id);
 
   const { data: reportData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['report', id],
-    queryFn: () => reportsService.show(Number(id)),
+    queryKey: [isPlatformCatalog ? 'platform-report' : 'report', id],
+    queryFn: () => reportsApi.show(Number(id)),
     enabled: isEditing,
   });
 
   const report = reportData?.data.result;
   const isActive = report?.is_active ?? true;
+  const isReadOnly = !isPlatformCatalog && Boolean(report?.is_system);
 
   const apiNotify = useApiToolbarAlert();
 
   const formPage = useFormPage({
-    backPath: '/reports',
-    newPath: '/reports/new',
+    backPath: listPath,
+    newPath: `${listPath}/new`,
     entityKey: 'report',
     notify: apiNotify,
-    onDelete: isEditing
+    onDelete: isEditing && !isPlatformCatalog
       ? async () => {
-          await reportsService.destroy(Number(id));
+          if (!('destroy' in reportsApi)) return;
+          await reportsApi.destroy(Number(id));
           queryClient.invalidateQueries({ queryKey: ['reports'] });
         }
       : undefined,
     onToggleActive: isEditing
       ? async (active) => {
-          await reportsService.toggleActive(Number(id), active);
-          queryClient.invalidateQueries({ queryKey: ['report', id] });
+          await reportsApi.toggleActive(Number(id), active);
+          queryClient.invalidateQueries({ queryKey: [isPlatformCatalog ? 'platform-report' : 'report', id] });
           queryClient.invalidateQueries({ queryKey: ['reports'] });
         }
       : undefined,
@@ -164,25 +172,35 @@ export function ReportFormPage() {
           options: p.options ? p.options.split(',').map((o) => o.trim()) : undefined,
         })),
       };
-      return isEditing
-        ? reportsService.update(Number(id), payload)
-        : reportsService.store(payload);
+
+      if (!isEditing) {
+        if (!('store' in reportsApi)) {
+          return Promise.reject(new Error('create-unavailable'));
+        }
+        return reportsApi.store(payload);
+      }
+
+      return reportsApi.update(Number(id), payload);
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       if (isEditing) {
-        queryClient.invalidateQueries({ queryKey: ['report', id] });
+        queryClient.invalidateQueries({ queryKey: [isPlatformCatalog ? 'platform-report' : 'report', id] });
       }
-      apiNotify.showSuccess(isEditing ? 'Relatório atualizado!' : 'Relatório criado!');
+      apiNotify.showSuccess(
+        isPlatformCatalog
+          ? 'Relatório de plataforma atualizado e sincronizado nos tenants.'
+          : (isEditing ? 'Relatório atualizado!' : 'Relatório criado!'),
+      );
       if (!isEditing && formPage.saveMode === 'new') {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       }
       const createdId = !isEditing ? response.data.result.id : undefined;
       const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
-        listPath: '/reports',
-        newPath: '/reports/new',
-        getEditPath: (recordId) => `/reports/${recordId}`,
+        listPath,
+        newPath: `${listPath}/new`,
+        getEditPath: catalogPaths.getEditPath,
         isEditing,
         createdId,
       });
@@ -217,7 +235,7 @@ export function ReportFormPage() {
   const handlePrimarySave = handleSaveAndList;
 
   useFormKeyboard({
-    enabled: !isEditing || !isLoading,
+    enabled: (!isEditing || !isLoading) && !isReadOnly,
     onSave: handlePrimarySave,
     isSubmitting: saveMutation.isPending,
   });
@@ -260,19 +278,19 @@ export function ReportFormPage() {
         isSubmitting={saveMutation.isPending}
         isTogglingActive={formPage.isTogglingActive}
         isDeleting={formPage.isDeleting}
-        onSaveAndList={handleSaveAndList}
-        onSaveAndNew={handleSaveAndNew}
-        onSaveAndEdit={handleSaveAndEdit}
+        onSaveAndList={isReadOnly ? undefined : handleSaveAndList}
+        onSaveAndNew={isReadOnly ? undefined : handleSaveAndNew}
+        onSaveAndEdit={isReadOnly ? undefined : handleSaveAndEdit}
         onBack={formPage.handleBack}
-        onNew={isEditing ? formPage.handleNew : undefined}
-        onClear={() => form.reset()}
+        onNew={isEditing && !isReadOnly ? formPage.handleNew : undefined}
+        onClear={isReadOnly ? undefined : () => form.reset()}
         onRefresh={formRefresh.onRefresh}
         isRefreshing={formRefresh.isRefreshing}
         onToggleActive={isEditing && report
           ? () => formPage.handleToggleActive(isActive)
           : undefined
         }
-        onDelete={isEditing ? formPage.handleDelete : undefined}
+        onDelete={isEditing && report && !report.is_system && !isPlatformCatalog ? formPage.handleDelete : undefined}
         entityLabel="relatório"
         recordLabel={report?.name}
       />
@@ -305,6 +323,16 @@ export function ReportFormPage() {
             title="Informações básicas"
             isActive={isEditing ? isActive : undefined}
           >
+            {report?.is_system || isPlatformCatalog ? (
+              <div className="mb-4 space-y-2">
+                <PlatformCatalogBadge />
+                {isReadOnly ? (
+                  <p className="text-sm text-muted-foreground">
+                    Este relatório é gerenciado pela plataforma e só pode ser editado no painel central.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <FormFieldGrid>
               {isEditing && id && (
                 <FormFieldGridItem>
@@ -315,7 +343,7 @@ export function ReportFormPage() {
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Nome</FormLabel>
-                    <FormControl><Input placeholder="Usuários por período" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Usuários por período" disabled={isReadOnly} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -324,7 +352,7 @@ export function ReportFormPage() {
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
-                    <FormControl><Input placeholder="Breve descrição" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Breve descrição" disabled={isReadOnly} {...field} /></FormControl>
                   </FormItem>
                 )} />
               </FormFieldGridItem>
@@ -354,6 +382,7 @@ export function ReportFormPage() {
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
+                      disabled={isReadOnly}
                       placeholder="SELECT id, name, email FROM users WHERE created_at BETWEEN :date_from AND :date_to"
                     />
                     <FormDescription>
@@ -367,16 +396,18 @@ export function ReportFormPage() {
           </FormPanel>
 
           <FormPanel title="Parâmetros">
-            <div className="mb-3 flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendParam({ name: '', type: 'text', label: '', required: true })}
-              >
-                <Plus className="size-4 mr-1" /> Adicionar
-              </Button>
-            </div>
+            {!isReadOnly ? (
+              <div className="mb-3 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendParam({ name: '', type: 'text', label: '', required: true })}
+                >
+                  <Plus className="size-4 mr-1" /> Adicionar
+                </Button>
+              </div>
+            ) : null}
             {paramFields.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sem parâmetros — relatório executa sem filtros.</p>
             ) : (
@@ -386,19 +417,19 @@ export function ReportFormPage() {
                     <FormField control={form.control} name={`parameters.${i}.name`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Nome (código)</FormLabel>}
-                        <FormControl><Input placeholder="date_from" className="font-mono text-sm" {...f} /></FormControl>
+                        <FormControl><Input placeholder="date_from" className="font-mono text-sm" disabled={isReadOnly} {...f} /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name={`parameters.${i}.label`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Label</FormLabel>}
-                        <FormControl><Input placeholder="Data início" {...f} /></FormControl>
+                        <FormControl><Input placeholder="Data início" disabled={isReadOnly} {...f} /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name={`parameters.${i}.type`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Tipo</FormLabel>}
-                        <Select onValueChange={f.onChange} value={f.value}>
+                        <Select onValueChange={f.onChange} value={f.value} disabled={isReadOnly}>
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
                             <SelectItem value="text">Texto</SelectItem>
@@ -413,14 +444,16 @@ export function ReportFormPage() {
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Obrigatório</FormLabel>}
                         <FormControl>
-                          <FormSwitchControl checked={f.value} onCheckedChange={f.onChange} />
+                          <FormSwitchControl checked={f.value} onCheckedChange={f.onChange} disabled={isReadOnly} />
                         </FormControl>
                       </FormItem>
                     )} />
                     <FormRepeatableRowAction>
-                      <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeParam(i)}>
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {!isReadOnly ? (
+                        <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeParam(i)}>
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      ) : null}
                     </FormRepeatableRowAction>
                   </FormRepeatableRow>
                 ))}
@@ -429,16 +462,18 @@ export function ReportFormPage() {
           </FormPanel>
 
           <FormPanel title="Colunas">
-            <div className="mb-3 flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendCol({ key: '', label: '', format: 'text' })}
-              >
-                <Plus className="size-4 mr-1" /> Adicionar
-              </Button>
-            </div>
+            {!isReadOnly ? (
+              <div className="mb-3 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendCol({ key: '', label: '', format: 'text' })}
+                >
+                  <Plus className="size-4 mr-1" /> Adicionar
+                </Button>
+              </div>
+            ) : null}
             {colFields.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sem colunas — exibe todos os campos retornados pela query.</p>
             ) : (
@@ -448,19 +483,19 @@ export function ReportFormPage() {
                     <FormField control={form.control} name={`columns.${i}.key`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Chave (campo SQL)</FormLabel>}
-                        <FormControl><Input placeholder="created_at" className="font-mono text-sm" {...f} /></FormControl>
+                        <FormControl><Input placeholder="created_at" className="font-mono text-sm" disabled={isReadOnly} {...f} /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name={`columns.${i}.label`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Label</FormLabel>}
-                        <FormControl><Input placeholder="Criado em" {...f} /></FormControl>
+                        <FormControl><Input placeholder="Criado em" disabled={isReadOnly} {...f} /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name={`columns.${i}.format`} render={({ field: f }) => (
                       <FormItem>
                         {i === 0 && <FormLabel className="text-xs">Formato</FormLabel>}
-                        <Select onValueChange={f.onChange} value={f.value}>
+                        <Select onValueChange={f.onChange} value={f.value} disabled={isReadOnly}>
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
                             <SelectItem value="text">Texto</SelectItem>
@@ -474,9 +509,11 @@ export function ReportFormPage() {
                       </FormItem>
                     )} />
                     <FormRepeatableRowAction>
-                      <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeCol(i)}>
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {!isReadOnly ? (
+                        <Button type="button" variant="ghost" mode="icon" size="sm" onClick={() => removeCol(i)}>
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      ) : null}
                     </FormRepeatableRowAction>
                   </FormRepeatableRow>
                 ))}

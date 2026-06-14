@@ -13,6 +13,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(PlatformCatalogSeeder::class);
+
         $tenant = Tenant::updateOrCreate(
             ['id' => 'acme'],
             [
@@ -45,6 +47,8 @@ class DatabaseSeeder extends Seeder
             );
 
             $user->syncRoles(['super-admin']);
+
+            app(\App\Services\PlatformCatalogService::class)->sync($user->id, force: true);
         });
     }
 }

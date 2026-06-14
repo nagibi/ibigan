@@ -139,6 +139,7 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        $this->call(PlatformCatalogSeeder::class);
         $this->seedCentralSuperAdmins();
 
         foreach ($this->tenants as $tenantIndex => $tenantData) {
@@ -401,100 +402,26 @@ class DemoSeeder extends Seeder
 
     private function seedReportTemplates(User $createdBy): void
     {
-        $reports = [
+        app(\App\Services\PlatformCatalogService::class)->sync($createdBy->id, force: true);
+
+        ReportTemplate::updateOrCreate(
+            ['name' => 'Docs por categoria'],
             [
-                'name'        => 'Relatório mensal de usuários',
-                'description' => 'Usuários cadastrados e aprovados por mês',
-                'query'       => 'SELECT DATE_FORMAT(created_at, "%Y-%m") as mes, COUNT(*) as total FROM users WHERE status = :status GROUP BY mes ORDER BY mes DESC',
-                'parameters'  => [
-                    ['name' => 'status', 'type' => 'select', 'label' => 'Status', 'required' => true, 'options' => ['active', 'inactive', 'pending']],
-                ],
-                'columns'     => [
-                    ['key' => 'mes', 'label' => 'Mês', 'format' => 'text'],
-                    ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
-                ],
-                'is_active'   => true,
-                'created_by'  => $createdBy->id,
-            ],
-            [
-                'name'        => 'Campanhas por tenant',
-                'description' => 'Resumo das campanhas agrupadas por status',
-                'query'       => "SELECT status, COUNT(*) as total FROM campaigns WHERE (:status = 'all' OR status = :status) GROUP BY status ORDER BY total DESC",
-                'parameters'  => [
-                    ['name' => 'status', 'type' => 'select', 'label' => 'Status', 'required' => true, 'options' => ['all', 'draft', 'scheduled', 'running', 'completed', 'cancelled', 'failed', 'sent']],
-                ],
-                'columns'     => [
-                    ['key' => 'status', 'label' => 'Status', 'format' => 'text'],
-                    ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
-                ],
-                'is_active'   => true,
-                'created_by'  => $createdBy->id,
-            ],
-            [
-                'name'        => 'Webhooks com falha',
-                'description' => 'Entregas de webhook que falharam',
-                'query'       => 'SELECT event, COUNT(*) as total FROM webhook_deliveries WHERE status = :status GROUP BY event ORDER BY total DESC LIMIT :limit',
-                'parameters'  => [
-                    ['name' => 'status', 'type' => 'select', 'label' => 'Status', 'required' => true, 'options' => ['failed', 'success', 'pending']],
-                    ['name' => 'limit', 'type' => 'number', 'label' => 'Limite', 'required' => true],
-                ],
-                'columns'     => [
-                    ['key' => 'event', 'label' => 'Evento', 'format' => 'text'],
-                    ['key' => 'total', 'label' => 'Total', 'format' => 'number'],
-                ],
-                'is_active'   => true,
-                'created_by'  => $createdBy->id,
-            ],
-            [
-                'name'        => 'Docs por categoria',
                 'description' => 'Documentação ativa no tenant',
-                'query'       => 'SELECT title, is_active FROM docs WHERE (:active = \'all\' OR is_active = :active) ORDER BY created_at DESC LIMIT :limit',
-                'parameters'  => [
+                'query' => 'SELECT title, is_active FROM docs WHERE (:active = \'all\' OR is_active = :active) ORDER BY created_at DESC LIMIT :limit',
+                'parameters' => [
                     ['name' => 'active', 'type' => 'select', 'label' => 'Ativo', 'required' => true, 'options' => ['all', '1', '0']],
                     ['name' => 'limit', 'type' => 'number', 'label' => 'Limite', 'required' => true],
                 ],
-                'columns'     => [
+                'columns' => [
                     ['key' => 'title', 'label' => 'Título', 'format' => 'text'],
                     ['key' => 'is_active', 'label' => 'Ativo', 'format' => 'text'],
                 ],
-                'is_active'   => true,
-                'created_by'  => $createdBy->id,
+                'is_active' => true,
+                'is_system' => false,
+                'created_by' => $createdBy->id,
             ],
-            [
-                'name'        => 'Relatório demonstrativo',
-                'description' => 'Exemplo com todos os tipos de parâmetro',
-                'query'       => <<<'SQL'
-SELECT id, name, email, status, gender, created_at
-FROM users
-WHERE status = :status
-  AND gender = :gender
-  AND DATE(created_at) >= :date_from
-  AND DATE(created_at) <= :date_to
-ORDER BY created_at DESC
-LIMIT :limit
-SQL,
-                'parameters'  => [
-                    ['name' => 'status', 'type' => 'select', 'label' => 'Status', 'required' => true, 'options' => ['active', 'inactive', 'pending']],
-                    ['name' => 'gender', 'type' => 'select', 'label' => 'Gênero', 'required' => true, 'options' => ['male', 'female', 'other']],
-                    ['name' => 'date_from', 'type' => 'date', 'label' => 'Cadastro de', 'required' => true],
-                    ['name' => 'date_to', 'type' => 'date', 'label' => 'Cadastro até', 'required' => true],
-                    ['name' => 'limit', 'type' => 'number', 'label' => 'Limite', 'required' => true],
-                ],
-                'columns'     => [
-                    ['key' => 'id', 'label' => 'ID', 'format' => 'number'],
-                    ['key' => 'name', 'label' => 'Nome', 'format' => 'text'],
-                    ['key' => 'email', 'label' => 'E-mail', 'format' => 'text'],
-                    ['key' => 'status', 'label' => 'Status', 'format' => 'text'],
-                    ['key' => 'created_at', 'label' => 'Cadastro', 'format' => 'datetime'],
-                ],
-                'is_active'   => true,
-                'created_by'  => $createdBy->id,
-            ],
-        ];
-
-        foreach ($reports as $report) {
-            ReportTemplate::updateOrCreate(['name' => $report['name']], $report);
-        }
+        );
     }
 
     private function seedCampaigns(User $createdBy, int $tenantIndex): void

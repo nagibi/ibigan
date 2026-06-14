@@ -46,6 +46,8 @@ final class EloquentActivityLogRepository implements ActivityLogRepositoryInterf
 
     private function applyFilters(Builder $query, array $filters): Builder
     {
+        $query = GridFilter::whenId($query, $filters);
+
         return $query
             ->when(
                 isset($filters['log_name']),

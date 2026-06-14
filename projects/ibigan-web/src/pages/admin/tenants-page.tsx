@@ -376,7 +376,7 @@ export function AdminTenantsPage() {
         filter: { type: 'text', filterKey: 'name', placeholder: 'Nome' },
         className: 'min-w-[220px]',
         render: (tenant) => (
-          <span className="font-medium">{tenant.name ?? tenant.slug}</span>
+          <span>{tenant.name ?? tenant.slug}</span>
         ),
       },
       {

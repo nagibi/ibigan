@@ -18,6 +18,8 @@ final class EloquentMessageTemplateRepository extends BaseRepository implements 
 
     protected function applyFilters(Builder $query, array $filters): Builder
     {
+        $query = parent::applyFilters($query, $filters);
+
         return $query
             ->when(
                 isset($filters['search']),

@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Webhook\StoreWebhookRequest;
 use App\Http\Requests\Webhook\UpdateWebhookRequest;
 use App\Models\Webhook;
+use App\Support\GridFilter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,10 @@ final class WebhookController extends Controller
         abort_unless($request->user()->can('webhook-visualizar'), Response::HTTP_FORBIDDEN);
 
         $webhooks = Webhook::query()
+            ->when(
+                $request->filled('filter_id'),
+                fn ($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
+            )
             ->latest()
             ->paginate($request->integer('per_page', 15));
 

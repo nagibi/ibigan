@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Support\SystemMessageTemplates;
+use App\Services\PlatformCatalogService;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -97,6 +97,6 @@ class RolePermissionSeeder extends Seeder
             'empresa-visualizar',
         ]);
 
-        SystemMessageTemplates::seed();
+        app(PlatformCatalogService::class)->sync();
     }
 }

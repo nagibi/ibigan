@@ -9,6 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ToggleActiveRequest;
 use App\Models\ReportExecution;
 use App\Models\ReportTemplate;
+use App\Support\PlatformCatalogGuard;
+use App\Support\GridFilter;
 use App\Services\ReportService;
 use App\Support\ApiResponse;
 use App\Support\ReportCsvExporter;
@@ -30,8 +32,12 @@ final class ReportController extends Controller
     {
         abort_unless($request->user()->can('relatorio-visualizar'), Response::HTTP_FORBIDDEN);
 
-        $templates = ReportTemplate::where('is_active', true)
-            ->when($request->user()->cannot('relatorio-gerenciar'), fn($q) => $q->where('is_active', true))
+        $templates = ReportTemplate::query()
+            ->when($request->user()->cannot('relatorio-gerenciar'), fn ($q) => $q->where('is_active', true))
+            ->when(
+                $request->filled('filter_id'),
+                fn ($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
+            )
             ->orderBy('name')
             ->paginate($request->integer('per_page', 15));
 
@@ -39,15 +45,7 @@ final class ReportController extends Controller
             'status'  => 1,
             'message' => 'MSG000067',
             'result'  => [
-                'data' => $templates->map(fn($t) => [
-                    'id'          => $t->id,
-                    'name'        => $t->name,
-                    'description' => $t->description,
-                    'parameters'  => $t->parameters,
-                    'columns'     => $t->columns,
-                    'is_active'   => $t->is_active,
-                    'created_at'  => $t->created_at->toIso8601String(),
-                ]),
+                'data' => $templates->map(fn ($t) => $this->formatReportTemplate($t)),
                 'meta' => [
                     'current_page' => $templates->currentPage(),
                     'last_page'    => $templates->lastPage(),
@@ -65,16 +63,10 @@ final class ReportController extends Controller
         return response()->json([
             'status'  => 1,
             'message' => 'MSG000067',
-            'result'  => [
-                'id'          => $report->id,
-                'name'        => $report->name,
-                'description' => $report->description,
-                'query'       => $request->user()->can('relatorio-gerenciar') ? $report->query : null,
-                'parameters'  => $report->parameters,
-                'columns'     => $report->columns,
-                'is_active'   => $report->is_active,
-                'created_at'  => $report->created_at->toIso8601String(),
-            ],
+            'result'  => $this->formatReportTemplate(
+                $report,
+                includeQuery: $request->user()->can('relatorio-gerenciar'),
+            ),
         ]);
     }
 
@@ -93,19 +85,22 @@ final class ReportController extends Controller
 
         $template = ReportTemplate::create([
             ...$validated,
+            'is_system' => false,
             'created_by' => $request->user()->id,
         ]);
 
         return response()->json([
             'status'  => 1,
             'message' => 'MSG000424',
-            'result'  => $template,
+            'result'  => $this->formatReportTemplate($template, includeQuery: true),
         ], Response::HTTP_CREATED);
     }
 
     public function update(Request $request, ReportTemplate $report): JsonResponse
     {
         abort_unless($request->user()->can('relatorio-gerenciar'), Response::HTTP_FORBIDDEN);
+
+        PlatformCatalogGuard::ensureCanEdit($report);
 
         $validated = $request->validate([
             'name'        => ['sometimes', 'string', 'max:255'],
@@ -121,7 +116,7 @@ final class ReportController extends Controller
         return response()->json([
             'status'  => 1,
             'message' => 'MSG000425',
-            'result'  => $report->fresh(),
+            'result'  => $this->formatReportTemplate($report->fresh(), includeQuery: true),
         ]);
     }
 
@@ -149,6 +144,8 @@ final class ReportController extends Controller
     public function destroy(Request $request, ReportTemplate $report): JsonResponse
     {
         abort_unless($request->user()->can('relatorio-gerenciar'), Response::HTTP_FORBIDDEN);
+
+        PlatformCatalogGuard::ensureCanDelete($report);
 
         $report->delete();
 
@@ -311,6 +308,10 @@ final class ReportController extends Controller
 
         $executions = ReportExecution::with('template')
             ->where('executed_by', $request->user()->id)
+            ->when(
+                $request->filled('filter_id'),
+                fn ($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
+            )
             ->orderByDesc('executed_at')
             ->paginate($request->integer('per_page', 20));
 
@@ -379,5 +380,24 @@ final class ReportController extends Controller
         }
 
         return [$rows];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatReportTemplate(ReportTemplate $report, bool $includeQuery = false): array
+    {
+        return [
+            'id' => $report->id,
+            'name' => $report->name,
+            'platform_key' => $report->platform_key,
+            'description' => $report->description,
+            'query' => $includeQuery ? $report->query : null,
+            'parameters' => $report->parameters,
+            'columns' => $report->columns,
+            'is_active' => $report->is_active,
+            'is_system' => (bool) $report->is_system,
+            'created_at' => $report->created_at->toIso8601String(),
+        ];
     }
 }

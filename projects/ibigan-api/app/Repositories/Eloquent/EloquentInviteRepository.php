@@ -18,6 +18,8 @@ final class EloquentInviteRepository extends BaseRepository implements InviteRep
 
     protected function applyFilters(Builder $query, array $filters): Builder
     {
+        $query = parent::applyFilters($query, $filters);
+
         return $query
             ->with(['invitedBy'])
             ->when(

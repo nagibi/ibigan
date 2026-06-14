@@ -23,6 +23,7 @@ class MessageTemplate extends Model
         'body',
         'merge_tags',
         'is_active',
+        'is_system',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class MessageTemplate extends Model
         return [
             'merge_tags' => 'array',
             'is_active' => 'boolean',
+            'is_system' => 'boolean',
         ];
     }
 

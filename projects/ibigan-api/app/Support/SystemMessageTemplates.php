@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Models\MessageTemplate;
+use App\Services\PlatformCatalogService;
 use App\Services\TemplateMailService;
 
 final class SystemMessageTemplates
@@ -19,6 +19,14 @@ final class SystemMessageTemplates
      * @return list<array<string, mixed>>
      */
     public static function definitions(): array
+    {
+        return PlatformCatalogDefinitions::messageTemplates();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function defaultDefinitions(): array
     {
         return [
             [
@@ -171,17 +179,6 @@ TEXT,
 
     public static function seed(): void
     {
-        foreach (self::definitions() as $template) {
-            MessageTemplate::updateOrCreate(
-                ['slug' => $template['slug']],
-                [
-                    'name' => $template['name'],
-                    'subject' => $template['subject'],
-                    'body' => $template['body'],
-                    'merge_tags' => $template['merge_tags'],
-                    'is_active' => $template['is_active'],
-                ],
-            );
-        }
+        app(PlatformCatalogService::class)->syncMessageTemplates();
     }
 }

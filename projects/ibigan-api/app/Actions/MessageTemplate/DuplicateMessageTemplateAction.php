@@ -22,6 +22,7 @@ final class DuplicateMessageTemplateAction
             'body' => $messageTemplate->body,
             'merge_tags' => $messageTemplate->merge_tags,
             'is_active' => false,
+            'is_system' => false,
         ]);
     }
 

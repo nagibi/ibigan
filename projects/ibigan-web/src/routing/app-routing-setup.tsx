@@ -91,6 +91,16 @@ function ReportExecuteRedirect() {
   return <Navigate to={`/reports/${id}/execute`} replace />;
 }
 
+function AdminPlatformMessageTemplateRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/admin/message-templates/${id}`} replace />;
+}
+
+function AdminPlatformReportRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/admin/reports/${id}`} replace />;
+}
+
 export function AppRoutingSetup() {
   return (
     <Routes>
@@ -160,6 +170,14 @@ export function AppRoutingSetup() {
           <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
           <Route path="/central-users" element={<Navigate to="/admin/super-admins" replace />} />
           <Route path="/admin/devtools" element={<AdminDevToolsPage />} />
+          <Route path="/admin/message-templates" element={<MessageTemplatesPage />} />
+          <Route path="/admin/message-templates/:id" element={<MessageTemplateFormPage key="platform-message-template-edit" />} />
+          <Route path="/admin/reports" element={<ReportsPage />} />
+          <Route path="/admin/reports/:id" element={<ReportFormPage key="platform-report-edit" />} />
+          <Route path="/admin/platform/message-templates" element={<Navigate to="/admin/message-templates" replace />} />
+          <Route path="/admin/platform/message-templates/:id" element={<AdminPlatformMessageTemplateRedirect />} />
+          <Route path="/admin/platform/reports" element={<Navigate to="/admin/reports" replace />} />
+          <Route path="/admin/platform/reports/:id" element={<AdminPlatformReportRedirect />} />
         </Route>
       </Route>
 

@@ -8,9 +8,11 @@ import {
   Bell,
   Building2,
   Globe,
+  LayoutDashboard,
   Moon,
   User,
 } from 'lucide-react';
+import { useCanAccessCentralFromTenant } from '@/hooks/use-can-access-central-from-tenant';
 import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { resolveMenuIcon } from '@/lib/menu-icons';
 import { I18N_LANGUAGES } from '@/i18n/config';
@@ -59,8 +61,9 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const navigate = useNavigate();
   const intl = useIntl();
   const { user, isAuthenticated } = useAuthStore();
-  const { centralUser, impersonatedTenant } = useCentralAuthStore();
+  const { centralUser } = useCentralAuthStore();
   const isCentralOnly = useCentralOnlySession();
+  const canAccessCentralFromTenant = useCanAccessCentralFromTenant();
   const { currenLanguage, changeLanguage } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
   const { storeOption } = useSettings();
@@ -205,16 +208,21 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
               {myNotificationsLabel}
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-              onClick={() => {
-                navigate(impersonatedTenant ? '/admin/tenants' : '/auth/select-tenant', {
-                  state: impersonatedTenant ? undefined : { manual: true },
-                });
-              }}
-            >
-              <Building2 className="size-4" />
-              Trocar empresa
-            </DropdownMenuItem>
+            {canAccessCentralFromTenant ? (
+              <DropdownMenuItem onClick={() => navigate('/admin/tenants')}>
+                <LayoutDashboard className="size-4" />
+                Painel central
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onClick={() => {
+                  navigate('/auth/select-tenant', { state: { manual: true } });
+                }}
+              >
+                <Building2 className="size-4" />
+                Trocar empresa
+              </DropdownMenuItem>
+            )}
           </>
         ) : null}
 

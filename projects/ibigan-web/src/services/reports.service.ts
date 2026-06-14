@@ -24,6 +24,8 @@ export interface ReportTemplate {
   parameters: ReportParameter[] | null;
   columns: ReportColumn[] | null;
   is_active: boolean;
+  is_system: boolean;
+  platform_key?: string | null;
   created_at: string;
 }
 

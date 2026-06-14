@@ -11,6 +11,8 @@ class SuperAdminSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(PlatformCatalogSeeder::class);
+
         CentralUser::firstOrCreate(
             ['email' => 'superadmin@ibigan.com'],
             [

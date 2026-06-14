@@ -28,6 +28,10 @@ final class UserApprovalController extends Controller
                     ? $query->where('status', $statuses[0])
                     : $query->whereIn('status', $statuses),
             )
+            ->when(
+                $request->filled('filter_id'),
+                fn ($query) => GridFilter::applyIdFromCsv($query, $request->string('filter_id')->toString()),
+            )
             ->orderByDesc('created_at')
             ->paginate($request->integer('per_page', 15));
 

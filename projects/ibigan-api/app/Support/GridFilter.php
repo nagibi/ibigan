@@ -41,4 +41,39 @@ final class GridFilter
 
         return $query->whereIn($column, $values);
     }
+
+    /**
+     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @return Builder<\Illuminate\Database\Eloquent\Model>
+     */
+    public static function applyIdFromCsv(Builder $query, ?string $value): Builder
+    {
+        $ids = array_values(array_filter(array_map(
+            static fn (string $id): int => (int) $id,
+            self::csvValues($value),
+        ), static fn (int $id): bool => $id > 0));
+
+        if ($ids === []) {
+            return $query;
+        }
+
+        if (count($ids) === 1) {
+            return $query->where('id', $ids[0]);
+        }
+
+        return $query->whereIn('id', $ids);
+    }
+
+    /**
+     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @return Builder<\Illuminate\Database\Eloquent\Model>
+     */
+    public static function whenId(Builder $query, array $filters, string $key = 'filter_id'): Builder
+    {
+        if (! filled($filters[$key] ?? null)) {
+            return $query;
+        }
+
+        return self::applyIdFromCsv($query, (string) $filters[$key]);
+    }
 }
