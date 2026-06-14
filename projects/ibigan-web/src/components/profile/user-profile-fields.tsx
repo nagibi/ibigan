@@ -24,11 +24,13 @@ import type { UserProfileFormData } from '@/lib/user-profile-fields';
 interface UserProfileFieldsProps<T extends FieldValues & UserProfileFormData> {
   control: Control<T>;
   showBio?: boolean;
+  basicOnly?: boolean;
 }
 
 export function UserProfileFields<T extends FieldValues & UserProfileFormData>({
   control,
   showBio = true,
+  basicOnly = false,
 }: UserProfileFieldsProps<T>) {
   const { t, i18n } = useTranslation();
   const genderOptions = useMemo(() => getUserGenderOptions(), [i18n.language]);
@@ -53,6 +55,8 @@ export function UserProfileFields<T extends FieldValues & UserProfileFormData>({
           </FormItem>
         )} />
       </FormFieldGridItem>
+      {!basicOnly && (
+        <>
       <FormFieldGridItem>
         <FormField control={control} name={'cpf' as Path<T>} render={({ field }) => (
           <FormItem>
@@ -120,6 +124,8 @@ export function UserProfileFields<T extends FieldValues & UserProfileFormData>({
             </FormItem>
           )} />
         </FormFieldGridItem>
+      )}
+        </>
       )}
     </>
   );

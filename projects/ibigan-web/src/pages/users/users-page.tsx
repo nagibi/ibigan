@@ -359,7 +359,7 @@ export function UsersPage() {
         id: 'actions',
         label: cols.actions,
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (user) => (
           <GridRowActions actions={getUserRowActions(user)} />
         ),
@@ -379,7 +379,6 @@ export function UsersPage() {
         exportValue: (user) => (isUserActive(user) ? 'Ativo' : 'Inativo'),
         render: (user) => (
           <Switch
-            size="sm"
             checked={isUserActive(user)}
             disabled={rowStatusId === user.id}
             onCheckedChange={(checked) => void handleRowStatusChange(user, checked)}

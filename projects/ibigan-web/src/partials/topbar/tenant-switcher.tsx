@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, ChevronsUpDown, LoaderCircle } from 'lucide-react';
+import { TenantSlugIcon } from '@/components/tenant/tenant-slug-icon';
 import { toast } from 'sonner';
 import { useImpersonate } from '@/hooks/use-impersonate';
 import { useCentralOnlySession } from '@/hooks/use-central-only-session';
@@ -222,9 +223,7 @@ export function TenantSwitcher({ showLabelOnMobile = false }: { showLabelOnMobil
                     onSelect={() => void handleSelect(tenant.id)}
                     className="gap-3 py-2.5"
                   >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                      <Building2 className="size-4 text-primary" />
-                    </div>
+                    <TenantSlugIcon slug={tenant.slug} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{label}</p>
                       <p className="truncate text-xs text-muted-foreground">{tenant.id}</p>

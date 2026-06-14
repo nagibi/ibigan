@@ -18,9 +18,11 @@ import {
   upsertNotificationInCache,
 } from '@/lib/notification-cache';
 import { isReportNotification } from '@/lib/notification-utils';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useNotificationsList } from '@/hooks/use-notifications-list';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { notificationsService } from '@/services/notifications.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SheetPanelTitle } from '@/components/common/panel-title';
@@ -43,6 +45,8 @@ export function NotificationsSheetPanel({
 }) {
   const queryClient = useQueryClient();
   const { open: openPreferences } = useNotificationPreferencesSheet();
+  const isCentralOnly = useCentralOnlySession();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const { data, isLoading } = useNotificationsList(open);
 
@@ -102,6 +106,22 @@ export function NotificationsSheetPanel({
     }
 
     if (items.length === 0) {
+      if (!isAuthenticated && isCentralOnly) {
+        return (
+          <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-muted-foreground">
+            <Bell className="size-10 opacity-30" />
+            <p className="text-sm">
+              Entre em uma empresa para ver e receber notificações.
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/profile" onClick={() => onOpenChange(false)}>
+                Selecionar empresa
+              </Link>
+            </Button>
+          </div>
+        );
+      }
+
       return (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Bell className="mb-2 size-10 opacity-30" />

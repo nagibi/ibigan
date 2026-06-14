@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { NotificationPreferencesSheet } from '@/components/notifications/notification-preferences-sheet';
 import { NotificationsSheetPanel } from '@/partials/topbar/notifications-sheet-panel';
-import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 
 interface NotificationsSheetContextValue {
@@ -44,7 +43,6 @@ function NotificationSheetsHost({
 
 export function NotificationsSheetProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const isCentralOnly = useCentralOnlySession();
 
   const openSheet = useCallback(() => setOpen(true), []);
   const closeSheet = useCallback(() => setOpen(false), []);
@@ -61,12 +59,10 @@ export function NotificationsSheetProvider({ children }: { children: ReactNode }
   return (
     <NotificationsSheetContext.Provider value={value}>
       {children}
-      {!isCentralOnly ? (
-        <NotificationSheetsHost
-          notificationsOpen={open}
-          onNotificationsOpenChange={setOpen}
-        />
-      ) : null}
+      <NotificationSheetsHost
+        notificationsOpen={open}
+        onNotificationsOpenChange={setOpen}
+      />
     </NotificationsSheetContext.Provider>
   );
 }

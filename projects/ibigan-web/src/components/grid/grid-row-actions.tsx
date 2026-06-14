@@ -2,7 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { useHoverDropdown } from '@/hooks/use-hover-dropdown';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 import { cn } from '@/lib/utils';
 
 export type GridRowActionIcon = LucideIcon | ComponentType<{ className?: string }>;
@@ -53,6 +53,7 @@ export function prioritizeViewGridAction(
 
 export function GridRowActions({ actions }: GridRowActionsProps) {
   const { t } = useTranslation();
+  const hover = useHoverDropdown();
   const visibleActions = useMemo(() => {
     const filtered = actions.filter((action) => !action.hidden);
 
@@ -63,52 +64,30 @@ export function GridRowActions({ actions }: GridRowActionsProps) {
     return null;
   }
 
-  if (visibleActions.length <= 2) {
-    return (
-      <div className="flex items-center gap-0.5" data-grid-no-row-select>
-        {visibleActions.map((action) => (
-          <ToolbarTooltip key={action.label} content={action.tooltip ?? action.label}>
-            <Button
-              type="button"
-              variant="ghost"
-              mode="icon"
-              size="sm"
-              aria-label={action.tooltip ?? action.label}
-              disabled={action.disabled}
-              onClick={(event) => {
-                event.stopPropagation();
-                action.onClick();
-              }}
-              className={cn(
-                action.tone === 'destructive' && 'text-destructive hover:text-destructive/90',
-              )}
-            >
-              <action.icon className="size-4" />
-            </Button>
-          </ToolbarTooltip>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <DropdownMenu>
-      <ToolbarTooltip content={t('grid.tooltip.more_actions')}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            mode="icon"
-            size="sm"
-            aria-label={t('grid.tooltip.more_actions')}
-            data-grid-no-row-select
-            onClick={(event) => event.stopPropagation()}
-          >
-            <MoreHorizontal className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-      </ToolbarTooltip>
-      <DropdownMenuContent align="start" className="w-44">
+    <DropdownMenu open={hover.open} onOpenChange={hover.setOpen} modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1 px-2.5 text-xs font-medium"
+          aria-label={t('columns.actions')}
+          data-grid-no-row-select
+          onMouseEnter={hover.handleEnter}
+          onMouseLeave={hover.handleLeave}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {t('columns.actions')}
+          <ChevronDown className="size-3.5 opacity-70" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-44"
+        onMouseEnter={hover.handleEnter}
+        onMouseLeave={hover.handleLeave}
+      >
         {visibleActions.map((action) => (
           <DropdownMenuItem
             key={action.label}

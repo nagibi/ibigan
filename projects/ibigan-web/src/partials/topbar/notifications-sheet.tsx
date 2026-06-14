@@ -1,17 +1,11 @@
 import type { ReactNode } from 'react';
-import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { useNotificationsUnreadCount } from '@/hooks/use-notifications-list';
 import { useNotificationsSheet } from '@/providers/notifications-sheet-provider';
 import { Badge } from '@/components/ui/badge';
 
 export function NotificationsSheet({ trigger }: { trigger: ReactNode }) {
-  const isCentralOnly = useCentralOnlySession();
   const { open: openSheet, isOpen } = useNotificationsSheet();
   const unread = useNotificationsUnreadCount(isOpen);
-
-  if (isCentralOnly) {
-    return null;
-  }
 
   return (
     <div className="relative inline-flex cursor-pointer" onClick={openSheet}>

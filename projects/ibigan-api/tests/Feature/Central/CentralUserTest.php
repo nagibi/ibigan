@@ -92,3 +92,68 @@ it('mantém pelo menos um super-admin no sistema', function (): void {
 
     expect(CentralUser::where('is_super_admin', true)->count())->toBeGreaterThanOrEqual(1);
 });
+
+it('exibe detalhes de um central-user para super-admin', function (): void {
+    Sanctum::actingAs($this->superUser, ['*'], 'central');
+
+    $this->getJson("/api/central/v1/admin/central-users/{$this->otherSuper->id}")
+        ->assertOk()
+        ->assertJsonPath('result.email', 'super2@ibigan.com');
+});
+
+it('atualiza nome e e-mail de outro super-admin', function (): void {
+    Sanctum::actingAs($this->superUser, ['*'], 'central');
+
+    $this->putJson("/api/central/v1/admin/central-users/{$this->otherSuper->id}", [
+        'name' => 'Super Atualizado',
+        'email' => 'super2.updated@ibigan.com',
+        'is_active' => true,
+    ])
+        ->assertOk()
+        ->assertJsonPath('result.name', 'Super Atualizado')
+        ->assertJsonPath('result.email', 'super2.updated@ibigan.com');
+
+    expect($this->otherSuper->fresh())
+        ->name->toBe('Super Atualizado')
+        ->email->toBe('super2.updated@ibigan.com');
+});
+
+it('atualiza senha e revoga tokens do usuário', function (): void {
+    Sanctum::actingAs($this->superUser, ['*'], 'central');
+
+    $this->otherSuper->createToken('test-token');
+
+    $this->putJson("/api/central/v1/admin/central-users/{$this->otherSuper->id}", [
+        'name' => $this->otherSuper->name,
+        'email' => $this->otherSuper->email,
+        'is_active' => true,
+        'password' => 'nova-senha-123',
+        'password_confirmation' => 'nova-senha-123',
+    ])->assertOk();
+
+    expect($this->otherSuper->tokens()->count())->toBe(0);
+});
+
+it('impede desativar o próprio usuário', function (): void {
+    Sanctum::actingAs($this->superUser, ['*'], 'central');
+
+    $this->putJson("/api/central/v1/admin/central-users/{$this->superUser->id}", [
+        'name' => $this->superUser->name,
+        'email' => $this->superUser->email,
+        'is_active' => false,
+    ])->assertUnprocessable();
+
+    expect($this->superUser->fresh()->is_active)->toBeTrue();
+});
+
+it('alterna status ativo de outro super-admin', function (): void {
+    Sanctum::actingAs($this->superUser, ['*'], 'central');
+
+    $this->patchJson("/api/central/v1/admin/central-users/{$this->otherSuper->id}/toggle-active", [
+        'is_active' => false,
+    ])
+        ->assertOk()
+        ->assertJsonPath('result.is_active', false);
+
+    expect($this->otherSuper->fresh()->is_active)->toBeFalse();
+});

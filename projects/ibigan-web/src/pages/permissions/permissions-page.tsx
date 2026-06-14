@@ -200,7 +200,7 @@ export function PermissionsPage() {
         id: 'actions',
         label: cols.actions,
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (permission) => (
           <GridRowActions actions={getPermissionRowActions(permission)} />
         ),

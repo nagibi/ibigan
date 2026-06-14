@@ -52,6 +52,47 @@ final class TwoFactorSyncService
         ]);
     }
 
+    public function syncFromCentralUser(CentralUser $centralUser): void
+    {
+        if ($centralUser->two_factor_confirmed_at === null) {
+            return;
+        }
+
+        Tenant::query()->each(function (Tenant $tenant) use ($centralUser): void {
+            tenancy()->initialize($tenant);
+
+            User::query()
+                ->where('email', $centralUser->email)
+                ->where('is_active', true)
+                ->update([
+                    'two_factor_method' => $centralUser->two_factor_method ?? TwoFactorMethod::Totp,
+                    'two_factor_secret' => $centralUser->two_factor_secret,
+                    'two_factor_recovery_codes' => $centralUser->two_factor_recovery_codes,
+                    'two_factor_confirmed_at' => $centralUser->two_factor_confirmed_at,
+                ]);
+
+            tenancy()->end();
+        });
+    }
+
+    public function clearForCentralUser(CentralUser $centralUser): void
+    {
+        Tenant::query()->each(function (Tenant $tenant) use ($centralUser): void {
+            tenancy()->initialize($tenant);
+
+            User::query()
+                ->where('email', $centralUser->email)
+                ->update([
+                    'two_factor_method' => null,
+                    'two_factor_secret' => null,
+                    'two_factor_recovery_codes' => null,
+                    'two_factor_confirmed_at' => null,
+                ]);
+
+            tenancy()->end();
+        });
+    }
+
     public function syncRecoveryCodesToTenantUsers(CentralUser $centralUser): void
     {
         if (! $centralUser->two_factor_recovery_codes) {

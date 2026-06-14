@@ -4,7 +4,9 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\CentralAuthController;
+use App\Http\Controllers\Api\V1\Central\CentralProfileController;
 use App\Http\Controllers\Api\V1\Central\CentralSocialAuthController;
+use App\Http\Controllers\Api\V1\Central\CentralTwoFactorController;
 use App\Http\Controllers\Api\V1\Central\CentralUserController;
 use App\Http\Controllers\Api\V1\Central\TenantAdminController;
 use App\Http\Controllers\Api\V1\Central\TenantController;
@@ -91,6 +93,24 @@ Route::prefix('central/v1')
         Route::get('auth/me', [CentralAuthController::class, 'me']);
         Route::post('auth/logout', [CentralAuthController::class, 'logout']);
 
+        Route::prefix('two-factor')->group(function () {
+            Route::get('status', [CentralTwoFactorController::class, 'status']);
+            Route::post('enable', [CentralTwoFactorController::class, 'enable']);
+            Route::post('confirm', [CentralTwoFactorController::class, 'confirm']);
+            Route::post('resend-setup-code', [CentralTwoFactorController::class, 'resendSetupCode']);
+            Route::post('disable', [CentralTwoFactorController::class, 'disable']);
+            Route::get('recovery-codes', [CentralTwoFactorController::class, 'recoveryCodes']);
+            Route::post('recovery-codes', [CentralTwoFactorController::class, 'regenerateRecoveryCodes']);
+        });
+
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [CentralProfileController::class, 'show']);
+            Route::put('/', [CentralProfileController::class, 'update']);
+            Route::put('password', [CentralProfileController::class, 'updatePassword']);
+            Route::post('avatar', [CentralProfileController::class, 'uploadAvatar']);
+            Route::delete('avatar', [CentralProfileController::class, 'deleteAvatar']);
+        });
+
         Route::prefix('admin')->group(function () {
             Route::get('tenants', [TenantAdminController::class, 'index']);
             Route::post('tenants', [TenantAdminController::class, 'store']);
@@ -102,6 +122,9 @@ Route::prefix('central/v1')
             Route::delete('tenants/{tenant}', [TenantAdminController::class, 'destroy']);
 
             Route::get('central-users', [CentralUserController::class, 'index']);
+            Route::get('central-users/{centralUser}', [CentralUserController::class, 'show']);
+            Route::put('central-users/{centralUser}', [CentralUserController::class, 'update']);
+            Route::patch('central-users/{centralUser}/toggle-active', [CentralUserController::class, 'toggleActive']);
             Route::patch('central-users/{centralUser}/toggle-super-admin', [CentralUserController::class, 'toggleSuperAdmin']);
         });
     });

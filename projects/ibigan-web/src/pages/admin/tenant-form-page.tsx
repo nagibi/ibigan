@@ -21,9 +21,9 @@ import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-g
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { FormSwitchControl } from '@/components/grid/form-switch-control';
 import { Input } from '@/components/ui/input';
 import { MaskedInput } from '@/components/ui/masked-input';
-import { Switch } from '@/components/ui/switch';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
@@ -296,13 +296,12 @@ export function AdminTenantFormPage() {
               </FormFieldGridItem>
               <FormFieldGridItem>
                 <FormField control={form.control} name="is_active" render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>Ativo</FormLabel>
-                    </div>
+                  <FormItem>
+                    <FormLabel>Ativo</FormLabel>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <FormSwitchControl checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )} />
               </FormFieldGridItem>

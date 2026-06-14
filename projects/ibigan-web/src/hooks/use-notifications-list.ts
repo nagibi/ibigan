@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCentralOnlySession } from '@/hooks/use-central-only-session';
 import { notificationsService } from '@/services/notifications.service';
+import { useAuthStore } from '@/stores/auth.store';
 
 export function useNotificationsList(open: boolean) {
-  const isCentralOnly = useCentralOnlySession();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationsService.list(),
     refetchInterval: open ? 30000 : false,
-    enabled: !isCentralOnly,
+    enabled: isAuthenticated,
   });
 }
 

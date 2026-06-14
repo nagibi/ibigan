@@ -34,4 +34,13 @@ final class UserPasswordVerificationService
             ]);
         }
     }
+
+    public function verifyCentralCurrentPassword(CentralUser $user, string $password): void
+    {
+        if (! Hash::check($password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['Senha incorreta.'],
+            ]);
+        }
+    }
 }

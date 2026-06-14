@@ -1,4 +1,5 @@
 import { CentralUsersPage } from '@/pages/admin/central-users-page';
+import { CentralUserFormPage } from '@/pages/admin/central-user-form-page';
 import { AdminDevToolsPage } from '@/pages/admin/admin-devtools-page';
 import { AdminTenantFormPage } from '@/pages/admin/tenant-form-page';
 import { AdminTenantsPage } from '@/pages/admin/tenants-page';
@@ -152,6 +153,11 @@ export function AppRoutingSetup() {
           <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
           <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
           <Route path="/admin/super-admins" element={<CentralUsersPage />} />
+          <Route path="/admin/super-admins/:id/editar" element={<CentralUserFormPage />} />
+          <Route path="/admin/profile" element={<Navigate to="/profile" replace />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
           <Route path="/central-users" element={<Navigate to="/admin/super-admins" replace />} />
           <Route path="/admin/devtools" element={<AdminDevToolsPage />} />
         </Route>

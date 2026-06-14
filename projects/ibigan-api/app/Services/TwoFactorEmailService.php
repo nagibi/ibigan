@@ -26,9 +26,28 @@ final class TwoFactorEmailService
         ));
     }
 
+    public function sendSetupCodeForCentralUser(CentralUser $user): void
+    {
+        $code = $this->storeCentralCode(
+            $this->centralSetupCacheKey($user->id),
+            self::CODE_TTL_SETUP,
+        );
+
+        $user->notify(new TwoFactorCodeNotification(
+            code: $code,
+            expiresMinutes: self::CODE_TTL_SETUP,
+            context: 'setup',
+        ));
+    }
+
     public function verifySetupCode(User $user, string $code): bool
     {
         return $this->verifyCode($this->setupCacheKey($user->id), $code);
+    }
+
+    public function verifySetupCodeForCentralUser(CentralUser $user, string $code): bool
+    {
+        return $this->verifyCentralCode($this->centralSetupCacheKey($user->id), $code);
     }
 
     public function sendLoginCodeForUser(User $user, string $challengeToken): void
@@ -112,6 +131,11 @@ final class TwoFactorEmailService
     private function setupCacheKey(int $userId): string
     {
         return 'two_factor_setup_code:'.$userId;
+    }
+
+    private function centralSetupCacheKey(int $userId): string
+    {
+        return 'two_factor_setup_code:central:'.$userId;
     }
 
     private function loginCacheKey(string $challengeToken): string

@@ -245,10 +245,10 @@ export function TranslationsPage() {
       },
       {
         id: 'actions',
-        label: '',
+        label: t('columns.actions'),
         pinned: 'start',
         hideable: false,
-        className: 'w-[56px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (row) => (
           canManage ? (
             <GridRowActions

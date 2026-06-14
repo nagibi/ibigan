@@ -352,7 +352,7 @@ export function NotificationsPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (notification) => (
           <GridRowActions
             actions={[
@@ -424,7 +424,6 @@ export function NotificationsPage() {
               onClick={(event) => event.stopPropagation()}
             >
               <Switch
-                size="sm"
                 checked={Boolean(notification.read_at)}
                 disabled={isToggling}
                 onCheckedChange={(checked) => {

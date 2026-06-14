@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { History, LogIn, Trash2 } from 'lucide-react';
+import { History, LoaderCircle, LogIn, Trash2 } from 'lucide-react';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { format } from 'date-fns';
@@ -44,9 +44,10 @@ import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { TenantActivityLogsSheet } from '@/components/activity-logs/tenant-activity-logs-sheet';
-import { GridBadge } from '@/components/grid/grid-badge';
+import { TenantSlugBadge } from '@/components/tenant/tenant-slug-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
@@ -58,7 +59,7 @@ import {
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 
-const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v5';
+const GRID_COLUMNS_KEY = 'grid-columns:admin-tenants-v6';
 
 const STATUS_FILTER_OPTIONS = [
   { label: 'Ativo', value: 'active' },
@@ -92,7 +93,7 @@ export function AdminTenantsPage() {
     onActivate: async (ids) => {
       try {
         await Promise.all(ids.map((id) => adminTenantsService.toggleActive(id, true)));
-        showToggleActive(true, TOGGLE_ACTIVE_LABELS.empresa, ids.length);
+        showToggleActive(true, TOGGLE_ACTIVE_LABELS.company, ids.length);
         await loadRef.current();
       } catch (error) {
         showError('Erro ao ativar empresa(s).', error);
@@ -102,7 +103,7 @@ export function AdminTenantsPage() {
     onDeactivate: async (ids) => {
       try {
         await Promise.all(ids.map((id) => adminTenantsService.toggleActive(id, false)));
-        showToggleActive(false, TOGGLE_ACTIVE_LABELS.empresa, ids.length);
+        showToggleActive(false, TOGGLE_ACTIVE_LABELS.company, ids.length);
         await loadRef.current();
       } catch (error) {
         showError('Erro ao inativar empresa(s).', error);
@@ -203,12 +204,6 @@ export function AdminTenantsPage() {
   const getTenantRowActions = useCallback(
     (tenant: AdminTenant): GridRowAction[] => [
       {
-        label: 'Entrar',
-        icon: LogIn,
-        disabled: Boolean(impersonatingId),
-        onClick: () => void handleImpersonate(tenant),
-      },
-      {
         label: 'Visualizar',
         icon: GRID_VIEW_ICON,
         onClick: () => handleEditTenant(tenant.id),
@@ -225,7 +220,7 @@ export function AdminTenantsPage() {
         onClick: () => selection.requestDelete([tenant.id]),
       },
     ],
-    [handleEditTenant, handleImpersonate, impersonatingId, selection.requestDelete, t],
+    [handleEditTenant, selection.requestDelete, t],
   );
 
   const handleEscape = useCallback(() => {
@@ -276,7 +271,7 @@ export function AdminTenantsPage() {
     try {
       setRowStatusId(tenant.id);
       await adminTenantsService.toggleActive(tenant.id, active);
-      showToggleActive(active, TOGGLE_ACTIVE_LABELS.empresa);
+      showToggleActive(active, TOGGLE_ACTIVE_LABELS.company);
       void load();
     } catch (error) {
       showError('Erro ao atualizar status da empresa.', error);
@@ -316,10 +311,39 @@ export function AdminTenantsPage() {
         ),
       },
       {
+        id: 'enter',
+        label: 'Entrar',
+        hideable: false,
+        className: 'w-[72px]',
+        render: (tenant) => (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            mode="icon"
+            className="size-8"
+            aria-label="Entrar na empresa"
+            title="Entrar na empresa"
+            disabled={Boolean(impersonatingId)}
+            data-grid-no-row-select
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleImpersonate(tenant);
+            }}
+          >
+            {impersonatingId === tenant.id ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <LogIn className="size-4" />
+            )}
+          </Button>
+        ),
+      },
+      {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (tenant) => (
           <GridRowActions actions={getTenantRowActions(tenant)} />
         ),
@@ -338,7 +362,6 @@ export function AdminTenantsPage() {
         className: 'w-[80px]',
         render: (tenant) => (
           <Switch
-            size="sm"
             checked={tenant.is_active}
             disabled={rowStatusId === tenant.id}
             onCheckedChange={(checked) => void handleRowStatusChange(tenant, checked)}
@@ -377,11 +400,7 @@ export function AdminTenantsPage() {
         id: 'slug',
         label: 'Slug',
         className: 'min-w-[180px]',
-        render: (tenant) => (
-          <GridBadge variant="outline" className="font-mono">
-            {tenant.slug}
-          </GridBadge>
-        ),
+        render: (tenant) => <TenantSlugBadge slug={tenant.slug} />,
       },
       {
         id: 'timezone',
@@ -416,6 +435,8 @@ export function AdminTenantsPage() {
     ],
     [
       getTenantRowActions,
+      handleImpersonate,
+      impersonatingId,
       rowStatusId,
       selection.selected,
       selection.toggleSelect,
@@ -642,6 +663,9 @@ export function AdminTenantsPage() {
                 <OrganizationCard
                   tenant={tenant}
                   actions={getTenantRowActions(tenant)}
+                  onEnter={() => void handleImpersonate(tenant)}
+                  enterDisabled={Boolean(impersonatingId)}
+                  enterLoading={impersonatingId === tenant.id}
                 />
               )}
             />
@@ -659,6 +683,9 @@ export function AdminTenantsPage() {
                 <OrganizationCard
                   tenant={tenant}
                   actions={getTenantRowActions(tenant)}
+                  onEnter={() => void handleImpersonate(tenant)}
+                  enterDisabled={Boolean(impersonatingId)}
+                  enterLoading={impersonatingId === tenant.id}
                 />
               )}
             />

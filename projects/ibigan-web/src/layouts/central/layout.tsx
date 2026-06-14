@@ -11,6 +11,8 @@ import {
   PageToolbarProvider,
   useClearPageToolbarAlertOnNavigate,
 } from '@/providers/page-toolbar-provider';
+import { NotificationPreferencesSheetProvider } from '@/providers/notification-preferences-sheet-provider';
+import { NotificationsSheetProvider } from '@/providers/notifications-sheet-provider';
 import { Footer } from '@/layouts/demo1/components/footer';
 import { ScrollToTopButton } from '@/components/common/scroll-to-top-button';
 import { ScrollTopAnchor } from '@/components/common/scroll-top-anchor';
@@ -122,16 +124,18 @@ export function CentralLayout() {
   }, [isSidebarMode]);
 
   return (
-    <>
-      <Helmet>
-        <title>{item?.title ?? 'Painel central'}</title>
-      </Helmet>
+    <NotificationPreferencesSheetProvider>
+      <NotificationsSheetProvider>
+        <Helmet>
+          <title>{item?.title ?? 'Painel central'}</title>
+        </Helmet>
 
-      {!isMobile && isSidebarMode ? <CentralSidebar /> : null}
+        {!isMobile && isSidebarMode ? <CentralSidebar /> : null}
 
-      <PageToolbarProvider>
+        <PageToolbarProvider>
           <CentralLayoutContent />
         </PageToolbarProvider>
-    </>
+      </NotificationsSheetProvider>
+    </NotificationPreferencesSheetProvider>
   );
 }

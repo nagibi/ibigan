@@ -22,6 +22,7 @@ import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-g
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { FormSwitchControl } from '@/components/grid/form-switch-control';
 import { Input } from '@/components/ui/input';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -29,7 +30,6 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 
 const schema = z.object({
   title: z.string().min(1, 'Título é obrigatório.'),
@@ -393,7 +393,7 @@ export function MenuFormPage() {
                   <FormItem>
                     <FormLabel>Requer autenticação</FormLabel>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <FormSwitchControl checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -323,7 +323,7 @@ export function WebhooksPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (webhook) => (
           <GridRowActions
             actions={[
@@ -361,7 +361,6 @@ export function WebhooksPage() {
         className: 'w-[80px]',
         render: (webhook) => (
           <Switch
-            size="sm"
             checked={webhook.is_active}
             disabled={rowStatusId === webhook.id}
             onCheckedChange={(checked) => void handleRowStatusChange(webhook, checked)}

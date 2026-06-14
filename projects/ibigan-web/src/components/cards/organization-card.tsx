@@ -1,18 +1,26 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { LoaderCircle, LogIn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { GridCardActions } from '@/components/grid/grid-card-actions';
 import type { GridRowAction } from '@/components/grid/grid-row-actions';
 import { formatCnpj } from '@/lib/brazilian-masks';
 import type { AdminTenant } from '@/services/admin-tenants.service';
+import { Button } from '@/components/ui/button';
 
 export function OrganizationCard({
   tenant,
   actions,
+  onEnter,
+  enterDisabled = false,
+  enterLoading = false,
 }: {
   tenant: AdminTenant;
   actions: GridRowAction[];
+  onEnter?: () => void;
+  enterDisabled?: boolean;
+  enterLoading?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -33,7 +41,29 @@ export function OrganizationCard({
         <p>{format(new Date(tenant.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
       </div>
 
-      <GridCardActions actions={actions} />
+      <div className="mt-auto flex items-center gap-2">
+        {onEnter ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="h-8 gap-1.5"
+            disabled={enterDisabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEnter();
+            }}
+          >
+            {enterLoading ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <LogIn className="size-4" />
+            )}
+            Entrar
+          </Button>
+        ) : null}
+        <GridCardActions actions={actions} />
+      </div>
     </div>
   );
 }

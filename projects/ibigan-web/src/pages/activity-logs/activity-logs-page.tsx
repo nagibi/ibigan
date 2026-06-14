@@ -154,7 +154,7 @@ export function ActivityLogsPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (log) => (
           <GridRowActions
             actions={[

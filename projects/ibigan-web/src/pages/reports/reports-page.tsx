@@ -254,7 +254,7 @@ export function ReportsPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (report) => (
           <GridRowActions
             actions={[
@@ -293,7 +293,6 @@ export function ReportsPage() {
         className: 'w-[80px]',
         render: (report) => (
           <Switch
-            size="sm"
             checked={report.is_active}
             disabled={rowStatusId === report.id}
             onCheckedChange={(checked) => void handleRowStatusChange(report, checked)}

@@ -22,10 +22,10 @@ import { FormFieldGrid, FormFieldGridItem, FormRepeatableRow, FormRepeatableRowA
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { FormSwitchControl } from '@/components/grid/form-switch-control';
 import { SqlEditor } from '@/components/editor/sql-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import {
   Form,
   FormControl,
@@ -331,9 +331,12 @@ export function ReportFormPage() {
               {!isEditing && (
                 <FormFieldGridItem>
                   <FormField control={form.control} name="is_active" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0 pt-8">
-                      <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <FormItem>
                       <FormLabel>Ativo</FormLabel>
+                      <FormControl>
+                        <FormSwitchControl checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )} />
                 </FormFieldGridItem>
@@ -407,9 +410,11 @@ export function ReportFormPage() {
                       </FormItem>
                     )} />
                     <FormField control={form.control} name={`parameters.${i}.required`} render={({ field: f }) => (
-                      <FormItem className="flex items-center gap-2 space-y-0 pb-1">
-                        {i === 0 && <FormLabel className="text-xs block mb-2">Obrigatório</FormLabel>}
-                        <FormControl><Switch checked={f.value} onCheckedChange={f.onChange} /></FormControl>
+                      <FormItem>
+                        {i === 0 && <FormLabel className="text-xs">Obrigatório</FormLabel>}
+                        <FormControl>
+                          <FormSwitchControl checked={f.value} onCheckedChange={f.onChange} />
+                        </FormControl>
                       </FormItem>
                     )} />
                     <FormRepeatableRowAction>

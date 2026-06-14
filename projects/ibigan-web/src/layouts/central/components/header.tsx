@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Menu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Bell, Menu } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
 import { type MenuMode } from '@/config/types';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
+import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
+import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -20,6 +23,7 @@ import { HorizontalMenu } from '@/layouts/demo1/components/horizontal-menu';
 import { SidebarMenu } from '@/layouts/demo1/components/sidebar-menu';
 
 export function CentralHeader() {
+  const { t } = useTranslation();
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const { pathname } = useLocation();
   const mobileMode = useIsMobile();
@@ -78,7 +82,21 @@ export function CentralHeader() {
           ) : null}
         </div>
 
-        <div className="relative z-20 flex shrink-0 items-center gap-3">
+        <div className="relative z-20 flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-3">
+          <NotificationsSheet
+            trigger={
+              <ToolbarTooltip content={t('header.tooltip.notifications')}>
+                <Button
+                  variant="ghost"
+                  mode="icon"
+                  shape="circle"
+                  className="size-8 shrink-0 hover:bg-primary/10 hover:[&_svg]:text-primary sm:size-9"
+                >
+                  <Bell className="size-4 sm:size-4.5!" />
+                </Button>
+              </ToolbarTooltip>
+            }
+          />
           <UserDropdownMenu />
         </div>
       </Container>

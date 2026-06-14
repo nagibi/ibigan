@@ -348,7 +348,7 @@ export function MessageTemplatesPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (template) => (
           <GridRowActions
             actions={[
@@ -387,7 +387,6 @@ export function MessageTemplatesPage() {
         className: 'w-[80px]',
         render: (template) => (
           <Switch
-            size="sm"
             checked={template.is_active}
             disabled={rowStatusId === template.id}
             onCheckedChange={(checked) => void handleRowStatusChange(template, checked)}

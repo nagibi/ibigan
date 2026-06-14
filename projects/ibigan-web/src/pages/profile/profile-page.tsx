@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { NOTIFICATION_PREFERENCES_TITLE } from '@/lib/notification-preferences-path';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
-import { Bell, Building2, Camera, ChevronRight, LoaderCircle, Trash2 } from 'lucide-react';
+import { Bell, Camera, ChevronRight, LoaderCircle, Trash2 } from 'lucide-react';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import {
   mapUserProfileToFormValues,
@@ -21,13 +21,16 @@ import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { focusFirstFormError, validateFormWithFocus } from '@/lib/focus-first-form-error';
+import { useCentralOnlySession } from '@/hooks/use-central-only-session';
+import { useImpersonate } from '@/hooks/use-impersonate';
 import { authService } from '@/services/auth.service';
-import { profileService } from '@/services/profile.service';
+import { adminTenantsService, type AdminTenant } from '@/services/admin-tenants.service';
+import { profileService, type Profile } from '@/services/profile.service';
 import { useTenantSwitch } from '@/hooks/use-tenant-switch';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { getInitials } from '@/lib/helpers';
 import { resolveMenuIcon } from '@/lib/menu-icons';
-import { cn } from '@/lib/utils';
 import { SecurityContent } from '@/components/security/security-content';
 import { UserProfileFields } from '@/components/profile/user-profile-fields';
 import { AvatarCropDialog } from '@/components/profile/avatar-crop-dialog';
@@ -46,7 +49,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import { ProfilePageSkeleton, ProfileTenantListSkeleton } from '@/pages/profile/profile-page-skeleton';
+import { ProfileTenantSelect } from '@/components/profile/profile-tenant-select';
+import { ProfilePageSkeleton } from '@/pages/profile/profile-page-skeleton';
 
 const USER_PROFILE_FALLBACK = {
   name: '',
@@ -69,14 +73,25 @@ const passwordSchema = z.object({
 
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
+type ProfileTenantItem = {
+  id: string;
+  name: string | null;
+  slug: string;
+};
+
 export function ProfilePage() {
   const queryClient = useQueryClient();
+  const isCentralOnly = useCentralOnlySession();
+  const centralToken = useCentralAuthStore((state) => state.centralToken);
+  const centralUser = useCentralAuthStore((state) => state.centralUser);
+  const setCentralAuth = useCentralAuthStore((state) => state.setCentralAuth);
   const { open: openPreferences } = useNotificationPreferencesSheet();
   const profileMenu = useApiMenuByPath('/profile');
   const notificationsMenu = useApiMenuByPath('/notifications');
   const notificationPreferencesMenu = useApiMenuByPath('/notification-preferences');
   const { user, setAuth, tenantId, token } = useAuthStore();
   const { switchToTenant, switchingId } = useTenantSwitch();
+  const { impersonate, impersonatingId } = useImpersonate();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
@@ -91,13 +106,40 @@ export function ProfilePage() {
   });
 
   const { data: tenantsData, isLoading: isLoadingTenants } = useQuery({
-    queryKey: ['user-tenants'],
-    queryFn: () => authService.listTenants(),
+    queryKey: ['profile-tenants', isCentralOnly ? 'central' : 'tenant'],
+    queryFn: async () => {
+      if (isCentralOnly) {
+        return adminTenantsService.list(1, 100);
+      }
+
+      return authService.listTenants();
+    },
     staleTime: 5 * 60 * 1000,
   });
 
-  const profile = data?.data.result;
-  const tenants = tenantsData?.data.result ?? [];
+  const profile = data?.data.result as Profile | undefined;
+
+  const tenants = useMemo<ProfileTenantItem[]>(() => {
+    if (!tenantsData) return [];
+
+    if (isCentralOnly) {
+      return tenantsData.data.result.data.map((tenant: AdminTenant) => ({
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+      }));
+    }
+
+    return tenantsData.data.result;
+  }, [isCentralOnly, tenantsData]);
+
+  const adminTenantsById = useMemo(() => {
+    if (!isCentralOnly || !tenantsData) return new Map<string, AdminTenant>();
+
+    return new Map(
+      tenantsData.data.result.data.map((tenant: AdminTenant) => [tenant.id, tenant]),
+    );
+  }, [isCentralOnly, tenantsData]);
 
   const NotificationsIcon = notificationsMenu
     ? resolveMenuIcon({
@@ -140,18 +182,28 @@ export function ProfilePage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: UserProfileFormData) =>
-      profileService.update(normalizeUserProfilePayload(data)),
+    mutationFn: (formData: UserProfileFormData) =>
+      profileService.update(normalizeUserProfilePayload(formData)),
     onSuccess: (res) => {
+      const result = res.data.result;
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      if (token && tenantId && user) {
+
+      if (isCentralOnly && centralToken && centralUser) {
+        setCentralAuth(centralToken, {
+          id: result.id,
+          name: result.name,
+          email: result.email,
+          is_super_admin: centralUser.is_super_admin,
+        });
+      } else if (token && tenantId && user) {
         setAuth(token, tenantId, {
           ...user,
-          name: res.data.result.name,
-          email: res.data.result.email,
+          name: result.name,
+          email: result.email,
         });
       }
-      profileForm.reset(mapUserProfileToFormValues(res.data.result), {
+
+      profileForm.reset(mapUserProfileToFormValues(result), {
         keepDirty: false,
         keepErrors: false,
         keepTouched: false,
@@ -169,7 +221,12 @@ export function ProfilePage() {
   });
 
   const passwordMutation = useMutation({
-    mutationFn: (data: PasswordFormData) => profileService.updatePassword(data),
+    mutationFn: (formData: PasswordFormData) =>
+      profileService.updatePassword({
+        current_password: formData.current_password,
+        password: formData.password,
+        password_confirmation: formData.password_confirmation,
+      }),
     onSuccess: () => {
       passwordForm.reset();
       apiNotify.showSuccess('Senha alterada!');
@@ -375,6 +432,20 @@ export function ProfilePage() {
     });
   }
 
+  function handleTenantClick(tenant: ProfileTenantItem) {
+    if (isCentralOnly) {
+      const adminTenant = adminTenantsById.get(tenant.id);
+      if (adminTenant) {
+        void impersonate(adminTenant);
+      }
+      return;
+    }
+
+    void switchToTenant(tenant.id);
+  }
+
+  const tenantActionPendingId = isCentralOnly ? impersonatingId : switchingId;
+
   if (isLoading) {
     return <ProfilePageSkeleton />;
   }
@@ -457,53 +528,16 @@ export function ProfilePage() {
       </Form>
 
       <FormPanel title="Empresas">
-        {isLoadingTenants ? (
-          <ProfileTenantListSkeleton count={2} />
-        ) : tenants.length === 0 ? (
+        {tenants.length === 0 && !isLoadingTenants ? (
           <p className="text-sm text-muted-foreground">Nenhuma empresa vinculada à sua conta.</p>
         ) : (
-          <div className="space-y-2">
-            {tenants.map((tenant) => {
-              const isCurrent = tenant.id === tenantId;
-
-              return (
-                <button
-                  key={tenant.id}
-                  type="button"
-                  disabled={isCurrent || switchingId !== null}
-                  onClick={() => {
-                    if (!isCurrent) {
-                      void switchToTenant(tenant.id);
-                    }
-                  }}
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
-                    isCurrent
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'border-border hover:border-primary hover:bg-muted/50',
-                    !isCurrent && switchingId !== null && 'cursor-not-allowed opacity-60',
-                  )}
-                >
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="size-4 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{tenant.name ?? tenant.slug}</p>
-                    <p className="truncate text-xs text-muted-foreground">{tenant.slug}</p>
-                  </div>
-                  {isCurrent ? (
-                    <Badge variant="primary" appearance="light" size="sm" className="shrink-0">
-                      Atual
-                    </Badge>
-                  ) : switchingId === tenant.id ? (
-                    <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <ProfileTenantSelect
+            tenants={tenants}
+            currentTenantId={isCentralOnly ? null : tenantId}
+            pendingTenantId={tenantActionPendingId}
+            loading={isLoadingTenants}
+            onSelect={handleTenantClick}
+          />
         )}
       </FormPanel>
 

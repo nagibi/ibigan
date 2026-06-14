@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Building2, ChevronRight, LoaderCircle } from 'lucide-react';
+import { ChevronRight, LoaderCircle } from 'lucide-react';
+import { TenantSlugIcon } from '@/components/tenant/tenant-slug-icon';
 import { authService, type UserTenant } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useTenantSwitch } from '@/hooks/use-tenant-switch';
@@ -90,9 +91,7 @@ export function TenantSelectPage() {
             onClick={() => void handleSelect(tenant.id)}
           >
             <CardContent className="flex items-center gap-4 py-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Building2 className="size-5 text-primary" />
-              </div>
+              <TenantSlugIcon slug={tenant.slug} size="lg" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{tenant.name ?? tenant.slug}</p>
                 <p className="text-xs text-muted-foreground">{tenant.id}</p>

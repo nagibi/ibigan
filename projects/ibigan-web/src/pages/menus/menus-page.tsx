@@ -101,7 +101,7 @@ const MENU_COLUMN_DEFINITIONS: GridColumnDef<ApiMenu>[] = [
     filter: { type: 'multi', filterKey: 'id', placeholder: 'Id', inputMode: 'numeric' },
     render: () => null,
   },
-  { id: 'actions', label: 'Ações', hideable: false, className: 'w-[72px]', render: () => null },
+  { id: 'actions', label: 'Ações', hideable: false, className: 'min-w-[100px] w-[100px]', render: () => null },
   {
     id: 'active',
     label: 'Ativo',
@@ -387,7 +387,6 @@ function renderMenuTableCell(
     case 'active':
       return (
         <Switch
-          size="sm"
           checked={menu.is_active}
           disabled={options.rowStatusId === menu.id}
           onCheckedChange={(checked) => options.onToggleActive(menu, checked)}

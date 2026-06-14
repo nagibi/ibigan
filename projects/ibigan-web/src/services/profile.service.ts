@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import { profileApiBase } from '@/lib/profile-api';
 import type { UserProfileFormData } from '@/lib/user-profile-fields';
 
 export interface Profile {
@@ -17,25 +18,25 @@ export interface Profile {
 
 export const profileService = {
   show: () =>
-    api.get<{ status: number; result: Profile }>('/v1/profile'),
+    api.get<{ status: number; result: Profile }>(profileApiBase()),
 
   update: (payload: UserProfileFormData) =>
-    api.put<{ status: number; result: Profile }>('/v1/profile', payload),
+    api.put<{ status: number; result: Profile }>(profileApiBase(), payload),
 
   updatePassword: (payload: {
     current_password: string;
     password: string;
     password_confirmation: string;
-  }) => api.put('/v1/profile/password', payload),
+  }) => api.put(`${profileApiBase()}/password`, payload),
 
   uploadAvatar: (file: File) => {
     const form = new FormData();
     form.append('avatar', file);
-    return api.post<{ status: number; result: Profile }>('/v1/profile/avatar', form, {
+    return api.post<{ status: number; result: Profile }>(`${profileApiBase()}/avatar`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
 
   deleteAvatar: () =>
-    api.delete('/v1/profile/avatar'),
+    api.delete(`${profileApiBase()}/avatar`),
 };

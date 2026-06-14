@@ -113,6 +113,8 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     : (profileData?.data.result.email ?? user?.email ?? '');
   const primaryRole = isCentralOnly ? 'super-admin' : user?.roles?.[0];
 
+  const profilePath = '/profile';
+
   async function handleLogout() {
     const redirectTo = await logoutFromApp();
     navigate(redirectTo);
@@ -169,7 +171,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             <div className="min-w-0 flex flex-col">
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate(profilePath)}
                 className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
               >
                 {displayName}
@@ -191,12 +193,13 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
 
         <DropdownMenuSeparator />
 
+        <DropdownMenuItem onClick={() => navigate(profilePath)}>
+          <ProfileIcon className="size-4" />
+          {profileLabel}
+        </DropdownMenuItem>
+
         {!isCentralOnly ? (
           <>
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
-              <ProfileIcon className="size-4" />
-              {profileLabel}
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/notifications')}>
               <MyNotificationsIcon className="size-4" />
               {myNotificationsLabel}

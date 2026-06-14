@@ -22,11 +22,12 @@ import { FormFieldGrid, FormFieldGridItem, FormInlineRow } from '@/components/gr
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
 import { FormPanel } from '@/components/grid/form-panel';
 import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { FormSwitchControl } from '@/components/grid/form-switch-control';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -335,10 +336,14 @@ export function CampaignFormPage() {
           </FormPanel>
 
           <FormPanel title="Conteúdo">
-            <div className="mb-4 flex items-center justify-end gap-2">
-              <span className="text-sm text-muted-foreground">Usar template</span>
-              <Switch checked={useTemplate} onCheckedChange={setUseTemplate} />
-            </div>
+            <FormFieldGrid className="mb-4">
+              <FormFieldGridItem>
+                <div className="flex flex-col gap-2.5">
+                  <Label>Usar template</Label>
+                  <FormSwitchControl checked={useTemplate} onCheckedChange={setUseTemplate} />
+                </div>
+              </FormFieldGridItem>
+            </FormFieldGrid>
             {useTemplate ? (
               <FormField control={form.control} name="template_id" render={({ field }) => (
                 <FormItem>

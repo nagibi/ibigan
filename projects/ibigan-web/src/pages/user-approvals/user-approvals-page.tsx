@@ -203,7 +203,7 @@ export function UserApprovalsPage() {
         id: 'actions',
         label: 'Ações',
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (approval) => (
           <GridRowActions
             actions={[

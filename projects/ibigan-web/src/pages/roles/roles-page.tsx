@@ -248,7 +248,7 @@ export function RolesPage() {
         id: 'actions',
         label: cols.actions,
         hideable: false,
-        className: 'w-[72px]',
+        className: 'min-w-[100px] w-[100px]',
         render: (role) => (
           <GridRowActions actions={getRoleRowActions(role)} />
         ),
