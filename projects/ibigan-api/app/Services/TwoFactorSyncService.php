@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\TwoFactorMethod;
 use App\Models\Central\CentralUser;
 use App\Models\Tenant;
 use App\Models\User;
@@ -12,7 +13,7 @@ final class TwoFactorSyncService
 {
     public function syncFromTenantUser(User $tenantUser): void
     {
-        if ($tenantUser->two_factor_confirmed_at === null || ! $tenantUser->two_factor_secret) {
+        if ($tenantUser->two_factor_confirmed_at === null) {
             return;
         }
 
@@ -26,6 +27,7 @@ final class TwoFactorSyncService
         }
 
         $centralUser->update([
+            'two_factor_method' => $tenantUser->two_factor_method ?? TwoFactorMethod::Totp,
             'two_factor_secret' => $tenantUser->two_factor_secret,
             'two_factor_recovery_codes' => $tenantUser->two_factor_recovery_codes,
             'two_factor_confirmed_at' => $tenantUser->two_factor_confirmed_at,
@@ -43,6 +45,7 @@ final class TwoFactorSyncService
         }
 
         $centralUser->update([
+            'two_factor_method' => null,
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,

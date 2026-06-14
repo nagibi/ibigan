@@ -5,18 +5,20 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Central;
 
 use App\Http\Controllers\Controller;
+use App\Enums\TwoFactorMethod;
 use App\Models\Central\CentralUser;
+use App\Services\TwoFactorEmailService;
 use App\Support\ApiResponse;
+use App\Support\MasksEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 final class CentralAuthController extends Controller
 {
-    public function login(Request $request): JsonResponse
+    public function login(Request $request, TwoFactorEmailService $twoFactorEmailService): JsonResponse
     {
         $validated = $request->validate([
             'email' => ['required', 'email'],
@@ -43,16 +45,24 @@ final class CentralAuthController extends Controller
 
         if ($user->two_factor_confirmed_at !== null) {
             $twoFactorToken = Str::uuid()->toString();
+            $method = $user->two_factor_method ?? TwoFactorMethod::Totp;
 
-            Cache::put('two_factor:'.$twoFactorToken, [
+            $twoFactorEmailService->storeChallenge($twoFactorToken, [
                 'scope' => 'central',
                 'user_id' => $user->id,
-            ], now()->addMinutes(5));
+                'method' => $method->value,
+            ]);
+
+            if ($method === TwoFactorMethod::Email) {
+                $twoFactorEmailService->sendLoginCodeForCentralUser($user, $twoFactorToken);
+            }
 
             return ApiResponse::success(
                 [
                     'requires_2fa' => true,
                     'two_factor_token' => $twoFactorToken,
+                    'two_factor_method' => $method->value,
+                    'masked_email' => MasksEmail::mask($user->email),
                 ],
                 'auth.login.two_factor_required',
                 severity: 'info',

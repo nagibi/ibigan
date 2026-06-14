@@ -74,7 +74,13 @@ export function CentralLoginPage() {
 
       if (result.requires_2fa && result.two_factor_token) {
         setRequires2FA(result.two_factor_token);
-        navigate('/auth/two-factor', { state: { scope: 'central' } });
+        navigate('/auth/two-factor', {
+          state: {
+            scope: 'central',
+            two_factor_method: result.two_factor_method,
+            masked_email: result.masked_email,
+          },
+        });
         return;
       }
 

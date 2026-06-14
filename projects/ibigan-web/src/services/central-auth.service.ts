@@ -6,6 +6,8 @@ export interface CentralLoginResult {
   user?: CentralUser;
   requires_2fa?: boolean;
   two_factor_token?: string;
+  two_factor_method?: 'totp' | 'email';
+  masked_email?: string;
   scope?: 'central';
 }
 

@@ -4,13 +4,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, LoaderCircle, RefreshCw, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Copy, LoaderCircle, Mail, RefreshCw, Shield, ShieldCheck, ShieldOff, Smartphone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
-import { twoFactorService } from '@/services/two-factor.service';
+import { twoFactorService, type TwoFactorMethod } from '@/services/two-factor.service';
+import { FormStatusBadge } from '@/components/grid/form-record-identifier';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
@@ -20,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/get-api-error-message';
 
 const confirmSchema = z.object({
   code: z.string().min(6, 'Código inválido.').max(10),
@@ -35,10 +37,13 @@ type DisableFormData = z.infer<typeof disableSchema>;
 type Step = 'idle' | 'setup' | 'confirm' | 'enabled';
 
 export function SecurityContent() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useApiToolbarAlert();
 
   const [step, setStep] = useState<Step>('idle');
+  const [setupMethod, setSetupMethod] = useState<TwoFactorMethod>('totp');
+  const [maskedEmail, setMaskedEmail] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [secret, setSecret] = useState('');
   const [setupCodes, setSetupCodes] = useState<string[]>([]);
@@ -47,19 +52,13 @@ export function SecurityContent() {
   const { data: twoFactorStatus } = useQuery({
     queryKey: ['two-factor-status'],
     queryFn: async () => {
-      try {
-        const res = await twoFactorService.recoveryCodes();
-        return {
-          enabled: true,
-          recovery_codes: res.data.result.recovery_codes,
-        };
-      } catch {
-        return { enabled: false, recovery_codes: [] as string[] };
-      }
+      const res = await twoFactorService.status();
+      return res.data.result;
     },
   });
 
   const is2FAEnabled = twoFactorStatus?.enabled ?? false;
+  const activeMethod = twoFactorStatus?.method ?? setupMethod;
 
   const confirmForm = useForm<ConfirmFormData>({
     resolver: zodResolver(confirmSchema),
@@ -72,14 +71,32 @@ export function SecurityContent() {
   });
 
   const enableMutation = useMutation({
-    mutationFn: () => twoFactorService.enable(),
+    mutationFn: (method: TwoFactorMethod) => twoFactorService.enable(method),
     onSuccess: (res) => {
-      setQrCodeUrl(res.data.result.qr_code_url);
-      setSecret(res.data.result.secret);
-      setSetupCodes(res.data.result.recovery_codes);
+      const result = res.data.result;
+      setSetupMethod(result.method);
+      setSetupCodes(result.recovery_codes);
+      setMaskedEmail(result.masked_email ?? twoFactorStatus?.masked_email ?? '');
+
+      if (result.method === 'email') {
+        setStep('setup');
+        return;
+      }
+
+      setQrCodeUrl(result.qr_code_url ?? '');
+      setSecret(result.secret ?? '');
       setStep('setup');
     },
     onError: () => toast.error('Erro ao habilitar 2FA.'),
+  });
+
+  const resendSetupMutation = useMutation({
+    mutationFn: () => twoFactorService.resendSetupCode(),
+    onSuccess: (res) => {
+      setMaskedEmail(res.data.result.masked_email);
+      toast.success('Código reenviado!');
+    },
+    onError: () => toast.error('Erro ao reenviar código.'),
   });
 
   const confirmMutation = useMutation({
@@ -103,8 +120,14 @@ export function SecurityContent() {
       disableForm.reset();
       toast.success('2FA desabilitado.');
     },
-    onError: () => {
-      disableForm.setError('password', { message: 'Senha incorreta.' });
+    onError: (error) => {
+      const validationMessage = (
+        error as { response?: { data?: { errors?: { password?: string[] } } } }
+      )?.response?.data?.errors?.password?.[0];
+
+      disableForm.setError('password', {
+        message: validationMessage ?? getApiErrorMessage(error, 'Senha incorreta.'),
+      });
     },
   });
 
@@ -126,6 +149,10 @@ export function SecurityContent() {
     ? setupCodes
     : twoFactorStatus?.recovery_codes ?? [];
 
+  const methodLabel = activeMethod === 'email'
+    ? t('security.two_factor.method_email')
+    : t('security.two_factor.method_totp');
+
   return (
     <div className="space-y-6">
       <Card>
@@ -143,22 +170,53 @@ export function SecurityContent() {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant={is2FAEnabled || step === 'enabled' ? 'default' : 'secondary'}>
-              {is2FAEnabled || step === 'enabled' ? 'Ativo' : 'Inativo'}
-            </Badge>
+            <FormStatusBadge isActive={is2FAEnabled || step === 'enabled'} />
           </div>
         </CardHeader>
         <CardContent>
           {step === 'idle' && !is2FAEnabled && (
-            <Button onClick={() => enableMutation.mutate()} disabled={enableMutation.isPending}>
-              {enableMutation.isPending
-                ? <><LoaderCircle className="size-4 mr-2 animate-spin" /> Configurando...</>
-                : <><Shield className="size-4 mr-2" /> Habilitar 2FA</>
-              }
-            </Button>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t('security.two_factor.choose_method')}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => enableMutation.mutate('totp')} disabled={enableMutation.isPending}>
+                  <Smartphone className="size-4 mr-2" /> {t('security.two_factor.method_totp')}
+                </Button>
+                <Button variant="outline" onClick={() => enableMutation.mutate('email')} disabled={enableMutation.isPending}>
+                  <Mail className="size-4 mr-2" /> {t('security.two_factor.method_email')}
+                </Button>
+              </div>
+            </div>
           )}
 
-          {step === 'setup' && (
+          {step === 'setup' && setupMethod === 'email' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {t('security.two_factor.email_setup_hint', { email: maskedEmail })}
+              </p>
+              <Form {...confirmForm}>
+                <form onSubmit={confirmForm.handleSubmit((data) => confirmMutation.mutate(data))} className="space-y-3">
+                  <FormField control={confirmForm.control} name="code" render={({ field}) => (
+                    <FormItem>
+                      <FormLabel>Código de verificação</FormLabel>
+                      <FormControl>
+                        <Input placeholder="000000" maxLength={6} className="max-w-[200px] text-center tracking-widest" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" disabled={confirmMutation.isPending}>Confirmar e ativar</Button>
+                    <Button type="button" variant="outline" onClick={() => resendSetupMutation.mutate()} disabled={resendSetupMutation.isPending}>
+                      {t('security.two_factor.resend_setup')}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setStep('idle')}>Cancelar</Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
+          )}
+
+          {step === 'setup' && setupMethod === 'totp' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Escaneie o QR code abaixo com seu aplicativo autenticador (Google Authenticator, Authy, etc).
@@ -224,7 +282,7 @@ export function SecurityContent() {
               <div>
                 <CardTitle>Códigos de recuperação</CardTitle>
                 <CardDescription>
-                  Use estes códigos caso perca acesso ao seu aplicativo autenticador.
+                  Use estes códigos caso perca acesso ao seu segundo fator.
                   Guarde-os em local seguro.
                 </CardDescription>
               </div>

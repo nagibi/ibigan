@@ -237,14 +237,14 @@ function StatCard({
 function TenantStatusBadge({ status }: { status: DashboardStats['tenants']['rows'][0]['status'] }) {
   const { t } = useTranslation();
   const map = {
-    active: { label: t('dashboard.status.active'), className: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' },
-    trial: { label: t('dashboard.status.trial'), className: 'bg-amber-500/15 text-amber-500 border-amber-500/30' },
-    inactive: { label: t('dashboard.status.inactive'), className: 'bg-muted text-muted-foreground' },
+    active: { label: t('dashboard.status.active'), variant: 'success' as const },
+    trial: { label: t('dashboard.status.trial'), variant: 'warning' as const },
+    inactive: { label: t('dashboard.status.inactive'), variant: 'secondary' as const },
   };
   const cfg = map[status] ?? map.inactive;
 
   return (
-    <Badge variant="outline" className={cn('text-[10px] font-normal', cfg.className)}>
+    <Badge variant={cfg.variant} appearance="light" size="sm" className="text-[10px] font-normal">
       {cfg.label}
     </Badge>
   );

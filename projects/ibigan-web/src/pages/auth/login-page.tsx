@@ -93,7 +93,11 @@ export function LoginPage() {
       if (data.result.requires_2fa && data.result.two_factor_token) {
         setRequires2FA(data.result.two_factor_token);
         navigate('/auth/two-factor', {
-          state: { tenant_id: values.tenant_id },
+          state: {
+            tenant_id: values.tenant_id,
+            two_factor_method: data.result.two_factor_method,
+            masked_email: data.result.masked_email,
+          },
         });
         return;
       }

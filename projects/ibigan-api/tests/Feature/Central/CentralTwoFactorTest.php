@@ -5,10 +5,14 @@ declare(strict_types=1);
 use App\Models\Central\CentralUser;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\TwoFactorCodeNotification;
 use App\Services\TwoFactorSyncService;
+use App\Support\SystemMessageTemplates;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -155,4 +159,41 @@ it('limpa 2FA central ao desabilitar no tenant', function (): void {
 
     expect($centralUser?->two_factor_confirmed_at)->toBeNull();
     expect($centralUser?->two_factor_secret)->toBeNull();
+});
+
+it('login central com 2FA por e-mail valida código no cache central', function (): void {
+    Notification::fake();
+
+    $this->tenant->run(function (): void {
+        SystemMessageTemplates::seed();
+    });
+
+    Sanctum::actingAs($this->tenantUser, ['*'], 'sanctum');
+    $this->postJson('/api/v1/two-factor/enable', ['method' => 'email'], ['X-Tenant-ID' => $this->tenant->id]);
+
+    $user = $this->tenant->run(fn () => User::find($this->tenantUser->id));
+    $setupCode = Cache::get('two_factor_setup_code:'.$user->id);
+    $this->postJson('/api/v1/two-factor/confirm', ['code' => $setupCode], ['X-Tenant-ID' => $this->tenant->id]);
+
+    Notification::fake();
+
+    $loginResponse = $this->postJson('/api/central/v1/auth/login', [
+        'email' => 'super@ibigan.com',
+        'password' => 'senha123',
+    ])
+        ->assertOk()
+        ->assertJsonPath('result.two_factor_method', 'email');
+
+    $twoFactorToken = $loginResponse->json('result.two_factor_token');
+
+    tenancy()->end();
+    $loginCode = Cache::get('two_factor_login_code:'.$twoFactorToken);
+    expect($loginCode)->not->toBeNull();
+
+    $this->postJson('/api/v1/auth/two-factor-challenge', [
+        'two_factor_token' => $twoFactorToken,
+        'code' => $loginCode,
+    ])
+        ->assertOk()
+        ->assertJsonPath('result.scope', 'central');
 });

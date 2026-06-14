@@ -50,6 +50,7 @@ Route::prefix('v1')->group(function () {
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
         Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'verify'])->middleware('throttle:two-factor');
+        Route::post('two-factor-resend', [TwoFactorChallengeController::class, 'resend'])->middleware('throttle:two-factor');
     });
 
     Route::post('invites/accept', [InviteController::class, 'accept'])
@@ -118,8 +119,10 @@ Route::prefix('v1')
         });
 
         Route::prefix('two-factor')->group(function () {
+            Route::get('status', [TwoFactorController::class, 'status']);
             Route::post('enable', [TwoFactorController::class, 'enable']);
             Route::post('confirm', [TwoFactorController::class, 'confirm']);
+            Route::post('resend-setup-code', [TwoFactorController::class, 'resendSetupCode']);
             Route::post('disable', [TwoFactorController::class, 'disable']);
             Route::get('recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
             Route::post('recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes']);

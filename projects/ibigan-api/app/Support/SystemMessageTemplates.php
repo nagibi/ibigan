@@ -142,6 +142,30 @@ TEXT,
                 ],
                 'is_active'  => true,
             ],
+            [
+                'name'       => 'Código de verificação 2FA',
+                'slug'       => MessageTemplateSlugs::TWO_FACTOR_CODE,
+                'subject'    => 'Seu código de verificação',
+                'body'       => <<<'TEXT'
+Hello!
+
+{{context_line}}
+
+Seu código é: {{code}}
+
+Este código expira em {{expires_minutes}} minutos.
+
+Se você não solicitou este código, ignore este e-mail.
+TEXT,
+                'merge_tags' => [
+                    '{{name}}',
+                    '{{email}}',
+                    '{{code}}',
+                    '{{expires_minutes}}',
+                    '{{context_line}}',
+                ],
+                'is_active'  => true,
+            ],
         ];
     }
 

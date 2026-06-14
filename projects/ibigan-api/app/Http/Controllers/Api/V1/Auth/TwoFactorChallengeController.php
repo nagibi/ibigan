@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Enums\TwoFactorMethod;
 use App\Http\Controllers\Controller;
 use App\Models\Central\CentralUser;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\TwoFactorEmailService;
 use App\Services\TwoFactorSyncService;
 use App\Support\ApiResponse;
+use App\Support\MasksEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 use PragmaRX\Google2FALaravel\Facade as Google2FA;
@@ -21,18 +23,16 @@ final class TwoFactorChallengeController extends Controller
 {
     /**
      * Validar desafio 2FA após login e retornar token de acesso.
-     *
-     * Aceita código OTP ou recovery code. Rota pública.
      */
-    public function verify(Request $request, TwoFactorSyncService $twoFactorSyncService): JsonResponse
+    public function verify(Request $request, TwoFactorSyncService $twoFactorSyncService, TwoFactorEmailService $twoFactorEmailService): \Illuminate\Http\JsonResponse
     {
         $request->validate([
             'two_factor_token' => ['required', 'string', 'uuid'],
             'code' => ['required', 'string'],
         ]);
 
-        /** @var array{scope?: string, user_id: int, tenant_id?: string}|null $challenge */
-        $challenge = Cache::get('two_factor:'.$request->string('two_factor_token'));
+        /** @var array{scope?: string, user_id: int, tenant_id?: string, method?: string}|null $challenge */
+        $challenge = $twoFactorEmailService->getChallenge($request->string('two_factor_token')->toString());
 
         if (! $challenge) {
             throw ValidationException::withMessages([
@@ -47,16 +47,89 @@ final class TwoFactorChallengeController extends Controller
                 $request,
                 $challenge,
                 $twoFactorSyncService,
+                $twoFactorEmailService,
             );
         }
 
-        return $this->verifyTenantChallenge($request, $challenge);
+        return $this->verifyTenantChallenge($request, $challenge, $twoFactorEmailService);
     }
 
     /**
-     * @param  array{user_id: int, tenant_id?: string}  $challenge
+     * Reenviar código por e-mail durante o desafio de login.
      */
-    private function verifyTenantChallenge(Request $request, array $challenge): JsonResponse
+    public function resend(Request $request, TwoFactorEmailService $twoFactorEmailService): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'two_factor_token' => ['required', 'string', 'uuid'],
+        ]);
+
+        /** @var array{scope?: string, user_id: int, tenant_id?: string, method?: string}|null $challenge */
+        $challenge = $twoFactorEmailService->getChallenge($request->string('two_factor_token')->toString());
+
+        if (! $challenge || ($challenge['method'] ?? TwoFactorMethod::Totp->value) !== TwoFactorMethod::Email->value) {
+            throw ValidationException::withMessages([
+                'two_factor_token' => ['Token de autenticação inválido.'],
+            ]);
+        }
+
+        $token = $request->string('two_factor_token')->toString();
+        $scope = $challenge['scope'] ?? 'tenant';
+
+        if ($scope === 'central') {
+            $user = CentralUser::query()->find($challenge['user_id']);
+
+            if (! $user || $user->two_factor_confirmed_at === null) {
+                throw ValidationException::withMessages([
+                    'two_factor_token' => ['Token de autenticação inválido.'],
+                ]);
+            }
+
+            $twoFactorEmailService->sendLoginCodeForCentralUser($user, $token);
+
+            return ApiResponse::success(
+                ['masked_email' => MasksEmail::mask($user->email)],
+                'auth.two_factor.code_resent',
+                severity: 'success',
+            );
+        }
+
+        if (! isset($challenge['tenant_id'])) {
+            throw ValidationException::withMessages([
+                'two_factor_token' => ['Token de autenticação inválido.'],
+            ]);
+        }
+
+        $tenant = Tenant::find($challenge['tenant_id']);
+
+        if (! $tenant) {
+            throw ValidationException::withMessages([
+                'two_factor_token' => ['Organização não encontrada.'],
+            ]);
+        }
+
+        tenancy()->initialize($tenant);
+
+        $user = User::query()->find($challenge['user_id']);
+
+        if (! $user || $user->two_factor_confirmed_at === null) {
+            throw ValidationException::withMessages([
+                'two_factor_token' => ['Token de autenticação inválido.'],
+            ]);
+        }
+
+        $twoFactorEmailService->resendLoginCode($user, $token);
+
+        return ApiResponse::success(
+            ['masked_email' => MasksEmail::mask($user->email)],
+            'auth.two_factor.code_resent',
+            severity: 'success',
+        );
+    }
+
+    /**
+     * @param  array{user_id: int, tenant_id?: string, method?: string}  $challenge
+     */
+    private function verifyTenantChallenge(Request $request, array $challenge, TwoFactorEmailService $twoFactorEmailService): \Illuminate\Http\JsonResponse
     {
         if (! isset($challenge['tenant_id'])) {
             throw ValidationException::withMessages([
@@ -76,15 +149,22 @@ final class TwoFactorChallengeController extends Controller
 
         $user = User::query()->find($challenge['user_id']);
 
-        if (! $user || $user->two_factor_confirmed_at === null || ! $user->two_factor_secret) {
+        if (! $user || $user->two_factor_confirmed_at === null) {
             throw ValidationException::withMessages([
                 'two_factor_token' => ['Token de autenticação inválido.'],
             ]);
         }
 
+        $method = TwoFactorMethod::tryFrom($challenge['method'] ?? '')
+            ?? $user->two_factor_method
+            ?? TwoFactorMethod::Totp;
+
         $code = $request->string('code')->toString();
-        $verified = $this->verifyOtp($user->two_factor_secret, $code)
-            || $this->verifyRecoveryCode($user, $code);
+        $challengeToken = $request->string('two_factor_token')->toString();
+
+        $verified = $method === TwoFactorMethod::Email
+            ? ($twoFactorEmailService->verifyLoginCode($challengeToken, $code) || $this->verifyRecoveryCode($user, $code))
+            : ($this->verifyOtp($user->two_factor_secret, $code) || $this->verifyRecoveryCode($user, $code));
 
         if (! $verified) {
             throw ValidationException::withMessages([
@@ -92,9 +172,9 @@ final class TwoFactorChallengeController extends Controller
             ]);
         }
 
-        Cache::forget('two_factor:'.$request->string('two_factor_token'));
+        $twoFactorEmailService->forgetChallenge($challengeToken);
 
-        $token = $user->createToken('api-token')->plainTextToken;
+        $accessToken = $user->createToken('api-token')->plainTextToken;
         $request->setUserResolver(fn () => $user);
 
         return response()->json([
@@ -102,7 +182,7 @@ final class TwoFactorChallengeController extends Controller
             'message' => 'MSG000067',
             'description' => 'Login efetuado com sucesso!',
             'result' => [
-                'token' => $token,
+                'token' => $accessToken,
                 'tenant_id' => $tenant->id,
                 'user' => [
                     'id' => $user->id,
@@ -116,24 +196,32 @@ final class TwoFactorChallengeController extends Controller
     }
 
     /**
-     * @param  array{user_id: int}  $challenge
+     * @param  array{user_id: int, method?: string}  $challenge
      */
     private function verifyCentralChallenge(
         Request $request,
         array $challenge,
         TwoFactorSyncService $twoFactorSyncService,
-    ): JsonResponse {
+        TwoFactorEmailService $twoFactorEmailService,
+    ): \Illuminate\Http\JsonResponse {
         $user = CentralUser::query()->find($challenge['user_id']);
 
-        if (! $user || $user->two_factor_confirmed_at === null || ! $user->two_factor_secret) {
+        if (! $user || $user->two_factor_confirmed_at === null) {
             throw ValidationException::withMessages([
                 'two_factor_token' => ['Token de autenticação inválido.'],
             ]);
         }
 
+        $method = TwoFactorMethod::tryFrom($challenge['method'] ?? '')
+            ?? $user->two_factor_method
+            ?? TwoFactorMethod::Totp;
+
         $code = $request->string('code')->toString();
-        $verified = $this->verifyOtp($user->two_factor_secret, $code)
-            || $this->verifyCentralRecoveryCode($user, $code, $twoFactorSyncService);
+        $challengeToken = $request->string('two_factor_token')->toString();
+
+        $verified = $method === TwoFactorMethod::Email
+            ? ($twoFactorEmailService->verifyCentralLoginCode($challengeToken, $code) || $this->verifyCentralRecoveryCode($user, $code, $twoFactorSyncService))
+            : ($this->verifyOtp($user->two_factor_secret, $code) || $this->verifyCentralRecoveryCode($user, $code, $twoFactorSyncService));
 
         if (! $verified) {
             throw ValidationException::withMessages([
@@ -141,13 +229,13 @@ final class TwoFactorChallengeController extends Controller
             ]);
         }
 
-        Cache::forget('two_factor:'.$request->string('two_factor_token'));
+        $twoFactorEmailService->forgetChallenge($challengeToken);
 
-        $token = $user->createToken('central-api-token')->plainTextToken;
+        $accessToken = $user->createToken('central-api-token')->plainTextToken;
 
         return ApiResponse::success(
             [
-                'token' => $token,
+                'token' => $accessToken,
                 'scope' => 'central',
                 'user' => [
                     'id' => $user->id,

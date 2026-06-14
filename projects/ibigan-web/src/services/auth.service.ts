@@ -13,6 +13,8 @@ export interface LoginResponse {
     tenant_id: string;
     requires_2fa?: boolean;
     two_factor_token?: string;
+    two_factor_method?: 'totp' | 'email';
+    masked_email?: string;
     user: {
       id: number;
       name: string;

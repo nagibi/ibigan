@@ -14,10 +14,12 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Enums\TwoFactorMethod;
+use App\Services\TwoFactorEmailService;
+use App\Support\MasksEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 final class AuthController extends Controller
@@ -28,7 +30,7 @@ final class AuthController extends Controller
      * Retorna token de acesso e dados do usuário.
      * Se 2FA estiver ativo, retorna `requires_2fa: true` sem token.
      */
-    public function login(Request $request): JsonResponse
+    public function login(Request $request, TwoFactorEmailService $twoFactorEmailService): JsonResponse
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -60,17 +62,25 @@ final class AuthController extends Controller
 
         if ($user->two_factor_confirmed_at !== null) {
             $twoFactorToken = Str::uuid()->toString();
+            $method = $user->two_factor_method ?? TwoFactorMethod::Totp;
 
-            Cache::put('two_factor:'.$twoFactorToken, [
+            $twoFactorEmailService->storeChallenge($twoFactorToken, [
                 'scope' => 'tenant',
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
-            ], now()->addMinutes(5));
+                'method' => $method->value,
+            ]);
+
+            if ($method === TwoFactorMethod::Email) {
+                $twoFactorEmailService->sendLoginCodeForUser($user, $twoFactorToken);
+            }
 
             return ApiResponse::success(
                 [
                     'requires_2fa' => true,
                     'two_factor_token' => $twoFactorToken,
+                    'two_factor_method' => $method->value,
+                    'masked_email' => MasksEmail::mask($user->email),
                     'tenant_id' => $tenant->id,
                 ],
                 'auth.login.two_factor_required',

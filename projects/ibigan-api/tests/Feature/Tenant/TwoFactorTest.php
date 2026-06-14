@@ -140,6 +140,11 @@ it('retorna recovery codes', function (): void {
     Sanctum::actingAs($this->user, ['*'], 'sanctum');
     $this->postJson('/api/v1/two-factor/enable', [], ['X-Tenant-ID' => $this->tenant->id]);
 
+    $user = $this->tenant->run(fn () => User::find($this->user->id));
+    $secret = Crypt::decryptString($user->two_factor_secret);
+    $otp = (new Google2FA)->getCurrentOtp($secret);
+    $this->postJson('/api/v1/two-factor/confirm', ['code' => $otp], ['X-Tenant-ID' => $this->tenant->id]);
+
     $this->getJson('/api/v1/two-factor/recovery-codes', ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()
         ->assertJsonStructure(['result' => ['recovery_codes']]);
@@ -148,6 +153,11 @@ it('retorna recovery codes', function (): void {
 it('regenera recovery codes', function (): void {
     Sanctum::actingAs($this->user, ['*'], 'sanctum');
     $this->postJson('/api/v1/two-factor/enable', [], ['X-Tenant-ID' => $this->tenant->id]);
+
+    $user = $this->tenant->run(fn () => User::find($this->user->id));
+    $secret = Crypt::decryptString($user->two_factor_secret);
+    $otp = (new Google2FA)->getCurrentOtp($secret);
+    $this->postJson('/api/v1/two-factor/confirm', ['code' => $otp], ['X-Tenant-ID' => $this->tenant->id]);
 
     $first = $this->getJson('/api/v1/two-factor/recovery-codes', ['X-Tenant-ID' => $this->tenant->id])
         ->json('result.recovery_codes');

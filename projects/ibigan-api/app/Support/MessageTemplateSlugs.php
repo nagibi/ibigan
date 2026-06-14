@@ -19,4 +19,6 @@ final class MessageTemplateSlugs
     public const USER_REJECTED = 'usuario-rejeitado';
 
     public const PASSWORD_RESET = 'redefinicao-de-senha';
+
+    public const TWO_FACTOR_CODE = 'codigo-verificacao-2fa';
 }

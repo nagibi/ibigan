@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\TwoFactorMethod;
 use App\Notifications\ResetPasswordNotification;
 use App\Search\TenantSearchable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,6 +43,7 @@ class User extends Authenticatable implements HasMedia
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'two_factor_method',
         'last_login_at',
         'last_login_ip',
         'last_login_device',
@@ -62,6 +64,7 @@ class User extends Authenticatable implements HasMedia
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'two_factor_method' => TwoFactorMethod::class,
             'is_active' => 'boolean',
             'is_platform_user' => 'boolean',
             'birth_date' => 'date',

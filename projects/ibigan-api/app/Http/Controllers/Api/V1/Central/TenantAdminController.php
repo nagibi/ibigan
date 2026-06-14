@@ -250,11 +250,15 @@ final class TenantAdminController extends Controller
                 ['email' => $centralUser->email, 'is_platform_user' => true],
                 [
                     'name' => $centralUser->name,
-                    'password' => Str::random(40),
+                    'password' => $centralUser->password,
                     'status' => 'active',
                     'is_active' => true,
                 ]
             );
+
+            if (! $user->wasRecentlyCreated) {
+                $user->forceFill(['password' => $centralUser->password])->saveQuietly();
+            }
 
             if (! $user->hasRole('super-admin')) {
                 $user->assignRole('super-admin');

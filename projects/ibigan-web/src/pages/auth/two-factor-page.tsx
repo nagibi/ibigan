@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, LoaderCircle } from 'lucide-react';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { authService } from '@/services/auth.service';
 import { centralAuthService } from '@/services/central-auth.service';
+import { twoFactorService } from '@/services/two-factor.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,8 @@ import { cn } from '@/lib/utils';
 type LocationState = {
   tenant_id?: string;
   scope?: 'central' | 'tenant';
+  two_factor_method?: 'totp' | 'email';
+  masked_email?: string;
 };
 
 const OTP_SLOT_CLASS =
@@ -63,12 +66,28 @@ export function TwoFactorPage() {
     setCentralAuth,
   } = useCentralAuthStore();
   const twoFactorToken = isCentralFlow ? centralTwoFactorToken : tenantTwoFactorToken;
+  const isEmailMethod = locationState.two_factor_method === 'email';
+  const maskedEmail = locationState.masked_email ?? '';
   const tenantId = locationState.tenant_id ?? '';
   const [code, setCode] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
   const [useRecovery, setUseRecovery] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendCooldown((current) => current - 1);
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   async function submit(submittedCode: string) {
     if (!twoFactorToken) {
@@ -116,6 +135,23 @@ export function TwoFactorPage() {
     }
   }
 
+  async function handleResendCode() {
+    if (!twoFactorToken || resendCooldown > 0 || isResending) {
+      return;
+    }
+
+    try {
+      setIsResending(true);
+      setError(null);
+      await twoFactorService.resendLoginCode(twoFactorToken);
+      setResendCooldown(60);
+    } catch {
+      setError(t('auth.two_factor.resend_failed'));
+    } finally {
+      setIsResending(false);
+    }
+  }
+
   function handleContinue() {
     void submit(useRecovery ? recoveryCode : code);
   }
@@ -141,7 +177,9 @@ export function TwoFactorPage() {
                 {t('auth.two_factor.title')}
               </h1>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                {t('auth.two_factor.subtitle')}
+                {isEmailMethod
+                  ? t('auth.two_factor.email_subtitle', { email: maskedEmail })
+                  : t('auth.two_factor.subtitle')}
               </p>
             </div>
           </div>
@@ -194,6 +232,23 @@ export function TwoFactorPage() {
               </div>
             )}
 
+            {isEmailMethod && !useRecovery ? (
+              <p className="text-center text-sm text-muted-foreground">
+                {t('auth.two_factor.resend_prompt')}{' '}
+                {resendCooldown > 0 ? (
+                  <span>({resendCooldown}s)</span>
+                ) : null}{' '}
+                <button
+                  type="button"
+                  onClick={() => void handleResendCode()}
+                  disabled={isResending || resendCooldown > 0}
+                  className="font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  {isResending ? t('auth.two_factor.resending') : t('auth.two_factor.resend')}
+                </button>
+              </p>
+            ) : null}
+
             <p className="text-center text-sm text-muted-foreground">
               {t('auth.two_factor.recovery_prompt')}{' '}
               <button
@@ -202,7 +257,7 @@ export function TwoFactorPage() {
                 className="font-medium text-primary hover:underline"
               >
                 {useRecovery
-                  ? t('auth.two_factor.use_authenticator')
+                  ? (isEmailMethod ? t('auth.two_factor.use_email') : t('auth.two_factor.use_authenticator'))
                   : t('auth.two_factor.use_recovery')}
               </button>
             </p>
