@@ -110,11 +110,24 @@ it('envia teste de template de plataforma para o super-admin', function (): void
         ->where('slug', MessageTemplateSlugs::USER_INVITE)
         ->firstOrFail();
 
-    $this->postJson("/api/central/v1/admin/platform/message-templates/{$template->id}/test-send")
+    $this->postJson("/api/central/v1/admin/platform/message-templates/{$template->id}/test-send", [
+        'merge_data' => [
+            'invited_by' => 'Admin Central',
+            'role' => 'admin',
+            'link' => 'https://example.com/convite',
+            'token' => 'abc123',
+            'expires_at' => '31/12/2026',
+        ],
+    ])
         ->assertOk()
         ->assertJsonPath('result.recipient', 'super-catalog@ibigan.com');
 
-    Mail::assertSent(\App\Mail\TemplateMailable::class);
+    Mail::assertSent(\App\Mail\TemplateMailable::class, function (\App\Mail\TemplateMailable $mail): bool {
+        $rendered = $mail->render();
+
+        return str_contains($rendered, 'Admin Central')
+            && str_contains($rendered, 'abc123');
+    });
 });
 
 it('dispara campanha central para empresas selecionadas', function (): void {

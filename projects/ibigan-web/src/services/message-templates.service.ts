@@ -15,6 +15,11 @@ export interface MessageTemplate {
 
 export type MessageChannel = 'email' | 'sms' | 'whatsapp' | 'notification';
 
+export interface TestMessageTemplatePayload {
+  channels?: MessageChannel[];
+  merge_data?: Record<string, string>;
+}
+
 export interface MessageTemplatesPaginatedResponse {
   status: number;
   result: {
@@ -85,10 +90,10 @@ export const messageTemplatesService = {
       `/v1/message-templates/${id}/duplicate`,
     ),
 
-  testSend: (id: number, channels?: MessageChannel[]) =>
+  testSend: (id: number, payload?: TestMessageTemplatePayload) =>
     api.post<{ status: number; result: { queued: number; recipient: string } }>(
       `/v1/message-templates/${id}/test-send`,
-      channels ? { channels } : {},
+      payload ?? {},
     ),
 
   uploadImage: (file: File) => {

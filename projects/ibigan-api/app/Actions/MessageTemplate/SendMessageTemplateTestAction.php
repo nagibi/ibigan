@@ -21,13 +21,18 @@ final class SendMessageTemplateTestAction
 
     /**
      * @param  list<string>  $channels
+     * @param  array<string, string>  $mergeData
      * @return array{queued: int, recipient: string}
      */
-    public function executeForTenant(MessageTemplate $template, User $user, array $channels): array
-    {
+    public function executeForTenant(
+        MessageTemplate $template,
+        User $user,
+        array $channels,
+        array $mergeData = [],
+    ): array {
         abort_unless($template->is_active, 422, 'Template inativo.');
 
-        $data = $this->mergeDataForUser($user);
+        $data = $this->resolveMergeData($user, $mergeData);
         $queued = 0;
 
         foreach ($channels as $channel) {
@@ -50,13 +55,18 @@ final class SendMessageTemplateTestAction
 
     /**
      * @param  list<string>  $channels
+     * @param  array<string, string>  $mergeData
      * @return array{queued: int, recipient: string}
      */
-    public function executeForPlatform(PlatformMessageTemplate $template, object $user, array $channels): array
-    {
+    public function executeForPlatform(
+        PlatformMessageTemplate $template,
+        object $user,
+        array $channels,
+        array $mergeData = [],
+    ): array {
         abort_unless($template->is_active, 422, 'Template inativo.');
 
-        $data = $this->mergeDataForUser($user);
+        $data = $this->resolveMergeData($user, $mergeData);
         $subject = $this->templateMailService->replace($template->subject, $data);
         $body = $this->templateMailService->replace($template->body, $data);
         $queued = 0;
@@ -72,6 +82,25 @@ final class SendMessageTemplateTestAction
             'queued' => $queued,
             'recipient' => $user->email,
         ];
+    }
+
+    /**
+     * @param  array<string, string>  $mergeData
+     * @return array<string, string>
+     */
+    private function resolveMergeData(object $user, array $mergeData): array
+    {
+        $defaults = $this->mergeDataForUser($user);
+
+        foreach ($mergeData as $tag => $value) {
+            if (! is_string($tag)) {
+                continue;
+            }
+
+            $defaults[$tag] = (string) $value;
+        }
+
+        return $defaults;
     }
 
     /**

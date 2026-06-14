@@ -169,6 +169,7 @@ final class PlatformMessageTemplateController extends Controller
             $platformMessageTemplate,
             $user,
             $request->channels(),
+            $request->mergeData(),
         );
 
         return response()->json([

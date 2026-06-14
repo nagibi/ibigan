@@ -43,6 +43,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
 import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
+import { TemplateTestSendDialog } from '@/components/message-templates/template-test-send-dialog';
+import type { TemplateTestSendPayload } from '@/components/message-templates/template-test-send-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -103,7 +105,8 @@ export function MessageTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [rowStatusId, setRowStatusId] = useState<number | null>(null);
-  const [testingId, setTestingId] = useState<number | null>(null);
+  const [testTemplate, setTestTemplate] = useState<MessageTemplate | null>(null);
+  const [isTestSending, setIsTestSending] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<number | null>(null);
 
   const infiniteScroll = useGridInfiniteScroll<MessageTemplate>({
@@ -161,17 +164,18 @@ export function MessageTemplatesPage() {
     void load();
   }, [load]);
 
-  async function handleTestSend(template: MessageTemplate) {
-    if (!('testSend' in templatesService)) return;
+  async function handleTestSendSubmit(payload: TemplateTestSendPayload) {
+    if (!testTemplate || !('testSend' in templatesService)) return;
 
     try {
-      setTestingId(template.id);
-      const response = await templatesService.testSend(template.id);
+      setIsTestSending(true);
+      const response = await templatesService.testSend(testTemplate.id, payload);
       showSuccess(`Teste enfileirado para ${response.data.result.recipient}.`);
+      setTestTemplate(null);
     } catch (error) {
       showError('Erro ao enviar teste do template.', error);
     } finally {
-      setTestingId(null);
+      setIsTestSending(false);
     }
   }
 
@@ -312,8 +316,8 @@ export function MessageTemplatesPage() {
                 label: 'Testar',
                 icon: FlaskConical,
                 hidden: !template.is_active || !('testSend' in templatesService),
-                disabled: testingId === template.id,
-                onClick: () => void handleTestSend(template),
+                disabled: isTestSending && testTemplate?.id === template.id,
+                onClick: () => setTestTemplate(template),
               },
               {
                 label: 'Duplicar',
@@ -396,7 +400,8 @@ export function MessageTemplatesPage() {
     ],
     [
       duplicatingId,
-      testingId,
+      isTestSending,
+      testTemplate?.id,
       grid.selected,
       grid.toggleSelect,
       handleEditTemplate,
@@ -623,6 +628,17 @@ export function MessageTemplatesPage() {
         </AlertDialogContent>
       </AlertDialog>
       ) : null}
+
+      <TemplateTestSendDialog
+        template={testTemplate}
+        open={testTemplate !== null}
+        onOpenChange={(open) => {
+          if (!open) setTestTemplate(null);
+        }}
+        isPlatformCatalog={isPlatformCatalog}
+        onSubmit={handleTestSendSubmit}
+        isSubmitting={isTestSending}
+      />
     </PageBody>
   );
 }

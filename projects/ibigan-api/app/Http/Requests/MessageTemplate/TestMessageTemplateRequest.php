@@ -23,7 +23,33 @@ final class TestMessageTemplateRequest extends FormRequest
         return [
             'channels' => ['sometimes', 'array', 'min:1'],
             'channels.*' => ['required', 'string', Rule::enum(SendChannel::class)],
+            'merge_data' => ['sometimes', 'array'],
+            'merge_data.*' => ['nullable', 'string', 'max:65535'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function mergeData(): array
+    {
+        $mergeData = $this->validated('merge_data');
+
+        if (! is_array($mergeData)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($mergeData as $tag => $value) {
+            if (! is_string($tag)) {
+                continue;
+            }
+
+            $normalized[$tag] = is_string($value) ? $value : (string) $value;
+        }
+
+        return $normalized;
     }
 
     /**

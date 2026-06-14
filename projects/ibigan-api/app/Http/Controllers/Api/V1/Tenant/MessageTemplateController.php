@@ -213,6 +213,7 @@ final class MessageTemplateController extends Controller
             $messageTemplate,
             $request->user(),
             $request->channels(),
+            $request->mergeData(),
         );
 
         return response()->json([

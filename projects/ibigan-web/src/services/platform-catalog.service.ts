@@ -79,10 +79,10 @@ export const platformCatalogMessageTemplatesService = {
       `/central/v1/admin/platform/message-templates/${id}/duplicate`,
     ),
 
-  testSend: (id: number, channels?: Array<'email' | 'notification' | 'sms' | 'whatsapp'>) =>
+  testSend: (id: number, payload?: { channels?: Array<'email' | 'notification' | 'sms' | 'whatsapp'>; merge_data?: Record<string, string> }) =>
     api.post<{ status: number; result: { queued: number; recipient: string } }>(
       `/central/v1/admin/platform/message-templates/${id}/test-send`,
-      channels ? { channels } : {},
+      payload ?? {},
     ),
 
   sync: () =>
