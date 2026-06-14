@@ -27,13 +27,15 @@ echo "==> Nginx (validar e recarregar config)"
 
 echo "==> Migrations e caches Laravel"
 "${DC[@]}" exec -T app php artisan migrate --force
-"${DC[@]}" exec -T app php artisan tenants:migrate
+"${DC[@]}" exec -T app php artisan tenants:migrate --force
+"${DC[@]}" exec -T app php artisan storage:link --force || true
+"${DC[@]}" exec -T app php artisan optimize:clear
 "${DC[@]}" exec -T app php artisan config:cache
 "${DC[@]}" exec -T app php artisan route:cache
 "${DC[@]}" exec -T app php artisan view:cache
-"${DC[@]}" exec -T app php artisan storage:link
 
-echo "==> Horizon e Reverb"
-"${DC[@]}" restart horizon reverb
+echo "==> Horizon, Scheduler e Reverb"
+"${DC[@]}" exec -T app php artisan horizon:terminate || true
+"${DC[@]}" restart horizon scheduler reverb
 
 echo "Deploy concluído com sucesso."

@@ -1,5 +1,5 @@
 .PHONY: help up down build restart logs shell artisan composer npm \
-        migrate fresh seed tenants-migrate test perm optimize
+        migrate fresh seed tenants-migrate test perm optimize setup setup-local
 
 export USER_ID  := $(shell id -u)
 export GROUP_ID := $(shell id -g)
@@ -23,6 +23,27 @@ restart: down up ## Reinicia a stack
 logs: ## Logs em tempo real
 	docker compose logs -f --tail=100
 
+# ── Setup local ───────────────────────────────────────────────
+setup-local: ## Setup completo: deps, key, migrate, seed, storage:link
+	docker compose up -d
+	docker compose exec app composer install --no-interaction
+	docker compose exec app php artisan key:generate --force --no-interaction || true
+	docker compose exec app php artisan migrate --force
+	docker compose exec app php artisan db:seed --force
+	docker compose exec app php artisan tenants:migrate
+	docker compose exec app php artisan storage:link --force
+	docker compose exec app php artisan optimize:clear
+	$(MAKE) perm
+	@echo ""
+	@echo "Setup concluído. Acesse:"
+	@echo "  API:        http://localhost/api"
+	@echo "  Frontend:   http://localhost:5173"
+	@echo "  Mailpit:    http://localhost:8025"
+	@echo "  Horizon:    http://localhost/horizon"
+	@echo "  phpMyAdmin: http://localhost:8081"
+
+setup: setup-local ## Alias para setup-local
+
 # ── Acesso ────────────────────────────────────────────────────
 shell: ## Bash no container app
 	docker compose exec app bash
@@ -43,6 +64,9 @@ npm: ## Ex: make npm CMD="install"
 # ── Database ──────────────────────────────────────────────────
 migrate: ## Migrations banco central
 	docker compose exec app php artisan migrate
+
+storage-link: ## Cria symlink public/storage
+	docker compose exec app php artisan storage:link --force
 
 fresh: ## Drop + recria tudo (APAGA DADOS)
 	docker compose exec app php artisan migrate:fresh --seed
