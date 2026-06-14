@@ -85,11 +85,11 @@ export const messageTemplatesService = {
       `/v1/message-templates/${id}/duplicate`,
     ),
 
-  send: (id: number, payload: {
-    recipients: string[];
-    channels: MessageChannel[];
-    data?: Record<string, string>;
-  }) => api.post(`/v1/message-templates/${id}/send`, payload),
+  testSend: (id: number, channels?: MessageChannel[]) =>
+    api.post<{ status: number; result: { queued: number; recipient: string } }>(
+      `/v1/message-templates/${id}/test-send`,
+      channels ? { channels } : {},
+    ),
 
   uploadImage: (file: File) => {
     const form = new FormData();

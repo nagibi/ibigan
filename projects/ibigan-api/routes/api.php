@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Central\CentralProfileController;
 use App\Http\Controllers\Api\V1\Central\CentralSocialAuthController;
 use App\Http\Controllers\Api\V1\Central\CentralTwoFactorController;
 use App\Http\Controllers\Api\V1\Central\CentralUserController;
+use App\Http\Controllers\Api\V1\Central\PlatformCampaignController;
 use App\Http\Controllers\Api\V1\Central\PlatformMessageTemplateController;
 use App\Http\Controllers\Api\V1\Central\PlatformReportTemplateController;
 use App\Http\Controllers\Api\V1\Central\TenantAdminController;
@@ -131,11 +132,17 @@ Route::prefix('central/v1')
 
             Route::post('platform-catalog/sync', [PlatformMessageTemplateController::class, 'sync'])
                 ->name('central.platform-catalog.sync');
+            Route::post('platform/message-templates/{platformMessageTemplate}/duplicate', [PlatformMessageTemplateController::class, 'duplicate'])
+                ->name('central.platform.message-templates.duplicate');
+            Route::post('platform/message-templates/{platformMessageTemplate}/test-send', [PlatformMessageTemplateController::class, 'testSend'])
+                ->name('central.platform.message-templates.test-send');
             Route::patch('platform/message-templates/{platformMessageTemplate}/toggle-active', [PlatformMessageTemplateController::class, 'toggleActive'])
                 ->name('central.platform.message-templates.toggle-active');
             Route::apiResource('platform/message-templates', PlatformMessageTemplateController::class)
                 ->only(['index', 'show', 'update'])
                 ->names('central.platform.message-templates');
+            Route::post('platform/campaigns', [PlatformCampaignController::class, 'store'])
+                ->name('central.platform.campaigns.store');
             Route::patch('platform/report-templates/{platformReportTemplate}/toggle-active', [PlatformReportTemplateController::class, 'toggleActive'])
                 ->name('central.platform.report-templates.toggle-active');
             Route::apiResource('platform/report-templates', PlatformReportTemplateController::class)
@@ -213,7 +220,7 @@ Route::prefix('v1')
         Route::apiResource('roles', RoleController::class);
 
         Route::post('message-templates/upload-image', [MessageTemplateController::class, 'uploadImage']);
-        Route::post('message-templates/{messageTemplate}/send', [MessageTemplateController::class, 'send']);
+        Route::post('message-templates/{messageTemplate}/test-send', [MessageTemplateController::class, 'testSend']);
         Route::post('message-templates/{messageTemplate}/duplicate', [MessageTemplateController::class, 'duplicate']);
         Route::patch('message-templates/{messageTemplate}/toggle-active', [MessageTemplateController::class, 'toggleActive']);
         Route::apiResource('message-templates', MessageTemplateController::class);

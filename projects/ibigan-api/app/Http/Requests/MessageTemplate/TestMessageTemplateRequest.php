@@ -8,7 +8,7 @@ use App\Enums\SendChannel;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-final class SendMessageTemplateRequest extends FormRequest
+final class TestMessageTemplateRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -21,11 +21,22 @@ final class SendMessageTemplateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'recipients' => ['required', 'array', 'min:1'],
-            'recipients.*' => ['required', 'email'],
-            'channels' => ['required', 'array', 'min:1'],
+            'channels' => ['sometimes', 'array', 'min:1'],
             'channels.*' => ['required', 'string', Rule::enum(SendChannel::class)],
-            'data' => ['nullable', 'array'],
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function channels(): array
+    {
+        $channels = $this->validated('channels');
+
+        if (! is_array($channels) || $channels === []) {
+            return ['email', 'notification'];
+        }
+
+        return array_values($channels);
     }
 }

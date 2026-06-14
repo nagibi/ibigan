@@ -7,6 +7,8 @@ use App\Models\Central\PlatformMessageTemplate;
 use App\Models\MessageTemplate;
 use App\Models\Tenant;
 use App\Services\PlatformCatalogService;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use App\Support\MessageTemplateSlugs;
 use Database\Seeders\PlatformCatalogSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -81,6 +83,72 @@ it('sincroniza template central atualizado para tenants', function (): void {
                 ->value('subject')
         )->toBe('Convite propagado pela central');
     });
+
+    cleanupTenantDatabaseFiles($tenantId);
+});
+
+it('duplica template de mensagem central', function (): void {
+    $template = PlatformMessageTemplate::query()
+        ->where('slug', MessageTemplateSlugs::USER_INVITE)
+        ->firstOrFail();
+
+    $this->postJson("/api/central/v1/admin/platform/message-templates/{$template->id}/duplicate")
+        ->assertCreated()
+        ->assertJsonPath('result.name', $template->name.' (cópia)');
+
+    expect(
+        PlatformMessageTemplate::query()
+            ->where('slug', 'like', MessageTemplateSlugs::USER_INVITE.'-copia%')
+            ->exists()
+    )->toBeTrue();
+});
+
+it('envia teste de template de plataforma para o super-admin', function (): void {
+    Mail::fake();
+
+    $template = PlatformMessageTemplate::query()
+        ->where('slug', MessageTemplateSlugs::USER_INVITE)
+        ->firstOrFail();
+
+    $this->postJson("/api/central/v1/admin/platform/message-templates/{$template->id}/test-send")
+        ->assertOk()
+        ->assertJsonPath('result.recipient', 'super-catalog@ibigan.com');
+
+    Mail::assertSent(\App\Mail\TemplateMailable::class);
+});
+
+it('dispara campanha central para empresas selecionadas', function (): void {
+    Queue::fake();
+
+    $tenantId = 'platform-campaign-'.uniqid();
+    $tenant = Tenant::create([
+        'id' => $tenantId,
+        'slug' => $tenantId,
+        'name' => 'Platform Campaign Corp',
+    ]);
+
+    $tenant->run(function (): void {
+        (new RolePermissionSeeder)->run();
+
+        $user = \App\Models\User::factory()->create();
+        $user->assignRole('admin');
+    });
+
+    app(PlatformCatalogService::class)->syncAllTenants(force: true);
+
+    $this->postJson('/api/central/v1/admin/platform/campaigns', [
+        'tenant_ids' => [$tenantId],
+        'name' => 'Campanha central',
+        'template_slug' => MessageTemplateSlugs::USER_INVITE,
+        'channels' => ['email'],
+        'recipients' => [
+            ['type' => 'all'],
+        ],
+    ])
+        ->assertCreated()
+        ->assertJsonPath('result.dispatched.0.tenant_id', $tenantId);
+
+    Queue::assertPushed(\App\Jobs\ProcessCampaignJob::class);
 
     cleanupTenantDatabaseFiles($tenantId);
 });

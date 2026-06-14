@@ -10,4 +10,5 @@ enum CampaignRecipientType: string
     case Role = 'role';
     case Permission = 'permission';
     case User = 'user';
+    case Users = 'users';
 }

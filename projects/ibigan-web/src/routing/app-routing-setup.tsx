@@ -174,6 +174,8 @@ export function AppRoutingSetup() {
           <Route path="/admin/message-templates/:id" element={<MessageTemplateFormPage key="platform-message-template-edit" />} />
           <Route path="/admin/reports" element={<ReportsPage />} />
           <Route path="/admin/reports/:id" element={<ReportFormPage key="platform-report-edit" />} />
+          <Route path="/admin/campaigns" element={<Navigate to="/admin/campaigns/new" replace />} />
+          <Route path="/admin/campaigns/new" element={<CampaignFormPage key="platform-campaign-new" />} />
           <Route path="/admin/platform/message-templates" element={<Navigate to="/admin/message-templates" replace />} />
           <Route path="/admin/platform/message-templates/:id" element={<AdminPlatformMessageTemplateRedirect />} />
           <Route path="/admin/platform/reports" element={<Navigate to="/admin/reports" replace />} />

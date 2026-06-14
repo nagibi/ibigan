@@ -8,8 +8,10 @@ import { Plus, Trash2 } from 'lucide-react';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import { formatFormPageTitle } from '@/lib/format-form-page-title';
 import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
-import { campaignsService, type Campaign } from '@/services/campaigns.service';
-import { messageTemplatesService } from '@/services/message-templates.service';
+import { type Campaign } from '@/services/campaigns.service';
+import { useCampaignContext } from '@/hooks/use-campaign-context';
+import { rolesService } from '@/services/roles.service';
+import { permissionsService } from '@/services/permissions.service';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
@@ -44,10 +46,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TenantMultiSelect } from '@/components/tenant/tenant-multi-select';
+import { UserCombobox } from '@/components/users/user-combobox';
+import { UserMultiComboboxField } from '@/components/users/user-multi-combobox';
 
 const recipientSchema = z.object({
-  type: z.enum(['all', 'role', 'permission', 'user']),
+  type: z.enum(['all', 'role', 'permission', 'user', 'users']),
   value: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.type !== 'all' && (!data.value || data.value.trim() === '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Valor é obrigatório.',
+      path: ['value'],
+    });
+  }
 });
 
 const schema = z.object({
@@ -85,9 +98,10 @@ const RECIPIENT_TYPES = [
   { value: 'role', label: 'Por função (role)' },
   { value: 'permission', label: 'Por permissão' },
   { value: 'user', label: 'Usuário específico' },
+  { value: 'users', label: 'Múltiplos usuários' },
 ];
 
-const ROLES = ['admin', 'manager', 'viewer'];
+const CENTRAL_ROLES = ['admin', 'manager', 'viewer'];
 
 function isDeletable(campaign: Campaign) {
   return campaign.status === 'draft' || campaign.status === 'cancelled';
@@ -98,34 +112,56 @@ export function CampaignFormPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isEditing = Boolean(id);
+  const campaignContext = useCampaignContext();
+  const {
+    isCentralDispatch,
+    listPath,
+    newPath,
+    campaignsApi,
+    templatesApi,
+  } = campaignContext;
+  const isEditing = Boolean(id) && !isCentralDispatch;
   const [useTemplate, setUseTemplate] = useState(true);
+  const [tenantIds, setTenantIds] = useState<string[]>([]);
+  const [tenantIdsError, setTenantIdsError] = useState<string | undefined>();
 
   const apiNotify = useApiToolbarAlert();
 
   const { data: templatesData } = useQuery({
-    queryKey: ['message-templates-all'],
-    queryFn: () => messageTemplatesService.list(1),
+    queryKey: [isCentralDispatch ? 'platform-message-templates-all' : 'message-templates-all'],
+    queryFn: () => templatesApi.list(1, 100),
+  });
+
+  const { data: rolesData } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => rolesService.list(),
+    enabled: !isCentralDispatch,
+  });
+
+  const { data: permissionsData } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: () => permissionsService.list(),
+    enabled: !isCentralDispatch,
   });
 
   const { data: campaignData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['campaign', id],
-    queryFn: () => campaignsService.show(Number(id)),
+    queryFn: () => ('show' in campaignsApi ? campaignsApi.show(Number(id)) : Promise.reject(new Error('unavailable'))),
     enabled: isEditing,
   });
 
   const campaign = campaignData?.data.result;
 
   const formPage = useFormPage({
-    backPath: '/campaigns',
-    newPath: '/campaigns/new',
+    backPath: listPath,
+    newPath,
     entityKey: 'campaign',
     notify: apiNotify,
-    onDelete: isEditing
+    onDelete: isEditing && 'destroy' in campaignsApi
       ? async () => {
           const current = campaignData?.data.result;
           if (current && !isDeletable(current)) return;
-          await campaignsService.destroy(Number(id));
+          await campaignsApi.destroy(Number(id));
           queryClient.invalidateQueries({ queryKey: ['campaigns'] });
         }
       : undefined,
@@ -145,6 +181,8 @@ export function CampaignFormPage() {
     if (!isEditing) {
       form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
       setUseTemplate(true);
+      setTenantIds([]);
+      setTenantIdsError(undefined);
     }
   }, [isEditing, form, location.key]);
 
@@ -174,21 +212,58 @@ export function CampaignFormPage() {
 
   const saveMutation = useMutation({
     mutationFn: (data: FormData) => {
-      const payload = {
-        ...data,
-        template_id: useTemplate ? data.template_id : null,
+      const selectedTemplate = templates.find((template) => template.id === data.template_id);
+      const basePayload = {
+        name: data.name,
+        description: data.description,
+        channels: data.channels,
+        scheduled_at: data.scheduled_at,
+        recipients: data.recipients,
+        merge_data: undefined,
         subject: useTemplate ? undefined : data.subject,
         body: useTemplate ? undefined : data.body,
+        template_id: useTemplate ? data.template_id : null,
       };
-      return isEditing
-        ? campaignsService.update(Number(id), payload)
-        : campaignsService.store(payload);
+
+      if (isCentralDispatch) {
+        if (tenantIds.length === 0) {
+          return Promise.reject(new Error('tenant-required'));
+        }
+
+        return campaignsApi.store({
+          ...basePayload,
+          tenant_ids: tenantIds,
+          template_slug: useTemplate ? selectedTemplate?.slug : undefined,
+          template_id: undefined,
+        });
+      }
+
+      return isEditing && 'update' in campaignsApi
+        ? campaignsApi.update(Number(id), basePayload)
+        : campaignsApi.store(basePayload);
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       if (isEditing) {
         queryClient.invalidateQueries({ queryKey: ['campaign', id] });
       }
+
+      if (isCentralDispatch) {
+        const skipped = response.data.result.skipped?.length ?? 0;
+        apiNotify.showSuccess(
+          skipped > 0
+            ? `Campanha disparada. ${skipped} empresa(s) ignorada(s).`
+            : 'Campanha disparada nas empresas selecionadas!',
+        );
+        if (formPage.saveMode === 'new') {
+          form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
+          setTenantIds([]);
+        } else {
+          navigate(listPath);
+        }
+        return;
+      }
+
       apiNotify.showSuccess(isEditing ? 'Campanha atualizada!' : 'Campanha criada e enfileirada!');
       if (!isEditing && formPage.saveMode === 'new') {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
@@ -196,8 +271,8 @@ export function CampaignFormPage() {
       const createdId = !isEditing ? response.data.result.id : undefined;
       const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
-        listPath: '/campaigns',
-        newPath: '/campaigns/new',
+        listPath,
+        newPath,
         getEditPath: (recordId) => `/campaigns/${recordId}/edit`,
         isEditing,
         createdId,
@@ -205,6 +280,11 @@ export function CampaignFormPage() {
       if (nextPath) navigate(nextPath);
     },
     onError: (error: unknown) => {
+      if (error instanceof Error && error.message === 'tenant-required') {
+        apiNotify.showError('Selecione pelo menos uma empresa.');
+        return;
+      }
+
       const handled = applyApiFormErrors(form, error);
       if (!handled) {
         apiNotify.showError(
@@ -215,20 +295,36 @@ export function CampaignFormPage() {
     },
   });
 
+  const validateCentralTenants = useCallback(() => {
+    if (!isCentralDispatch || tenantIds.length > 0) {
+      setTenantIdsError(undefined);
+      return true;
+    }
+
+    setTenantIdsError('Selecione pelo menos uma empresa.');
+    return false;
+  }, [isCentralDispatch, tenantIds.length]);
+
   const handleSaveAndList = useCallback(() => {
+    if (!validateCentralTenants()) return;
+
     formPage.setSaveMode('list');
     void form.handleSubmit((data) => saveMutation.mutate(data))();
-  }, [form, formPage, saveMutation]);
+  }, [form, formPage, saveMutation, validateCentralTenants]);
 
   const handleSaveAndNew = useCallback(() => {
+    if (!validateCentralTenants()) return;
+
     formPage.setSaveMode('new');
     void form.handleSubmit((data) => saveMutation.mutate(data))();
-  }, [form, formPage, saveMutation]);
+  }, [form, formPage, saveMutation, validateCentralTenants]);
 
   const handleSaveAndEdit = useCallback(() => {
+    if (!validateCentralTenants()) return;
+
     formPage.setSaveMode('edit');
     void form.handleSubmit((data) => saveMutation.mutate(data))();
-  }, [form, formPage, saveMutation]);
+  }, [form, formPage, saveMutation, validateCentralTenants]);
 
   const handlePrimarySave = handleSaveAndList;
 
@@ -250,12 +346,14 @@ export function CampaignFormPage() {
       : undefined,
   });
 
-  const pageTitle = formatFormPageTitle({
-    isEditing,
-    id,
-    label: campaign?.name,
-    loading: isEditing && isLoading,
-  });
+  const pageTitle = isCentralDispatch
+    ? 'Disparar campanha'
+    : formatFormPageTitle({
+        isEditing,
+        id,
+        label: campaign?.name,
+        loading: isEditing && isLoading,
+      });
 
   usePageToolbar({
     title: pageTitle,
@@ -282,6 +380,11 @@ export function CampaignFormPage() {
   });
 
   const templates = templatesData?.data.result.data ?? [];
+  const roles = isCentralDispatch ? CENTRAL_ROLES.map((name) => ({ id: name, name })) : (rolesData?.data.result ?? []);
+  const permissions = permissionsData?.data.result ?? [];
+  const recipientTypeOptions = isCentralDispatch
+    ? RECIPIENT_TYPES.filter((type) => !['user', 'users'].includes(type.value))
+    : RECIPIENT_TYPES;
   const channels = form.watch('channels');
 
   if (isEditing && isLoading) {
@@ -334,6 +437,32 @@ export function CampaignFormPage() {
               </FormFieldGridItem>
             </FormFieldGrid>
           </FormPanel>
+
+          {isCentralDispatch ? (
+            <FormPanel title="Empresas destinatárias">
+              <FormFieldGrid>
+                <FormFieldGridItem span={4}>
+                  <FormItem>
+                    <FormLabel required>Empresas</FormLabel>
+                    <TenantMultiSelect
+                      value={tenantIds}
+                      onChange={(nextTenantIds) => {
+                        setTenantIds(nextTenantIds);
+                        if (nextTenantIds.length > 0) {
+                          setTenantIdsError(undefined);
+                        }
+                      }}
+                      placeholder="Selecione uma ou mais empresas"
+                      error={tenantIdsError}
+                    />
+                    <FormDescription>
+                      A campanha será criada e disparada em cada empresa selecionada.
+                    </FormDescription>
+                  </FormItem>
+                </FormFieldGridItem>
+              </FormFieldGrid>
+            </FormPanel>
+          ) : null}
 
           <FormPanel title="Conteúdo">
             <FormFieldGrid className="mb-4">
@@ -439,10 +568,16 @@ export function CampaignFormPage() {
                     name={`recipients.${index}.type`}
                     render={({ field: typeField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={typeField.onChange} value={typeField.value}>
+                        <Select
+                          onValueChange={(nextType) => {
+                            typeField.onChange(nextType);
+                            form.setValue(`recipients.${index}.value`, '', { shouldDirty: true });
+                          }}
+                          value={typeField.value}
+                        >
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {RECIPIENT_TYPES.map((t) => (
+                            {recipientTypeOptions.map((t) => (
                               <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                             ))}
                           </SelectContent>
@@ -454,20 +589,54 @@ export function CampaignFormPage() {
                     <FormField
                       control={form.control}
                       name={`recipients.${index}.value`}
-                      render={({ field: valueField }) => (
-                        <FormItem className="flex-1">
-                          {form.watch(`recipients.${index}.type`) === 'role' ? (
-                            <Select onValueChange={valueField.onChange} value={valueField.value}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <FormControl><Input placeholder="Valor" {...valueField} /></FormControl>
-                          )}
-                        </FormItem>
-                      )}
+                      render={({ field: valueField }) => {
+                        const recipientType = form.watch(`recipients.${index}.type`);
+
+                        return (
+                          <FormItem className="flex-1">
+                            {recipientType === 'role' ? (
+                              <Select onValueChange={valueField.onChange} value={valueField.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {roles.map((role) => (
+                                    <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : recipientType === 'permission' && !isCentralDispatch ? (
+                              <Select onValueChange={valueField.onChange} value={valueField.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Selecione a permissão" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {permissions.map((permission) => (
+                                    <SelectItem key={permission.id} value={permission.name}>{permission.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : recipientType === 'permission' ? (
+                              <FormControl><Input placeholder="Nome da permissão (ex: template-visualizar)" {...valueField} /></FormControl>
+                            ) : recipientType === 'user' ? (
+                              <FormControl>
+                                <UserCombobox
+                                  value={valueField.value}
+                                  onChange={valueField.onChange}
+                                  placeholder="Selecione o usuário"
+                                />
+                              </FormControl>
+                            ) : recipientType === 'users' ? (
+                              <FormControl>
+                                <UserMultiComboboxField
+                                  value={valueField.value}
+                                  onChange={valueField.onChange}
+                                  placeholder="Selecione os usuários"
+                                />
+                              </FormControl>
+                            ) : (
+                              <FormControl><Input placeholder="Valor" {...valueField} /></FormControl>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   )}
                   {fields.length > 1 && (

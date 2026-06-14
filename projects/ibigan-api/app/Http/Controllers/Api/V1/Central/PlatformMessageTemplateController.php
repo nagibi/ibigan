@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Central;
 
+use App\Actions\Central\DuplicatePlatformMessageTemplateAction;
+use App\Actions\MessageTemplate\SendMessageTemplateTestAction;
 use App\Data\Central\PlatformMessageTemplateData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MessageTemplate\TestMessageTemplateRequest;
 use App\Http\Requests\ToggleActiveRequest;
 use App\Models\Central\CentralUser;
 use App\Models\Central\PlatformMessageTemplate;
@@ -20,6 +23,8 @@ final class PlatformMessageTemplateController extends Controller
 {
     public function __construct(
         private readonly PlatformCatalogService $platformCatalogService,
+        private readonly DuplicatePlatformMessageTemplateAction $duplicatePlatformMessageTemplateAction,
+        private readonly SendMessageTemplateTestAction $sendMessageTemplateTestAction,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -132,6 +137,44 @@ final class PlatformMessageTemplateController extends Controller
         return response()->json([
             'status' => 1,
             'message' => 'MSG000425',
+            'result' => $result,
+        ]);
+    }
+
+    public function duplicate(Request $request, PlatformMessageTemplate $platformMessageTemplate): JsonResponse
+    {
+        $this->authorizeSuperAdmin($request);
+
+        $duplicate = $this->duplicatePlatformMessageTemplateAction->execute($platformMessageTemplate);
+
+        $this->platformCatalogService->syncAllTenants(force: true);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000424',
+            'result' => PlatformMessageTemplateData::fromModel($duplicate),
+        ], Response::HTTP_CREATED);
+    }
+
+    public function testSend(
+        TestMessageTemplateRequest $request,
+        PlatformMessageTemplate $platformMessageTemplate,
+    ): JsonResponse {
+        $this->authorizeSuperAdmin($request);
+
+        /** @var CentralUser $user */
+        $user = $request->user();
+
+        $result = $this->sendMessageTemplateTestAction->executeForPlatform(
+            $platformMessageTemplate,
+            $user,
+            $request->channels(),
+        );
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'MSG000067',
+            'description' => 'Teste enviado para o seu e-mail.',
             'result' => $result,
         ]);
     }

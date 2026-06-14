@@ -74,6 +74,17 @@ export const platformCatalogMessageTemplatesService = {
       { is_active: isActive },
     ),
 
+  duplicate: (id: number) =>
+    api.post<{ status: number; result: MessageTemplate }>(
+      `/central/v1/admin/platform/message-templates/${id}/duplicate`,
+    ),
+
+  testSend: (id: number, channels?: Array<'email' | 'notification' | 'sms' | 'whatsapp'>) =>
+    api.post<{ status: number; result: { queued: number; recipient: string } }>(
+      `/central/v1/admin/platform/message-templates/${id}/test-send`,
+      channels ? { channels } : {},
+    ),
+
   sync: () =>
     api.post<{ status: number; result: { tenants_synced: number } }>(
       '/central/v1/admin/platform-catalog/sync',

@@ -1,7 +1,7 @@
 import api from '@/lib/axios';
 
 export interface CampaignRecipient {
-  type: 'all' | 'role' | 'permission' | 'user';
+  type: 'all' | 'role' | 'permission' | 'user' | 'users';
   value?: string;
 }
 

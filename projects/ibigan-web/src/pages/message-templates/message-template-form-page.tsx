@@ -100,7 +100,7 @@ export function MessageTemplateFormPage() {
           queryClient.invalidateQueries({ queryKey: ['message-templates'] });
         }
       : undefined,
-    onDuplicate: isEditing && !isPlatformCatalog && 'duplicate' in templatesService
+    onDuplicate: isEditing && 'duplicate' in templatesService
       ? async () => {
           const res = await templatesService.duplicate(Number(id));
           navigate(catalogPaths.getEditPath(res.data.result.id));
@@ -290,7 +290,7 @@ export function MessageTemplateFormPage() {
           : undefined
         }
         onDelete={isEditing && template && !template.is_system && !isPlatformCatalog ? formPage.handleDelete : undefined}
-        onDuplicate={isEditing && !isPlatformCatalog ? formPage.handleDuplicate : undefined}
+        onDuplicate={isEditing && 'duplicate' in templatesService ? formPage.handleDuplicate : undefined}
         entityLabel="template"
         recordLabel={template?.name}
       />

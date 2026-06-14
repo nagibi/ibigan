@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Requests\Campaign;
+namespace App\Http\Requests\Central;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-final class UpdateCampaignRequest extends FormRequest
+final class StorePlatformCampaignRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,9 +19,12 @@ final class UpdateCampaignRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'tenant_ids' => ['required', 'array', 'min:1'],
+            'tenant_ids.*' => ['required', 'string', 'distinct', 'exists:tenants,id'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'template_id' => ['nullable', 'integer', 'exists:message_templates,id'],
+            'template_slug' => ['nullable', 'string', 'max:255'],
+            'template_id' => ['nullable', 'integer'],
             'subject' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
             'merge_data' => ['nullable', 'array'],

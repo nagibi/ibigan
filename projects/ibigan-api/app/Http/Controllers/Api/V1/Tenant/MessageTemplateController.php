@@ -11,11 +11,10 @@ use App\Data\MessageTemplateData;
 use App\Http\Controllers\Concerns\TogglesModelActive;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ToggleActiveRequest;
-use App\Http\Requests\MessageTemplate\SendMessageTemplateRequest;
+use App\Actions\MessageTemplate\SendMessageTemplateTestAction;
+use App\Http\Requests\MessageTemplate\TestMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\StoreMessageTemplateRequest;
 use App\Http\Requests\MessageTemplate\UpdateMessageTemplateRequest;
-use App\Jobs\SendTemplateEmailJob;
-use App\Jobs\SendTemplateNotificationJob;
 use App\Models\MessageTemplate;
 use App\Support\PlatformCatalogGuard;
 use App\Repositories\Contracts\MessageTemplateRepositoryInterface;
@@ -35,6 +34,7 @@ final class MessageTemplateController extends Controller
         private readonly CreateMessageTemplateAction $createMessageTemplateAction,
         private readonly DuplicateMessageTemplateAction $duplicateMessageTemplateAction,
         private readonly UpdateMessageTemplateAction $updateMessageTemplateAction,
+        private readonly SendMessageTemplateTestAction $sendMessageTemplateTestAction,
     ) {}
 
     /**
@@ -201,47 +201,25 @@ final class MessageTemplateController extends Controller
     }
 
     /**
-     * Enviar mensagem usando template e merge tags nos canais informados.
+     * Enviar teste do template para o usuário autenticado.
      *
-     * Requer permissão `template-gerenciar`. O envio é processado em fila.
+     * Requer permissão `template-gerenciar`.
      */
-    public function send(SendMessageTemplateRequest $request, MessageTemplate $messageTemplate): JsonResponse
+    public function testSend(TestMessageTemplateRequest $request, MessageTemplate $messageTemplate): JsonResponse
     {
         abort_unless($request->user()->can('template-gerenciar'), Response::HTTP_FORBIDDEN);
 
-        abort_unless($messageTemplate->is_active, Response::HTTP_UNPROCESSABLE_ENTITY);
-
-        $channels = $request->validated('channels');
-        $recipients = $request->validated('recipients');
-        $data = $request->validated('data', []);
-
-        foreach ($channels as $channel) {
-            foreach ($recipients as $recipient) {
-                match ($channel) {
-                    'email' => SendTemplateEmailJob::dispatch(
-                        $messageTemplate->slug,
-                        $recipient,
-                        $data,
-                    ),
-                    'notification' => SendTemplateNotificationJob::dispatch(
-                        $messageTemplate->slug,
-                        $recipient,
-                        $data,
-                    ),
-                    default => null,
-                };
-            }
-        }
+        $result = $this->sendMessageTemplateTestAction->executeForTenant(
+            $messageTemplate,
+            $request->user(),
+            $request->channels(),
+        );
 
         return response()->json([
             'status' => 1,
             'message' => 'MSG000067',
-            'description' => 'Mensagens enfileiradas com sucesso!',
-            'result' => [
-                'queued' => count($channels) * count($recipients),
-                'channels' => $channels,
-                'recipients' => count($recipients),
-            ],
+            'description' => 'Teste enfileirado para o seu usuário.',
+            'result' => $result,
         ]);
     }
 }

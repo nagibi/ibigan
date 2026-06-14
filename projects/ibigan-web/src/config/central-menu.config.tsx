@@ -1,4 +1,4 @@
-import { BarChart2, Building2, MessageSquare, ShieldCheck, Wrench } from 'lucide-react';
+import { Megaphone, BarChart2, Building2, MessageSquare, ShieldCheck, Wrench } from 'lucide-react';
 import { type MenuConfig } from './types';
 
 export const CENTRAL_MENU_SIDEBAR: MenuConfig = [
@@ -27,6 +27,11 @@ export const CENTRAL_MENU_SIDEBAR: MenuConfig = [
     title: 'Relatórios padrão',
     icon: BarChart2,
     path: '/admin/reports',
+  },
+  {
+    title: 'Campanhas',
+    icon: Megaphone,
+    path: '/admin/campaigns/new',
   },
   {
     heading: 'FERRAMENTAS',

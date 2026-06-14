@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { Copy, Send, Trash2, X } from 'lucide-react';
+import { Copy, FlaskConical, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
@@ -20,7 +19,6 @@ import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
 import { VIEW_PREFERENCE_KEYS, type ViewPreferenceKey } from '@/types/view-mode';
 import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import {
-  type MessageChannel,
   type MessageTemplate,
 } from '@/services/message-templates.service';
 import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
@@ -33,7 +31,7 @@ import { GridPanel } from '@/components/grid/grid-panel';
 import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
-import { AlertDialogPanelTitle, DialogPanelTitle } from '@/components/common/panel-title';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,34 +45,12 @@ import { GridBadge } from '@/components/grid/grid-badge';
 import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-
-const CHANNEL_OPTIONS: { value: MessageChannel; label: string }[] = [
-  { value: 'email', label: 'E-mail' },
-  { value: 'sms', label: 'SMS' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'notification', label: 'Notificação' },
-];
 
 const STATUS_FILTER_OPTIONS = [
   { label: 'Ativo', value: 'active' },
   { label: 'Inativo', value: 'inactive' },
 ];
-
-function resetSendState() {
-  return {
-    recipients: [] as string[],
-    recipientInput: '',
-    channels: ['email'] as MessageChannel[],
-  };
-}
 
 export function MessageTemplatesPage() {
   const { t } = useTranslation();
@@ -127,10 +103,7 @@ export function MessageTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [rowStatusId, setRowStatusId] = useState<number | null>(null);
-  const [sendTemplate, setSendTemplate] = useState<MessageTemplate | null>(null);
-  const [sendRecipients, setSendRecipients] = useState<string[]>([]);
-  const [recipientInput, setRecipientInput] = useState('');
-  const [sendChannels, setSendChannels] = useState<MessageChannel[]>(['email']);
+  const [testingId, setTestingId] = useState<number | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<number | null>(null);
 
   const infiniteScroll = useGridInfiniteScroll<MessageTemplate>({
@@ -188,20 +161,19 @@ export function MessageTemplatesPage() {
     void load();
   }, [load]);
 
-  const sendMutation = useMutation({
-    mutationFn: () =>
-      ('send' in templatesService
-        ? templatesService.send(sendTemplate!.id, {
-          recipients: sendRecipients,
-          channels: sendChannels,
-        })
-        : Promise.reject(new Error('send-unavailable'))),
-    onSuccess: () => {
-      showSuccess('Mensagem enfileirada com sucesso!');
-      closeSendDialog();
-    },
-    onError: (error) => showError('Erro ao enviar mensagem.', error),
-  });
+  async function handleTestSend(template: MessageTemplate) {
+    if (!('testSend' in templatesService)) return;
+
+    try {
+      setTestingId(template.id);
+      const response = await templatesService.testSend(template.id);
+      showSuccess(`Teste enfileirado para ${response.data.result.recipient}.`);
+    } catch (error) {
+      showError('Erro ao enviar teste do template.', error);
+    } finally {
+      setTestingId(null);
+    }
+  }
 
   const handleEditSelected = useCallback(() => {
     if (!grid.singleSelection) return;
@@ -214,10 +186,6 @@ export function MessageTemplatesPage() {
   }, [grid.hasSelection, grid.requestDelete, grid.selected]);
 
   const handleEscape = useCallback(() => {
-    if (sendTemplate !== null) {
-      closeSendDialog();
-      return;
-    }
     if (grid.deleteIds.length > 0) {
       grid.clearDeleteRequest();
     }
@@ -225,7 +193,6 @@ export function MessageTemplatesPage() {
       grid.clearSelection();
     }
   }, [
-    sendTemplate,
     grid.clearDeleteRequest,
     grid.clearSelection,
     grid.deleteIds.length,
@@ -280,7 +247,7 @@ export function MessageTemplatesPage() {
   );
 
   async function handleDuplicate(templateId: number) {
-    if (isPlatformCatalog || !('duplicate' in templatesService)) return;
+    if (!('duplicate' in templatesService)) return;
     try {
       setDuplicatingId(templateId);
       const res = await templatesService.duplicate(templateId);
@@ -306,41 +273,6 @@ export function MessageTemplatesPage() {
     } finally {
       setRowStatusId(null);
     }
-  }
-
-  function closeSendDialog() {
-    setSendTemplate(null);
-    const reset = resetSendState();
-    setSendRecipients(reset.recipients);
-    setRecipientInput(reset.recipientInput);
-    setSendChannels(reset.channels);
-  }
-
-  function openSendDialog(template: MessageTemplate) {
-    const reset = resetSendState();
-    setSendTemplate(template);
-    setSendRecipients(reset.recipients);
-    setRecipientInput(reset.recipientInput);
-    setSendChannels(reset.channels);
-  }
-
-  function addRecipient() {
-    const value = recipientInput.trim();
-    if (!value) return;
-    if (!sendRecipients.includes(value)) {
-      setSendRecipients((prev) => [...prev, value]);
-    }
-    setRecipientInput('');
-  }
-
-  function removeRecipient(recipient: string) {
-    setSendRecipients((prev) => prev.filter((r) => r !== recipient));
-  }
-
-  function toggleChannel(channel: MessageChannel, checked: boolean) {
-    setSendChannels((prev) =>
-      checked ? [...prev, channel] : prev.filter((c) => c !== channel),
-    );
   }
 
   const columnDefinitions = useMemo<GridColumnDef<MessageTemplate>[]>(
@@ -377,15 +309,16 @@ export function MessageTemplatesPage() {
           <GridRowActions
             actions={[
               {
-                label: 'Enviar',
-                icon: Send,
-                hidden: isPlatformCatalog || !template.is_active,
-                onClick: () => openSendDialog(template),
+                label: 'Testar',
+                icon: FlaskConical,
+                hidden: !template.is_active || !('testSend' in templatesService),
+                disabled: testingId === template.id,
+                onClick: () => void handleTestSend(template),
               },
               {
                 label: 'Duplicar',
                 icon: Copy,
-                hidden: isPlatformCatalog,
+                hidden: !('duplicate' in templatesService),
                 disabled: duplicatingId === template.id,
                 onClick: () => void handleDuplicate(template.id),
               },
@@ -463,11 +396,13 @@ export function MessageTemplatesPage() {
     ],
     [
       duplicatingId,
+      testingId,
       grid.selected,
       grid.toggleSelect,
       handleEditTemplate,
       isPlatformCatalog,
       rowStatusId,
+      templatesService,
     ],
   );
 
@@ -658,95 +593,6 @@ export function MessageTemplatesPage() {
           onRowDoubleClick={(template) => handleEditTemplate(template.id)}
         />
       </GridPanel>
-
-      <Dialog open={!isPlatformCatalog && !!sendTemplate} onOpenChange={(open) => !open && closeSendDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogPanelTitle icon={Send}>Enviar mensagem</DialogPanelTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <p className="text-sm text-muted-foreground">
-              Template: <strong>{sendTemplate?.name}</strong>
-            </p>
-
-            <div className="space-y-2">
-              <Label>Destinatários</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  placeholder="email@exemplo.com ou +5511999999999"
-                  value={recipientInput}
-                  onChange={(e) => setRecipientInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addRecipient();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={addRecipient}>
-                  Adicionar
-                </Button>
-              </div>
-              <div className="flex min-h-[32px] flex-wrap gap-1">
-                {sendRecipients.map((recipient) => (
-                  <GridBadge key={recipient} variant="secondary" className="gap-1">
-                    {recipient}
-                    <button type="button" onClick={() => removeRecipient(recipient)}>
-                      <X className="size-3" />
-                    </button>
-                  </GridBadge>
-                ))}
-                {sendRecipients.length === 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    Nenhum destinatário adicionado.
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Canais</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {CHANNEL_OPTIONS.map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex cursor-pointer items-center gap-2 text-sm"
-                  >
-                    <Checkbox
-                      checked={sendChannels.includes(option.value)}
-                      onCheckedChange={(checked) =>
-                        toggleChannel(option.value, checked === true)
-                      }
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                onClick={() => sendMutation.mutate()}
-                disabled={
-                  sendRecipients.length === 0
-                  || sendChannels.length === 0
-                  || sendMutation.isPending
-                }
-              >
-                {sendMutation.isPending ? 'Enviando...' : (
-                  <>
-                    <Send className="size-4 mr-2" /> Enviar
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={closeSendDialog}>
-                {t('common.close')}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {!isPlatformCatalog ? (
       <AlertDialog

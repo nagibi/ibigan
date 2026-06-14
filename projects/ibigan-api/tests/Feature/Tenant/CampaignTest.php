@@ -421,3 +421,30 @@ it('ProcessCampaignJob resolve destinatários por role e cria deliveries', funct
         expect($campaign->deliveries()->count())->toBeGreaterThan(0);
     });
 });
+
+it('ProcessCampaignJob resolve destinatários por users e cria deliveries', function (): void {
+    Queue::fake();
+
+    $campaign = $this->tenant->run(function (): Campaign {
+        $c = Campaign::factory()->create([
+            'created_by' => $this->admin->id,
+            'channels'   => ['email'],
+            'status'     => CampaignStatus::Draft,
+        ]);
+        $c->recipients()->create([
+            'type' => 'users',
+            'value' => implode(',', [$this->admin->id, $this->viewer->id]),
+        ]);
+
+        return $c;
+    });
+
+    $this->tenant->run(function () use ($campaign): void {
+        $job = new \App\Jobs\ProcessCampaignJob($campaign->id);
+        $job->handle(app(\App\Services\CampaignService::class));
+    });
+
+    $this->tenant->run(function () use ($campaign): void {
+        expect($campaign->fresh()->deliveries()->count())->toBe(2);
+    });
+});

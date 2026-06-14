@@ -168,16 +168,37 @@ final class CampaignService
 
         foreach ($campaign->recipients as $recipient) {
             $users = $users->merge(match ($recipient->type) {
-                CampaignRecipientType::All => User::query()->get(),
-                CampaignRecipientType::Role => User::role($recipient->value)->get(),
-                CampaignRecipientType::Permission => User::permission($recipient->value)->get(),
+                CampaignRecipientType::All => User::query()->where('is_active', true)->get(),
+                CampaignRecipientType::Role => User::role($recipient->value)->where('is_active', true)->get(),
+                CampaignRecipientType::Permission => User::permission($recipient->value)->where('is_active', true)->get(),
                 CampaignRecipientType::User => User::query()
-                    ->where('id', $recipient->value)
+                    ->whereKey($recipient->value)
+                    ->where('is_active', true)
+                    ->get(),
+                CampaignRecipientType::Users => User::query()
+                    ->whereIn('id', $this->parseUserIds($recipient->value))
+                    ->where('is_active', true)
                     ->get(),
             });
         }
 
         return $users->unique('id')->values();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function parseUserIds(?string $value): array
+    {
+        if ($value === null || trim($value) === '') {
+            return [];
+        }
+
+        return collect(explode(',', $value))
+            ->map(static fn (string $id): int => (int) trim($id))
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values()
+            ->all();
     }
 
     /**
