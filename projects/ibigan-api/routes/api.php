@@ -129,11 +129,18 @@ Route::prefix('central/v1')
             Route::patch('central-users/{centralUser}/toggle-active', [CentralUserController::class, 'toggleActive']);
             Route::patch('central-users/{centralUser}/toggle-super-admin', [CentralUserController::class, 'toggleSuperAdmin']);
 
-            Route::post('platform-catalog/sync', [PlatformMessageTemplateController::class, 'sync']);
-            Route::patch('platform/message-templates/{platformMessageTemplate}/toggle-active', [PlatformMessageTemplateController::class, 'toggleActive']);
-            Route::apiResource('platform/message-templates', PlatformMessageTemplateController::class)->only(['index', 'show', 'update']);
-            Route::patch('platform/report-templates/{platformReportTemplate}/toggle-active', [PlatformReportTemplateController::class, 'toggleActive']);
-            Route::apiResource('platform/report-templates', PlatformReportTemplateController::class)->only(['index', 'show', 'update']);
+            Route::post('platform-catalog/sync', [PlatformMessageTemplateController::class, 'sync'])
+                ->name('central.platform-catalog.sync');
+            Route::patch('platform/message-templates/{platformMessageTemplate}/toggle-active', [PlatformMessageTemplateController::class, 'toggleActive'])
+                ->name('central.platform.message-templates.toggle-active');
+            Route::apiResource('platform/message-templates', PlatformMessageTemplateController::class)
+                ->only(['index', 'show', 'update'])
+                ->names('central.platform.message-templates');
+            Route::patch('platform/report-templates/{platformReportTemplate}/toggle-active', [PlatformReportTemplateController::class, 'toggleActive'])
+                ->name('central.platform.report-templates.toggle-active');
+            Route::apiResource('platform/report-templates', PlatformReportTemplateController::class)
+                ->only(['index', 'show', 'update'])
+                ->names('central.platform.report-templates');
         });
     });
 
