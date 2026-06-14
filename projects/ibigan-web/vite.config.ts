@@ -6,6 +6,14 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: process.env.VITE_BASE_URL || '/',
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    // Browser loads the app via nginx on :80; HMR WebSocket must use the same port.
+    hmr: {
+      clientPort: 80,
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -13,13 +13,19 @@ function isDevToolsPath(path: string): boolean {
     return normalized === '/docs/api'
       || normalized === '/horizon'
       || normalized === '/telescope'
+      || normalized === '/clockwork'
+      || normalized === '/log-viewer'
       || normalized.endsWith('/docs/api')
       || normalized.endsWith('/horizon')
-      || normalized.endsWith('/telescope');
+      || normalized.endsWith('/telescope')
+      || normalized.endsWith('/clockwork')
+      || normalized.endsWith('/log-viewer');
   } catch {
     return path.includes('/docs/api')
       || path.includes('/horizon')
-      || path.includes('/telescope');
+      || path.includes('/telescope')
+      || path.includes('/clockwork')
+      || path.includes('/log-viewer');
   }
 }
 

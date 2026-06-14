@@ -31,7 +31,8 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="true"/>
-        <env name="DEBUGBAR_ENABLED" value="false"/>
+        <env name="CLOCKWORK_ENABLE" value="false"/>
+        <env name="LOG_VIEWER_ENABLED" value="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="SCOUT_DRIVER" value="collection"/>
     </php>

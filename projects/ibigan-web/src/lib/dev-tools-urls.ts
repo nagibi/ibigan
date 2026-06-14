@@ -22,6 +22,10 @@ export const DEV_TOOLS_URLS = {
     import.meta.env.VITE_DEV_HORIZON_URL || `${apiBaseUrl()}/horizon`,
   telescope:
     import.meta.env.VITE_DEV_TELESCOPE_URL || `${apiBaseUrl()}/telescope`,
+  clockwork:
+    import.meta.env.VITE_DEV_CLOCKWORK_URL || `${apiBaseUrl()}/clockwork`,
+  logViewer:
+    import.meta.env.VITE_DEV_LOG_VIEWER_URL || `${apiBaseUrl()}/log-viewer`,
   phpMyAdmin:
     import.meta.env.VITE_DEV_PHPMYADMIN_URL || 'http://localhost:8080',
   mailpit:

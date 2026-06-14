@@ -43,20 +43,36 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => 'API do Ibigan — plataforma SaaS multi-tenant.
+        'description' => <<<'MD'
+API do Ibigan — plataforma SaaS multi-tenant.
 
-Todas as rotas de tenant requerem o header `X-Tenant-ID` com o ID do tenant.
+### Autenticação
+- **Tenant:** header `X-Tenant-ID` + `Authorization: Bearer {token}` (obtido em `POST /api/v1/auth/login`)
+- **Central (super-admin):** `Authorization: Bearer {token}` (obtido em `POST /api/central/v1/auth/login`)
 
-Rotas protegidas requerem Bearer token obtido via `/auth/login`.',
+### Dicas
+- Use **Authorize** (cadeado) para gravar o Bearer token
+- **Try it out** em cada endpoint para testar direto no navegador
+MD,
     ],
 
     'ui' => [
         'title' => 'Ibigan API',
     ],
 
-    'renderer' => 'elements',
+    'renderer' => 'swagger',
 
     'renderers' => [
+        'swagger' => [
+            'view' => 'docs.api-swagger',
+            'docExpansion' => 'list',
+            'defaultModelsExpandDepth' => 1,
+            'defaultModelExpandDepth' => 1,
+            'displayRequestDuration' => true,
+            'filter' => true,
+            'persistAuthorization' => true,
+            'tryItOutEnabled' => true,
+        ],
         /*
          * Stoplight Elements config options: https://docs.stoplight.io/docs/elements/b074dc47b2826-elements-configuration-options
          */

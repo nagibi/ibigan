@@ -13,7 +13,7 @@ final class DevToolsLinks extends Command
                             {--email= : Email do CentralUser}
                             {--tenant= : Tenant ID opcional (query tenant_id na API Docs)}';
 
-    protected $description = 'Gera links de acesso para Horizon, Telescope e API Docs';
+    protected $description = 'Gera links de acesso para Horizon, Telescope, Clockwork, Log Viewer e API Docs';
 
     public function handle(): int
     {
@@ -42,6 +42,16 @@ final class DevToolsLinks extends Command
             $token,
         );
 
+        $clockworkUrl = $this->urlWithToken(
+            (string) config('dev-tools.clockwork_url'),
+            $token,
+        );
+
+        $logViewerUrl = $this->urlWithToken(
+            (string) config('dev-tools.log_viewer_url'),
+            $token,
+        );
+
         $apiDocsUrl = $this->urlWithToken(
             (string) config('dev-tools.api_docs_url'),
             $token,
@@ -53,6 +63,8 @@ final class DevToolsLinks extends Command
         $this->newLine();
         $this->line("  <fg=blue>Horizon</>     {$horizonUrl}");
         $this->line("  <fg=blue>Telescope</>   {$telescopeUrl}");
+        $this->line("  <fg=blue>Clockwork</>   {$clockworkUrl}");
+        $this->line("  <fg=blue>Log Viewer</>  {$logViewerUrl}");
         $this->line("  <fg=blue>API Docs</>    {$apiDocsUrl}");
         $this->newLine();
         $this->comment('Os links redirecionam e gravam cookie de acesso (válido pelo tempo da sessão).');

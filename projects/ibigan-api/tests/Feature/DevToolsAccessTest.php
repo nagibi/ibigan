@@ -67,6 +67,10 @@ it('nega acesso anônimo ao Telescope', function (): void {
     $this->get('/telescope')->assertForbidden();
 });
 
+it('nega acesso anônimo ao Log Viewer', function (): void {
+    $this->get('/log-viewer')->assertForbidden();
+});
+
 it('permite admin do tenant com token e tenant_id', function (): void {
     $token = $this->tenant->run(fn (): string => $this->admin->createToken('api-token')->plainTextToken);
 
@@ -116,6 +120,9 @@ it('permite super-admin central com token', function (): void {
 
     $this->get("/telescope?access_token={$token}")
         ->assertRedirect('/telescope');
+
+    $this->get("/log-viewer?access_token={$token}")
+        ->assertRedirect('/log-viewer');
 });
 
 it('nega central user comum com token', function (): void {

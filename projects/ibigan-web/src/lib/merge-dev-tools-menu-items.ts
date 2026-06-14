@@ -8,6 +8,8 @@ const DEV_TOOL_TRANSLATION_BY_PATH: Partial<Record<string, string>> = {
   [DEV_TOOLS_URLS.apiDocs]: 'menu.api_docs',
   [DEV_TOOLS_URLS.horizon]: 'menu.horizon',
   [DEV_TOOLS_URLS.telescope]: 'menu.telescope',
+  [DEV_TOOLS_URLS.clockwork]: 'menu.clockwork',
+  [DEV_TOOLS_URLS.logViewer]: 'menu.log_viewer',
   [DEV_TOOLS_URLS.phpMyAdmin]: 'menu.phpmyadmin',
   [DEV_TOOLS_URLS.mailpit]: 'menu.mailpit',
 };
@@ -16,6 +18,8 @@ const DEV_TOOL_PATH_BY_SLUG: Record<string, string> = {
   'documentacao-api': DEV_TOOLS_URLS.apiDocs,
   'horizon': DEV_TOOLS_URLS.horizon,
   'telescope': DEV_TOOLS_URLS.telescope,
+  'clockwork': DEV_TOOLS_URLS.clockwork,
+  'log-viewer': DEV_TOOLS_URLS.logViewer,
   'phpmyadmin': DEV_TOOLS_URLS.phpMyAdmin,
   'mailpit': DEV_TOOLS_URLS.mailpit,
 };
@@ -26,6 +30,8 @@ export function isDevToolsChild(item: MenuItem): boolean {
     || item.path.includes('/docs/api')
     || item.path.includes('/horizon')
     || item.path.includes('/telescope')
+    || item.path.includes('/clockwork')
+    || item.path.includes('/log-viewer')
   ));
 }
 
@@ -47,6 +53,10 @@ function syncDevToolChildPath(child: MenuItem): MenuItem {
         ? DEV_TOOLS_URLS.horizon
         : child.path?.includes('/telescope')
           ? DEV_TOOLS_URLS.telescope
+          : child.path?.includes('/clockwork')
+            ? DEV_TOOLS_URLS.clockwork
+            : child.path?.includes('/log-viewer')
+              ? DEV_TOOLS_URLS.logViewer
           : child.path?.includes('8080')
           ? DEV_TOOLS_URLS.phpMyAdmin
           : child.path?.includes('8025')

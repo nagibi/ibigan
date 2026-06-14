@@ -15,14 +15,13 @@ use App\Repositories\Eloquent\EloquentInviteRepository;
 use App\Repositories\Eloquent\EloquentMessageTemplateRepository;
 use App\Models\MultiTenantPersonalAccessToken;
 use App\Repositories\Eloquent\EloquentUserRepository;
-use App\Models\Central\CentralUser;
 use App\Support\DevToolsAccess;
 use App\Support\SentryContext;
 use App\Support\TimezoneResolver;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Server;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -61,34 +60,31 @@ class AppServiceProvider extends ServiceProvider
 
         Sanctum::usePersonalAccessTokenModel(MultiTenantPersonalAccessToken::class);
 
-        Scramble::registerUiRoute('docs/api');
-        Scramble::registerJsonSpecificationRoute('docs/api.json');
+        Scramble::ignoreDefaultRoutes();
+
+        Scramble::configure()->expose(
+            ui: 'docs/api',
+            document: 'docs/api.json',
+        );
 
         Scramble::extendOpenApi(function (OpenApi $openApi): void {
             $openApi->info->title = config('scramble.ui.title', 'Ibigan API');
             $openApi->info->version = config('scramble.info.version', '1.0.0');
             $openApi->info->description = config('scramble.info.description', '');
+
+            $openApi->servers = [
+                Server::make(rtrim((string) config('app.url'), '/'))
+                    ->setDescription('Servidor atual'),
+            ];
         });
 
-        Gate::define('viewApiDocs', function ($user = null) {
-            if (DevToolsAccess::userCanAccess($user)) {
-                return true;
-            }
+        Gate::define('viewApiDocs', fn ($user = null) => DevToolsAccess::canViewDevTools($user));
 
-            if (DevToolsAccess::userCanAccess(Auth::guard('web')->user())) {
-                return true;
-            }
-
-            $centralUserId = session('dev_tools_central_user_id');
-
-            if (! is_numeric($centralUserId)) {
-                return false;
-            }
-
-            return DevToolsAccess::userCanAccess(
-                CentralUser::query()->find((int) $centralUserId),
-            );
-        });
+        Gate::define('viewLogViewer', fn ($user = null) => DevToolsAccess::canViewDevTools($user));
+        Gate::define('downloadLogFile', fn ($user) => DevToolsAccess::canViewDevTools($user));
+        Gate::define('downloadLogFolder', fn ($user) => DevToolsAccess::canViewDevTools($user));
+        Gate::define('deleteLogFile', fn ($user) => DevToolsAccess::canViewDevTools($user));
+        Gate::define('deleteLogFolder', fn ($user) => DevToolsAccess::canViewDevTools($user));
 
         Event::listen(TenancyInitialized::class, function (TenancyInitialized $event): void {
             $timezone = $event->tenancy->tenant->timezone ?? null;

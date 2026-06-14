@@ -305,13 +305,39 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
+            'title' => 'Clockwork',
+            'slug' => 'clockwork',
+            'icon' => 'Clock',
+            'path' => config('dev-tools.clockwork_url'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Log Viewer',
+            'slug' => 'log-viewer',
+            'icon' => 'ScrollText',
+            'path' => config('dev-tools.log_viewer_url'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 4,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
             'title' => 'phpMyAdmin',
             'slug' => 'phpmyadmin',
             'icon' => 'Database',
             'path' => config('dev-tools.phpmyadmin_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
-            'order' => 3,
+            'order' => 5,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -324,7 +350,7 @@ class MenuSeeder extends Seeder
             'path' => config('dev-tools.mailpit_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
-            'order' => 4,
+            'order' => 6,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -391,6 +417,8 @@ class MenuSeeder extends Seeder
             'documentacao-api' => 'menu.api_docs',
             'horizon' => 'menu.horizon',
             'telescope' => 'menu.telescope',
+            'clockwork' => 'menu.clockwork',
+            'log-viewer' => 'menu.log_viewer',
             'phpmyadmin' => 'menu.phpmyadmin',
             'mailpit' => 'menu.mailpit',
             'configuracoes' => 'menu.settings',

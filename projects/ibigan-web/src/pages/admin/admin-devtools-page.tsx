@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, ExternalLink, Gauge, Telescope } from 'lucide-react';
+import { BookOpen, Clock, ExternalLink, Gauge, ScrollText, Telescope } from 'lucide-react';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { PageBody } from '@/components/common/page-body';
 import { buildDevToolsHref } from '@/lib/dev-tools-link';
@@ -46,6 +46,20 @@ export function AdminDevToolsPage() {
         descriptionKey: 'admin.devtools.telescope_description',
         url: DEV_TOOLS_URLS.telescope,
         icon: Telescope,
+      },
+      {
+        id: 'clockwork',
+        titleKey: 'menu.clockwork',
+        descriptionKey: 'admin.devtools.clockwork_description',
+        url: DEV_TOOLS_URLS.clockwork,
+        icon: Clock,
+      },
+      {
+        id: 'log-viewer',
+        titleKey: 'menu.log_viewer',
+        descriptionKey: 'admin.devtools.log_viewer_description',
+        url: DEV_TOOLS_URLS.logViewer,
+        icon: ScrollText,
       },
       {
         id: 'api-docs',

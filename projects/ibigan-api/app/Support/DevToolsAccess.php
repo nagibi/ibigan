@@ -7,6 +7,7 @@ namespace App\Support;
 use App\Models\Central\CentralUser;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\Auth;
 
 final class DevToolsAccess
 {
@@ -28,5 +29,30 @@ final class DevToolsAccess
         }
 
         return false;
+    }
+
+    public static function canViewDevTools(mixed $user = null): bool
+    {
+        if (app()->environment('local')) {
+            return true;
+        }
+
+        if (self::userCanAccess($user)) {
+            return true;
+        }
+
+        if (self::userCanAccess(Auth::guard('web')->user())) {
+            return true;
+        }
+
+        $centralUserId = session('dev_tools_central_user_id');
+
+        if (! is_numeric($centralUserId)) {
+            return false;
+        }
+
+        return self::userCanAccess(
+            CentralUser::query()->find((int) $centralUserId),
+        );
     }
 }
