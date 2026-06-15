@@ -102,7 +102,7 @@ final class SocialAuthController extends Controller
         string $tenantId,
         string $frontUrl,
     ): RedirectResponse {
-        $tenant = Tenant::find($tenantId);
+        $tenant = $this->findTenant($tenantId);
 
         if (! $tenant) {
             return redirect("{$frontUrl}/auth/login?error=tenant_not_found");
@@ -132,7 +132,7 @@ final class SocialAuthController extends Controller
 
         $token = $result['token'];
 
-        return redirect("{$frontUrl}/auth/callback?token={$token}&tenant_id={$tenantId}");
+        return redirect("{$frontUrl}/auth/callback?token={$token}&tenant_id={$tenant->id}");
     }
 
     private function handleTenantRegistration(
@@ -171,6 +171,17 @@ final class SocialAuthController extends Controller
         });
 
         return redirect("{$frontUrl}/auth/callback?token={$token}&tenant_id={$tenantSlug}");
+    }
+
+    private function findTenant(string $tenantId): ?Tenant
+    {
+        $tenant = Tenant::find($tenantId);
+
+        if ($tenant !== null) {
+            return $tenant;
+        }
+
+        return Tenant::query()->where('slug', $tenantId)->first();
     }
 
     private function assertProvider(string $provider): void

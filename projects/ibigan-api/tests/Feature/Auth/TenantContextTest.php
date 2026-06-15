@@ -68,11 +68,38 @@ it('resolve tenant por query no host central', function (): void {
         ->assertJsonPath('result.is_central_host', true);
 });
 
+it('resolve tenant por query no host central de producao', function (): void {
+    config(['tenant-context.central_hosts' => ['nagibi.com.br']]);
+
+    tenantContextRequest('nagibi.com.br', 'tenant=techctx')
+        ->assertOk()
+        ->assertJsonPath('result.resolved', true)
+        ->assertJsonPath('result.source', 'query')
+        ->assertJsonPath('result.is_central_host', true)
+        ->assertJsonPath('result.tenant.slug', 'techctx');
+});
+
+it('trata www como host central quando apex esta configurado', function (): void {
+    config(['tenant-context.central_hosts' => ['nagibi.com.br']]);
+
+    tenantContextRequest('www.nagibi.com.br', 'tenant=techctx')
+        ->assertOk()
+        ->assertJsonPath('result.is_central_host', true)
+        ->assertJsonPath('result.resolved', true);
+});
+
 it('nao resolve tenant no host central sem query', function (): void {
     tenantContextRequest('localhost')
         ->assertOk()
         ->assertJsonPath('result.resolved', false)
         ->assertJsonPath('result.is_central_host', true);
+});
+
+it('nao resolve tenant por query fora do host central', function (): void {
+    tenantContextRequest('unknown.example', 'tenant=techctx')
+        ->assertOk()
+        ->assertJsonPath('result.resolved', false)
+        ->assertJsonPath('result.is_central_host', false);
 });
 
 it('resolve tenant pelo host informado via X-Forwarded-Host', function (): void {

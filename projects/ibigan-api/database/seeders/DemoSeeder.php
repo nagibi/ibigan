@@ -26,6 +26,7 @@ use App\Models\Webhook;
 use App\Models\WebhookDelivery;
 use App\Support\SystemMessageTemplates;
 use Carbon\Carbon;
+use Database\Seeders\Concerns\SeedsPlatformTenantSuperAdmins;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -33,6 +34,11 @@ use Illuminate\Support\Str;
 
 class DemoSeeder extends Seeder
 {
+    use SeedsPlatformTenantSuperAdmins;
+
+    /** Tenant padrão ao listar organizações para os super-admins da plataforma. */
+    private const PLATFORM_DEFAULT_TENANT_ID = 'techsolutions';
+
     /** @var list<array<string, mixed>> */
     private array $tenants = [
         [
@@ -133,19 +139,7 @@ class DemoSeeder extends Seeder
         ['name' => 'Jean Schletz',   'email' => 'jeanschletz@gmail.com'],
         ['name' => 'Breno Silva',    'email' => 'breno.silva@ibigan.com'],
         ['name' => 'Raphael Acunha da Silva', 'email' => 'raphaelacunhadasilva@gmail.com'],
-    ];
-
-    /** Usuários fixos por tenant (e-mail real, independente do padrão demo). */
-    private array $fixedTenantUsers = [
-        'techsolutions' => [
-            [
-                'name'   => 'Ibigan',
-                'email'  => 'ibigan@gmail.com',
-                'cpf'    => '52998224725',
-                'role'   => 'viewer',
-                'gender' => 'prefer_not_to_say',
-            ],
-        ],
+        ['name' => 'Ibigan', 'email' => 'ibigan@gmail.com'],
     ];
 
     /** Volumes mensais de entregas (últimos 6 meses) por tenant. */
@@ -199,7 +193,12 @@ class DemoSeeder extends Seeder
                 );
                 $superAdmin->syncRoles(['super-admin']);
 
-                $tenantUsers = [$superAdmin];
+                $platformAdmins = $this->seedPlatformTenantSuperAdmins(
+                    $tenantData['id'],
+                    self::PLATFORM_DEFAULT_TENANT_ID,
+                );
+
+                $tenantUsers = [$superAdmin, ...$platformAdmins];
 
                 foreach ($this->users as $index => $userData) {
                     $email = str_replace('{tenant}', $tenantData['id'], $userData['email']);
@@ -222,11 +221,6 @@ class DemoSeeder extends Seeder
                     $tenantUsers[] = $user;
                 }
 
-                $tenantUsers = array_merge(
-                    $tenantUsers,
-                    $this->seedFixedTenantUsers($tenantData['id']),
-                );
-
                 $this->backdateUserTimestamps($tenantUsers, $tenantIndex);
                 $this->seedMessageTemplates();
                 $this->seedWebhooks($tenantData['id']);
@@ -246,36 +240,24 @@ class DemoSeeder extends Seeder
                 $this->command->info("  ✓ Tenant {$tenantData['id']} populado com sucesso");
             });
         }
+
+        $this->seedAcmePlatformAdminsIfPresent();
     }
 
-    /**
-     * @return list<User>
-     */
-    private function seedFixedTenantUsers(string $tenantId): array
+    private function seedAcmePlatformAdminsIfPresent(): void
     {
-        $users = [];
+        $acme = Tenant::query()->find('acme');
 
-        foreach ($this->fixedTenantUsers[$tenantId] ?? [] as $userData) {
-            $user = User::firstOrCreate(
-                ['email' => $userData['email']],
-                [
-                    'name'           => $userData['name'],
-                    'cpf'            => $userData['cpf'],
-                    'phone'          => '11987654321',
-                    'birth_date'     => '1990-01-15',
-                    'gender'         => $userData['gender'],
-                    'password'       => Hash::make('A12345'),
-                    'status'         => 'active',
-                    'is_super_admin' => false,
-                ]
-            );
-            $user->syncRoles([$userData['role']]);
-            $users[] = $user;
-
-            $this->command->info("  ✓ Usuário fixo criado: {$userData['email']} ({$userData['role']})");
+        if ($acme === null) {
+            return;
         }
 
-        return $users;
+        $this->command->info('Vinculando super-admins da plataforma ao tenant Acme...');
+
+        $acme->run(function () use ($acme): void {
+            $this->call(RolePermissionSeeder::class);
+            $this->seedPlatformTenantSuperAdmins($acme->id, self::PLATFORM_DEFAULT_TENANT_ID);
+        });
     }
 
     private function seedCentralSuperAdmins(): void

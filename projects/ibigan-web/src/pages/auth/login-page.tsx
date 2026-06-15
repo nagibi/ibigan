@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { AuthLanguageSwitcher } from '@/components/auth/auth-language-switcher';
 import { AuthPageShell } from '@/components/auth/auth-page-shell';
 
 type FormData = {
@@ -48,13 +49,13 @@ export function LoginPage() {
 
   const schema = useMemo(
     () => z.object({
-      tenant_id: tenantContext.isResolved
+      tenant_id: tenantContext.isTenantKnown
         ? z.string().optional()
         : z.string().min(1, t('validation.required')),
       email: z.string().email(t('validation.email')).min(1, t('validation.required')),
       password: z.string().min(1, t('validation.required')),
     }),
-    [t, tenantContext.isResolved],
+    [t, tenantContext.isTenantKnown],
   );
 
   const form = useForm<FormData>({
@@ -63,13 +64,13 @@ export function LoginPage() {
   });
 
   const tenantId = form.watch('tenant_id');
-  const effectiveTenantId = tenantContext.tenantId || tenantId;
+  const effectiveTenantId = tenantContext.tenantId || tenantId || tenantContext.tenantQuery;
 
   useEffect(() => {
-    if (tenantContext.isResolved && tenantContext.tenantId) {
+    if (tenantContext.isTenantKnown && tenantContext.tenantId) {
       form.setValue('tenant_id', tenantContext.tenantId, { shouldValidate: true });
     }
-  }, [form, tenantContext.isResolved, tenantContext.tenantId]);
+  }, [form, tenantContext.isTenantKnown, tenantContext.tenantId]);
 
   useEffect(() => {
     if (effectiveTenantId.trim().length > 0) {
@@ -101,7 +102,7 @@ export function LoginPage() {
       setIsLoading(true);
       setError(null);
 
-      const resolvedTenantId = tenantContext.tenantId || values.tenant_id?.trim() || '';
+      const resolvedTenantId = tenantContext.tenantId || values.tenant_id?.trim() || tenantContext.tenantQuery || '';
 
       if (resolvedTenantId) {
         await loadTenantTranslationOverrides(currenLanguage.code, resolvedTenantId);
@@ -149,21 +150,24 @@ export function LoginPage() {
   return (
     <AuthPageShell>
       <Card className="relative w-full">
-        <CardContent className="p-8 max-xl:p-4">
+        <AuthLanguageSwitcher className="absolute top-4 right-4" />
+        <CardContent className="p-8 pt-14 max-xl:p-4 max-xl:pt-10">
             <div className="space-y-1 pb-5 text-center max-xl:pb-2">
               <h1 className="text-2xl font-semibold tracking-tight max-xl:text-lg">{t('auth.login.title')}</h1>
               <p className="text-sm text-muted-foreground max-xl:hidden">
                 {tenantContext.isResolved && tenantContext.tenant?.name
                   ? t('auth.login.subtitle_tenant', { name: tenantContext.tenant.name })
-                  : t('auth.login.subtitle')}
+                  : tenantContext.isTenantKnown && tenantContext.tenantSlug
+                    ? t('auth.login.subtitle_tenant', { name: tenantContext.tenantSlug })
+                    : t('auth.login.subtitle')}
               </p>
             </div>
 
-            {tenantContext.isResolved && tenantContext.tenant ? (
+            {tenantContext.isTenantKnown && (tenantContext.tenant?.name ?? tenantContext.tenantSlug) ? (
               <div className="mb-4 flex justify-center">
                 <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
                   <Building2 className="size-3.5" />
-                  {tenantContext.tenant.name ?? tenantContext.tenant.slug}
+                  {tenantContext.tenant?.name ?? tenantContext.tenantSlug}
                 </Badge>
               </div>
             ) : null}
@@ -187,7 +191,7 @@ export function LoginPage() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-4 max-xl:space-y-3"
               >
-                {!tenantContext.isResolved ? (
+                {!tenantContext.isTenantKnown ? (
                   <FormField
                     control={form.control}
                     name="tenant_id"
@@ -307,7 +311,7 @@ export function LoginPage() {
                 tenantId={effectiveTenantId}
                 onError={setError}
                 onTenantIdRequired={() => {
-                  if (!tenantContext.isResolved) {
+                  if (!tenantContext.isTenantKnown) {
                     form.setError('tenant_id', { message: t('validation.required') });
                   }
                 }}

@@ -31,12 +31,12 @@ export function ForgotPasswordPage() {
 
   const schema = useMemo(
     () => z.object({
-      tenant_id: tenantContext.isResolved
+      tenant_id: tenantContext.isTenantKnown
         ? z.string().optional()
         : z.string().min(1, t('validation.required')),
       email: z.string().email(t('validation.email')),
     }),
-    [t, tenantContext.isResolved],
+    [t, tenantContext.isTenantKnown],
   );
 
   const form = useForm<FormData>({
@@ -45,17 +45,17 @@ export function ForgotPasswordPage() {
   });
 
   useEffect(() => {
-    if (tenantContext.isResolved && tenantContext.tenantId) {
+    if (tenantContext.isTenantKnown && tenantContext.tenantId) {
       form.setValue('tenant_id', tenantContext.tenantId, { shouldValidate: true });
     }
-  }, [form, tenantContext.isResolved, tenantContext.tenantId]);
+  }, [form, tenantContext.isTenantKnown, tenantContext.tenantId]);
 
   async function onSubmit(values: FormData) {
     try {
       setIsLoading(true);
       setError(null);
 
-      const tenantId = tenantContext.tenantId || values.tenant_id?.trim() || undefined;
+      const tenantId = tenantContext.tenantId || values.tenant_id?.trim() || tenantContext.tenantQuery || undefined;
       await authService.forgotPassword(values.email, tenantId);
       setSuccess(true);
     } catch {
@@ -76,11 +76,11 @@ export function ForgotPasswordPage() {
             <p className="text-sm text-muted-foreground">{t('auth.forgot_password.subtitle')}</p>
           </div>
 
-          {tenantContext.isResolved && tenantContext.tenant ? (
+          {tenantContext.isTenantKnown && (tenantContext.tenant?.name ?? tenantContext.tenantSlug) ? (
             <div className="mb-4 flex justify-center">
               <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm font-normal">
                 <Building2 className="size-3.5" />
-                {tenantContext.tenant.name ?? tenantContext.tenant.slug}
+                {tenantContext.tenant?.name ?? tenantContext.tenantSlug}
               </Badge>
             </div>
           ) : null}
@@ -106,7 +106,7 @@ export function ForgotPasswordPage() {
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  {!tenantContext.isResolved ? (
+                  {!tenantContext.isTenantKnown ? (
                     <FormField
                       control={form.control}
                       name="tenant_id"

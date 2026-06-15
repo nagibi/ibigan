@@ -104,7 +104,15 @@ final class TenantContextResolver
 
         $centralHosts = config('tenant-context.central_hosts', []);
 
-        return in_array($host, $centralHosts, true);
+        if (in_array($host, $centralHosts, true)) {
+            return true;
+        }
+
+        if (str_starts_with($host, 'www.')) {
+            return in_array(substr($host, 4), $centralHosts, true);
+        }
+
+        return false;
     }
 
     private function resolveByDevSubdomain(string $host): ?Tenant
