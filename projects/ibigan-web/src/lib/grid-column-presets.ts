@@ -46,7 +46,7 @@ function resolveGridColumnWidthClass(columnId: string, className?: string): stri
   return className;
 }
 
-/** @deprecated Headers now use the same width classes as body cells with table-fixed layout. */
+/** @deprecated Headers now use the same width classes as body cells. */
 export function toGridColumnMinWidthClassName(className?: string): string | undefined {
   if (!className) return undefined;
   return className.replace(/\bw-\[/g, 'min-w-[');

@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { applyTenantHostHeader, resolveApiBaseUrl } from '@/lib/api-base-url';
 import { trackApiRequestEnd, trackApiRequestStart } from '@/lib/api-loading-bar';
 import { isCentralApiRoute } from '@/lib/central-api';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost/api',
+  baseURL: resolveApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -14,6 +15,12 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   trackApiRequestStart();
+
+  if (!config.headers) {
+    config.headers = {};
+  }
+
+  applyTenantHostHeader(config.headers as Record<string, string>);
 
   const url = config.url ?? '';
 

@@ -6,8 +6,8 @@ import { mapApiMenusToConfig } from '@/lib/menu-mapper';
 import { filterMenuForUser } from '@/lib/filter-menu-for-user';
 import { filterMenuByPermissions } from '@/lib/filter-menu-by-permissions';
 import { mergeAccountMenuItems } from '@/lib/merge-account-menu-items';
-import { mergeCentralPlatformMenuItems } from '@/lib/merge-central-platform-menu-items';
-import { mergeDevToolsMenuItems } from '@/lib/merge-dev-tools-menu-items';
+import { applyTenantCentralMenuPolicy } from '@/lib/hide-central-panel-from-tenant-menu';
+import { stripDevToolsFromMenu } from '@/lib/merge-dev-tools-menu-items';
 import { mergeSaasMenuItems } from '@/lib/merge-saas-menu-items';
 import { MENU_SIDEBAR } from '@/config/menu.config';
 import { SUPER_ADMIN_ROLE } from '@/config/routing';
@@ -24,8 +24,8 @@ function buildTenantMenu(
 ): MenuConfig {
   const filtered = filterMenuForUser(menu, isSuperAdmin);
 
-  return mergeCentralPlatformMenuItems(
-    filterMenuByPermissions(filtered, hasPermission),
+  return applyTenantCentralMenuPolicy(
+    filterMenuByPermissions(stripDevToolsFromMenu(filtered), hasPermission),
     canAccessCentralFromTenant,
   );
 }
@@ -65,9 +65,7 @@ export function useDynamicMenu(): MenuConfig {
       return fallbackMenu;
     }
 
-    const includeDevTools = hasPermission('doc-visualizar');
-
-    const baseMenu = mergeDevToolsMenuItems(
+    const baseMenu = stripDevToolsFromMenu(
       mergeAccountMenuItems(
         mergeSaasMenuItems(
           mapApiMenusToConfig(apiMenus, (key, fallback) => t(key, fallback)),
@@ -75,8 +73,6 @@ export function useDynamicMenu(): MenuConfig {
         ),
         MENU_SIDEBAR,
       ),
-      MENU_SIDEBAR,
-      includeDevTools,
     );
 
     return buildTenantMenu(baseMenu, isSuperAdmin, hasPermission, canAccessCentralFromTenant);

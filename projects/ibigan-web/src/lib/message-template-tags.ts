@@ -23,6 +23,17 @@ export function extractTemplateTags(
   return [...tags];
 }
 
+const SAMPLE_TAG_VALUES: Record<string, string> = {
+  empresa: 'Ibigan',
+  company: 'Ibigan',
+  company_name: 'Ibigan',
+  link: 'https://app.ibigan.com/exemplo',
+  url: 'https://app.ibigan.com/exemplo',
+  codigo: '123456',
+  code: '123456',
+  token: 'exemplo-token',
+};
+
 export function buildDefaultTemplateTagValues(
   tags: string[],
   user: { name: string; email: string },
@@ -40,8 +51,18 @@ export function buildDefaultTemplateTagValues(
       continue;
     }
 
-    values[tag] = '';
+    values[tag] = SAMPLE_TAG_VALUES[tag] ?? `[${tag}]`;
   }
 
   return values;
+}
+
+export function applyMessageTemplateMergeData(
+  content: string,
+  mergeData: Record<string, string>,
+): string {
+  return content.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (match, tag: string) => {
+    const key = tag.trim();
+    return mergeData[key] ?? match;
+  });
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data;
 
-use App\Models\TenantTranslation;
+use App\Models\Central\PlatformTranslation;
 use Spatie\LaravelData\Data;
 
 final class TenantTranslationData extends Data
@@ -19,7 +19,7 @@ final class TenantTranslationData extends Data
         public string $updated_at,
     ) {}
 
-    public static function fromModel(TenantTranslation $translation): self
+    public static function fromModel(PlatformTranslation $translation): self
     {
         return new self(
             id: $translation->id,

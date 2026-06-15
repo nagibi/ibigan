@@ -34,6 +34,7 @@ import { RolesPage } from '@/pages/roles/roles-page';
 import { NotificationPreferencesPage } from '@/pages/profile/notification-preferences-page';
 import { ProfilePage } from '@/pages/profile/profile-page';
 import { SecurityPage } from '@/pages/security/security-page';
+import { TranslationsTenantPickerPage } from '@/pages/admin/translations-tenant-picker-page';
 import { TranslationsPage } from '@/pages/settings/translations-page';
 import { TranslationFormPage } from '@/pages/settings/translation-form-page';
 import { UserFormPage } from '@/pages/users/user-form-page';
@@ -47,6 +48,8 @@ import { CentralLayout } from '@/components/layouts/central-layout';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
 import { RequireSuperAdmin } from '@/routing/require-super-admin';
 import { RequirePermission } from '@/routing/require-permission';
+import { RequireAccountSession } from '@/routing/require-account-session';
+import { AccountLayout } from '@/routing/account-layout';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 /**
@@ -156,6 +159,15 @@ export function AppRoutingSetup() {
         }
       />
 
+      {/* Conta — tenant ou super-admin central sem tenant */}
+      <Route element={<RequireAccountSession />}>
+        <Route element={<AccountLayout />}>
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
+        </Route>
+      </Route>
+
       {/* Painel central — layout próprio, sem fetch de tenant */}
       <Route element={<RequireSuperAdmin />}>
         <Route element={<CentralLayout />}>
@@ -165,9 +177,6 @@ export function AppRoutingSetup() {
           <Route path="/admin/super-admins" element={<CentralUsersPage />} />
           <Route path="/admin/super-admins/:id/editar" element={<CentralUserFormPage />} />
           <Route path="/admin/profile" element={<Navigate to="/profile" replace />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
           <Route path="/central-users" element={<Navigate to="/admin/super-admins" replace />} />
           <Route path="/admin/devtools" element={<AdminDevToolsPage />} />
           <Route path="/admin/message-templates" element={<MessageTemplatesPage />} />
@@ -176,6 +185,10 @@ export function AppRoutingSetup() {
           <Route path="/admin/reports/:id" element={<ReportFormPage key="platform-report-edit" />} />
           <Route path="/admin/campaigns" element={<Navigate to="/admin/campaigns/new" replace />} />
           <Route path="/admin/campaigns/new" element={<CampaignFormPage key="platform-campaign-new" />} />
+          <Route path="/admin/translations" element={<TranslationsTenantPickerPage />} />
+          <Route path="/admin/translations/:tenantId" element={<TranslationsPage key="central-translations-list" />} />
+          <Route path="/admin/translations/:tenantId/new" element={<TranslationFormPage key="central-translation-new" />} />
+          <Route path="/admin/translations/:tenantId/:id" element={<TranslationFormPage key="central-translation-edit" />} />
           <Route path="/admin/platform/message-templates" element={<Navigate to="/admin/message-templates" replace />} />
           <Route path="/admin/platform/message-templates/:id" element={<AdminPlatformMessageTemplateRedirect />} />
           <Route path="/admin/platform/reports" element={<Navigate to="/admin/reports" replace />} />
@@ -209,13 +222,7 @@ export function AppRoutingSetup() {
           <Route path="/permissions/new" element={<PermissionFormPage key="permission-new" />} />
           <Route path="/permissions/:id" element={<PermissionFormPage key="permission-edit" />} />
         </Route>
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
         <Route path="/security" element={<SecurityPage />} />
-        <Route path="/settings/translations" element={<TranslationsPage />} />
-        <Route path="/settings/translations/new" element={<TranslationFormPage key="translation-new" />} />
-        <Route path="/settings/translations/:id" element={<TranslationFormPage key="translation-edit" />} />
         <Route path="/activity-logs" element={<ActivityLogsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/new" element={<ReportFormPage key="report-new" />} />

@@ -27,43 +27,57 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        $tenant->domains()->updateOrCreate(
+            ['domain' => 'acme.localhost'],
+        );
+
         $tenant->run(function () {
             $this->call(RolePermissionSeeder::class);
             $this->call(MenuSeeder::class);
 
-            $user = User::firstOrCreate(
-                ['email' => 'super@ibigan.com'],
+            $superAdmins = [
                 [
-                    'name' => 'Super Admin',
+                    'name' => 'Raphael Acunha da Silva',
+                    'email' => 'raphaelacunhadasilva@gmail.com',
                     'cpf' => '39053344705',
-                    'phone' => '11987654321',
-                    'birth_date' => '1990-01-15',
-                    'gender' => 'prefer_not_to_say',
-                    'bio' => 'Usuário administrador da plataforma.',
-                    'password' => Hash::make('A12345'),
-                    'status' => 'active',
-                    'is_super_admin' => true,
-                ]
-            );
-
-            $user->syncRoles(['super-admin']);
-
-            User::firstOrCreate(
-                ['email' => 'ibigan@gmail.com'],
+                ],
+                [
+                    'name' => 'Hemily Monteiro',
+                    'email' => 'hemily.monteiro01@gmail.com',
+                    'cpf' => '86288358016',
+                ],
                 [
                     'name' => 'Ibigan',
-                    'cpf' => '52998224725',
-                    'phone' => '11987654321',
-                    'birth_date' => '1990-01-15',
-                    'gender' => 'prefer_not_to_say',
-                    'bio' => 'Usuário viewer de demonstração.',
-                    'password' => Hash::make('A12345'),
-                    'status' => 'active',
-                    'is_super_admin' => false,
-                ]
-            )->syncRoles(['viewer']);
+                    'email' => 'ibigan@gmail.com',
+                    'cpf' => '61090473095',
+                ],
+            ];
 
-            app(\App\Services\PlatformCatalogService::class)->sync($user->id, force: true);
+            $catalogSyncUser = null;
+
+            foreach ($superAdmins as $admin) {
+                $user = User::updateOrCreate(
+                    ['email' => $admin['email']],
+                    [
+                        'name' => $admin['name'],
+                        'cpf' => $admin['cpf'],
+                        'phone' => '11987654321',
+                        'birth_date' => '1990-01-15',
+                        'gender' => 'prefer_not_to_say',
+                        'bio' => 'Super-admin do tenant Acme.',
+                        'password' => Hash::make('A12345'),
+                        'status' => 'active',
+                        'is_super_admin' => true,
+                    ]
+                );
+
+                $user->syncRoles(['super-admin']);
+                $catalogSyncUser ??= $user;
+            }
+
+            if ($catalogSyncUser !== null) {
+                app(\App\Services\PlatformCatalogService::class)->sync($catalogSyncUser->id, force: true);
+            }
         });
     }
 }

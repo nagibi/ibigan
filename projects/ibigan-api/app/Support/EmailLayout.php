@@ -14,8 +14,8 @@ final class EmailLayout
         ?string $afterButtonHtml = null,
     ): string {
         $brandName = (string) config('email-branding.brand_name', 'Ibigan');
-        $accentColor = (string) config('email-branding.accent_color', '#f9386a');
-        $logoUrl = (string) config('email-branding.logo_url');
+        $accentColor = (string) config('email-branding.accent_color', '#F8285A');
+        $logoUrl = (string) (config('email-branding.logo_url') ?: config('email-branding.logo_fallback_url'));
         $bgUrl = (string) config('email-branding.background_image_url');
         $contentWidth = (int) config('email-branding.content_width', 680);
 
@@ -40,7 +40,7 @@ final class EmailLayout
 <tbody>
 <tr>
 <td style="vertical-align:middle">
-<img alt="Logo {$brandName}" border="0" src="{$logoUrl}" style="border-style:none;padding-top:15px;padding-bottom:10px" title="Logo {$brandName}" width="150">
+<img alt="Logo {$brandName}" border="0" src="{$logoUrl}" style="border-style:none;padding-top:15px;padding-bottom:10px;height:auto" title="Logo {$brandName}" width="136">
 </td>
 </tr>
 </tbody>

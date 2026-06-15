@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Central\CentralUser;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\TenantContextResolver;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,8 @@ final class SocialAuthController extends Controller
     {
         $this->assertProvider($provider);
 
-        $tenantId = $request->query('tenant_id');
+        $tenantId = $request->query('tenant_id')
+            ?? app(TenantContextResolver::class)->resolveTenantId($request);
 
         $driver = Socialite::driver($provider)
             ->with(['state' => $tenantId ?? ''])

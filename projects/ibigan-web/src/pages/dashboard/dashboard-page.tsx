@@ -31,6 +31,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useImpersonationEntryAlert } from '@/hooks/use-impersonation-entry-alert';
+import { useCanAccessCentralFromTenant } from '@/hooks/use-can-access-central-from-tenant';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { PageBody } from '@/components/common/page-body';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
@@ -326,7 +327,9 @@ export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const hasRole = useAuthStore((state) => state.hasRole);
   const centralUser = useCentralAuthStore((state) => state.centralUser);
+  const canAccessCentralFromTenant = useCanAccessCentralFromTenant();
   const isSuperAdmin = hasRole('super-admin') || centralUser?.is_super_admin;
+  const showCentralTenantsLink = isSuperAdmin && !canAccessCentralFromTenant;
 
   const [dateRange, setDateRange] = useState<DashboardDateRange>(getDefaultDashboardDateRange);
 
@@ -483,7 +486,7 @@ export function DashboardPage() {
               title={t('dashboard.cards.tenants.title')}
               subtitle={t('dashboard.cards.tenants.subtitle')}
               action={
-                isSuperAdmin ? (
+                showCentralTenantsLink ? (
                   <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
                     <Link to="/admin/tenants">
                       {t('dashboard.cards.tenants.view_model')}

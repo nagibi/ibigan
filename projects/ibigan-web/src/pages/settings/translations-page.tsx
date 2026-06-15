@@ -11,8 +11,9 @@ import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { useTranslationAdminContext } from '@/hooks/use-translation-admin-context';
+import { PageBody } from '@/components/common/page-body';
 import { useClientGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
-import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { buildClientGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { getApiErrorMessage } from '@/lib/get-api-error-message';
@@ -23,9 +24,6 @@ import {
 import { filterTranslationCatalog } from '@/lib/filter-translation-catalog';
 import { getTranslationRowId, getTranslationRowKey } from '@/lib/translation-row-id';
 import { useLanguage } from '@/providers/i18n-provider';
-import { translationsService } from '@/services/translations.service';
-import { useAuthStore } from '@/stores/auth.store';
-import { PageBody } from '@/components/common/page-body';
 import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { getGridRecordCount } from '@/components/grid/grid-record-count';
@@ -43,23 +41,36 @@ import {
   StandardGridToolbar,
 } from '@/components/grid/grid-toolbar';
 
-const GRID_COLUMNS_KEY = 'grid-columns:translations';
+const GRID_COLUMNS_KEY_FALLBACK = 'grid-columns:translations';
 
 type TranslationLocaleQuickFilter = 'all' | 'pt' | 'en';
 
 export function TranslationsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const translationContext = useTranslationAdminContext();
+  const {
+    tenantId,
+    listPath,
+    newPath,
+    getEditPath,
+    translationsApi,
+    canManage,
+    gridColumnsKey,
+    viewPreferenceKey,
+  } = translationContext;
   const { reloadTranslations } = useLanguage();
   const gridToasts = useGridToasts();
-  const canManage = useAuthStore((state) => state.hasPermission('configuracao-gerenciar'));
-  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.translations);
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(viewPreferenceKey);
   const grid = useGrid({ defaultPerPage: 25 });
   const columnFilters = useGridFilters(() => grid.setPage(1));
 
   const { data, isFetching, refetch, isError, error } = useQuery({
-    queryKey: ['translations-manage'],
-    queryFn: () => translationsService.manage({}),
+    queryKey: ['translations-manage', tenantId],
+    queryFn: () => ('manage' in translationsApi
+      ? translationsApi.manage({})
+      : Promise.reject(new Error('unavailable'))),
+    enabled: canManage,
   });
 
   const overrides = data?.data.result ?? [];
@@ -157,12 +168,12 @@ export function TranslationsPage() {
   }, [grid.debouncedSearch, columnFilters.debouncedFilters, grid.setPage]);
 
   const openCreate = useCallback(() => {
-    navigate('/settings/translations/new');
-  }, [navigate]);
+    navigate(newPath);
+  }, [navigate, newPath]);
 
   const openEdit = useCallback((row: TranslationCatalogRow) => {
     if (row.id) {
-      navigate(`/settings/translations/${row.id}`);
+      navigate(getEditPath(row.id));
       return;
     }
 
@@ -170,8 +181,8 @@ export function TranslationsPage() {
       key: row.key,
       locale: row.locale,
     });
-    navigate(`/settings/translations/new?${params.toString()}`);
-  }, [navigate]);
+    navigate(`${newPath}?${params.toString()}`);
+  }, [getEditPath, navigate, newPath]);
 
   const handleEditSelected = useCallback(() => {
     if (!selectedRow) return;
@@ -268,7 +279,7 @@ export function TranslationsPage() {
     [canManage, localeFilterOptions, openEdit, t],
   );
 
-  const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
+  const gridColumns = useGridColumns(gridColumnsKey || GRID_COLUMNS_KEY_FALLBACK, columnDefinitions);
 
   const exportCatalog = infiniteScrollEnabled ? cardListCatalog : paginatedCatalog;
 
@@ -383,9 +394,9 @@ export function TranslationsPage() {
     description: t('settings.translations.description'),
     actions: toolbarActions,
     breadcrumbs: [
-      { title: t('menu.settings') },
-      { title: t('menu.languages') },
-      { title: t('menu.translations') },
+      { title: 'Plataforma' },
+      { title: t('menu.translations'), path: '/admin/translations' },
+      { title: t('settings.translations.title') },
     ],
   });
 

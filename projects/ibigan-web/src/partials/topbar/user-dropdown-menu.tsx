@@ -6,12 +6,14 @@ import { useTheme } from 'next-themes';
 import { useIntl } from 'react-intl';
 import {
   Bell,
-  Building2,
   Globe,
   LayoutDashboard,
   Moon,
+  PanelLeft,
+  PanelTop,
   User,
 } from 'lucide-react';
+import { type MenuMode } from '@/config/types';
 import { useCanAccessCentralFromTenant } from '@/hooks/use-can-access-central-from-tenant';
 import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { resolveMenuIcon } from '@/lib/menu-icons';
@@ -52,6 +54,11 @@ interface UserDropdownMenuProps {
   trigger?: ReactNode;
 }
 
+const MENU_MODE_OPTIONS: Array<{ value: MenuMode; labelKey: string; icon: typeof PanelTop }> = [
+  { value: 'horizontal', labelKey: 'USER.MENU.NAVIGATION_HORIZONTAL', icon: PanelTop },
+  { value: 'sidebar', labelKey: 'USER.MENU.NAVIGATION_SIDEBAR', icon: PanelLeft },
+];
+
 function formatRole(role: string): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
@@ -66,7 +73,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const canAccessCentralFromTenant = useCanAccessCentralFromTenant();
   const { currenLanguage, changeLanguage } = useLanguage();
   const { setTheme, resolvedTheme } = useTheme();
-  const { storeOption } = useSettings();
+  const { settings, storeOption } = useSettings();
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
 
@@ -75,6 +82,9 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   }, []);
 
   const isDarkMode = mounted && resolvedTheme === 'dark';
+  const menuMode = (settings.layouts.demo1.menuMode ?? 'horizontal') as MenuMode;
+  const currentMenuMode = MENU_MODE_OPTIONS.find((option) => option.value === menuMode)
+    ?? MENU_MODE_OPTIONS[0];
 
   const { data: profileData } = useQuery({
     queryKey: ['profile'],
@@ -127,6 +137,10 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     const nextTheme = checked ? 'dark' : 'light';
     setTheme(nextTheme);
     storeOption('layouts.demo1.sidebarTheme', nextTheme);
+  }
+
+  function handleMenuModeChange(value: MenuMode) {
+    storeOption('layouts.demo1.menuMode', value);
   }
 
   const avatarTrigger = trigger ?? (
@@ -213,18 +227,11 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
                 <LayoutDashboard className="size-4" />
                 Painel central
               </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                onClick={() => {
-                  navigate('/auth/select-tenant', { state: { manual: true } });
-                }}
-              >
-                <Building2 className="size-4" />
-                Trocar empresa
-              </DropdownMenuItem>
-            )}
+            ) : null}
           </>
         ) : null}
+
+        <DropdownMenuSeparator />
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="[&_[data-slot=dropdown-menu-sub-trigger-indicator]]:hidden">
@@ -267,7 +274,38 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="[&_[data-slot=dropdown-menu-sub-trigger-indicator]]:hidden">
+            <currentMenuMode.icon className="size-4" />
+            <span className="relative flex grow items-center justify-between gap-2">
+              {intl.formatMessage({ id: 'USER.MENU.NAVIGATION_MENU' })}
+              <Badge variant="outline" className="max-w-24 truncate">
+                {intl.formatMessage({ id: currentMenuMode.labelKey })}
+              </Badge>
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-52">
+            <DropdownMenuRadioGroup
+              value={menuMode}
+              onValueChange={(value) => handleMenuModeChange(value as MenuMode)}
+            >
+              {MENU_MODE_OPTIONS.map((option) => {
+                const Icon = option.icon;
+
+                return (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                    className="gap-2"
+                  >
+                    <Icon className="size-4" />
+                    <span>{intl.formatMessage({ id: option.labelKey })}</span>
+                  </DropdownMenuRadioItem>
+                );
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
 
         <DropdownMenuItem
           className="focus:bg-transparent"
@@ -295,6 +333,8 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             </ToolbarTooltip>
           </div>
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
 
         <div className="p-2 pt-1">
           <Button

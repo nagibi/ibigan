@@ -2,29 +2,20 @@ import {
   History,
   BarChart2,
   Bell,
-  BookOpen,
   Building2,
-  Clock,
-  Database,
   FileBarChart,
-  Gauge,
   LayoutDashboard,
   Mail,
-  Mailbox,
   Megaphone,
   Menu,
   MessageSquare,
-  ScrollText,
   Shield,
   ShieldCheck,
-  Telescope,
   User,
   UserCheck,
   Users,
   Webhook,
-  Wrench,
 } from 'lucide-react';
-import { DEV_TOOLS_URLS } from '@/lib/dev-tools-urls';
 import { type MenuConfig } from './types';
 
 export const MENU_SIDEBAR: MenuConfig = [
@@ -107,54 +98,6 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Histórico',
     icon: History,
     path: '/activity-logs',
-  },
-  {
-    title: 'Ferramentas',
-    icon: Wrench,
-    children: [
-      {
-        title: 'Documentação API',
-        icon: BookOpen,
-        path: DEV_TOOLS_URLS.apiDocs,
-        target: '_blank',
-      },
-      {
-        title: 'Horizon',
-        icon: Gauge,
-        path: DEV_TOOLS_URLS.horizon,
-        target: '_blank',
-      },
-      {
-        title: 'Telescope',
-        icon: Telescope,
-        path: DEV_TOOLS_URLS.telescope,
-        target: '_blank',
-      },
-      {
-        title: 'Clockwork',
-        icon: Clock,
-        path: DEV_TOOLS_URLS.clockwork,
-        target: '_blank',
-      },
-      {
-        title: 'Log Viewer',
-        icon: ScrollText,
-        path: DEV_TOOLS_URLS.logViewer,
-        target: '_blank',
-      },
-      {
-        title: 'phpMyAdmin',
-        icon: Database,
-        path: DEV_TOOLS_URLS.phpMyAdmin,
-        target: '_blank',
-      },
-      {
-        title: 'Mailpit',
-        icon: Mailbox,
-        path: DEV_TOOLS_URLS.mailpit,
-        target: '_blank',
-      },
-    ],
   },
   {
     title: 'Conta',

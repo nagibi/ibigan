@@ -368,30 +368,6 @@ class MenuSeeder extends Seeder
             'roles' => ['admin', 'super-admin'],
         ]);
 
-        $idiomas = Menu::create([
-            'title' => 'Idiomas',
-            'slug' => 'idiomas',
-            'icon' => 'Languages',
-            'path' => null,
-            'parent_id' => $configuracoes->id,
-            'order' => 0,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'super-admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Traduções',
-            'slug' => 'traducoes',
-            'icon' => 'FileText',
-            'path' => '/settings/translations',
-            'parent_id' => $idiomas->id,
-            'order' => 0,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'super-admin'],
-        ]);
-
         $translationKeys = [
             'dashboard' => 'menu.dashboard',
             'gestao' => 'menu.management',
@@ -422,8 +398,6 @@ class MenuSeeder extends Seeder
             'phpmyadmin' => 'menu.phpmyadmin',
             'mailpit' => 'menu.mailpit',
             'configuracoes' => 'menu.settings',
-            'idiomas' => 'menu.languages',
-            'traducoes' => 'menu.translations',
         ];
 
         foreach ($translationKeys as $slug => $translationKey) {

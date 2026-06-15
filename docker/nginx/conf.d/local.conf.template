@@ -3,7 +3,7 @@
 
 server {
     listen 80;
-    server_name localhost;
+    server_name localhost *.localhost;
     root /var/www/public;
     index index.php;
     charset utf-8;
@@ -23,6 +23,21 @@ server {
         alias /var/www/storage/app/public/;
         expires 7d;
         add_header Cache-Control "public";
+    }
+
+    # Assets estáticos do Laravel (e-mails, etc.) — antes do proxy do Vite
+    location ^~ /images/ {
+        root /var/www/public;
+        expires 7d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
+    }
+
+    location ^~ /api/images/ {
+        alias /var/www/public/images/;
+        expires 7d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
     }
 
     location /api/ {

@@ -13,5 +13,8 @@
   "USER.MENU.PAYMENT_&_SUBSCRIPTION_INFO": "Payment & subscription info",
   "USER.MENU.DARK_MODE": "Dark Mode",
   "USER.MENU.LOGOUT": "Logout",
-  "USER.MENU.LANGUAGE": "Language"
+  "USER.MENU.LANGUAGE": "Language",
+  "USER.MENU.NAVIGATION_MENU": "Menu",
+  "USER.MENU.NAVIGATION_HORIZONTAL": "Horizontal",
+  "USER.MENU.NAVIGATION_SIDEBAR": "Sidebar"
 }

@@ -13,7 +13,6 @@ const PATH_PERMISSIONS: Record<string, string> = {
   '/permissions': 'permissao-visualizar',
   '/webhooks': 'webhook-visualizar',
   '/activity-logs': 'log-visualizar',
-  '/settings/translations': 'configuracao-gerenciar',
 };
 
 function pathPermission(path: string | undefined): string | undefined {

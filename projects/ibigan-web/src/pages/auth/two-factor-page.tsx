@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, LoaderCircle } from 'lucide-react';
-import { AuthLanguageSwitcher } from '@/components/auth/auth-language-switcher';
 import { AuthPageShell } from '@/components/auth/auth-page-shell';
 import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -168,8 +167,7 @@ export function TwoFactorPage() {
   return (
     <AuthPageShell>
       <Card className="relative w-full border-border/60 shadow-sm">
-        <AuthLanguageSwitcher className="absolute top-4 right-4" />
-        <CardContent className="p-6 pt-14 max-xl:p-5 max-xl:pt-12">
+        <CardContent className="p-6 max-xl:p-5">
           <div className="mb-6 space-y-3 text-center max-xl:mb-5">
             <AuthenticatorIllustration />
             <div className="space-y-1.5">

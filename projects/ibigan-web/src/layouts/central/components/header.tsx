@@ -70,9 +70,6 @@ export function CentralHeader() {
               className="h-[22px] max-w-none"
               alt="Ibigan"
             />
-            <span className="ms-3 text-sm font-medium text-muted-foreground">
-              Painel central
-            </span>
           </Link>
 
           {isHorizontalMenu && !mobileMode ? (

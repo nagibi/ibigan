@@ -36,6 +36,11 @@ export function isDevToolsChild(item: MenuItem): boolean {
 }
 
 function isDevToolsGroup(item: MenuItem): boolean {
+  const slug = (item as MenuItem & { slug?: string }).slug;
+  if (slug === 'ferramentas') {
+    return true;
+  }
+
   return Boolean(item.children?.some(isDevToolsChild));
 }
 
@@ -148,4 +153,9 @@ export function mergeDevToolsMenuItems(
   }
 
   return [...syncedMenu, localizeDevToolsGroup(devTools)];
+}
+
+/** Remove Ferramentas do menu tenant — acesso exclusivo do painel central. */
+export function stripDevToolsFromMenu(menu: MenuConfig): MenuConfig {
+  return mergeDevToolsMenuItems(menu, [], false);
 }

@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\Auth\TenantContextController;
 use App\Http\Controllers\Api\V1\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\Central\CentralAuthController;
 use App\Http\Controllers\Api\V1\Central\CentralProfileController;
 use App\Http\Controllers\Api\V1\Central\CentralSocialAuthController;
 use App\Http\Controllers\Api\V1\Central\CentralTwoFactorController;
+use App\Http\Controllers\Api\V1\Central\CentralTranslationController;
 use App\Http\Controllers\Api\V1\Central\CentralUserController;
 use App\Http\Controllers\Api\V1\Central\PlatformCampaignController;
 use App\Http\Controllers\Api\V1\Central\PlatformMessageTemplateController;
@@ -46,6 +48,7 @@ Broadcast::routes([
 // Rotas públicas
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
+        Route::get('tenant-context', [TenantContextController::class, 'show']);
         Route::get('{provider}', [SocialAuthController::class, 'redirect'])
             ->where('provider', 'google|apple');
         Route::match(['get', 'post'], '{provider}/callback', [SocialAuthController::class, 'callback'])
@@ -123,6 +126,9 @@ Route::prefix('central/v1')
             Route::get('tenants/{tenant}/activity-logs', [TenantAdminController::class, 'activityLogs']);
             Route::post('tenants/{tenant}/impersonate', [TenantAdminController::class, 'impersonate']);
             Route::delete('tenants/{tenant}', [TenantAdminController::class, 'destroy']);
+            Route::get('tenants/{tenant}/translations', [CentralTranslationController::class, 'index']);
+            Route::post('tenants/{tenant}/translations', [CentralTranslationController::class, 'store']);
+            Route::put('tenants/{tenant}/translations/{tenantTranslation}', [CentralTranslationController::class, 'update']);
 
             Route::get('central-users', [CentralUserController::class, 'index']);
             Route::get('central-users/{centralUser}', [CentralUserController::class, 'show']);
@@ -204,10 +210,6 @@ Route::prefix('v1')
         Route::patch('menus/reorder', [MenuController::class, 'reorder']);
         Route::patch('menus/{menu}/toggle-active', [MenuController::class, 'toggleActive']);
         Route::apiResource('menus', MenuController::class);
-
-        Route::get('translations/manage', [TranslationController::class, 'manage']);
-        Route::post('translations', [TranslationController::class, 'store']);
-        Route::put('translations/{tenantTranslation}', [TranslationController::class, 'update']);
 
         Route::apiResource('permissions', PermissionController::class)->only([
             'index',

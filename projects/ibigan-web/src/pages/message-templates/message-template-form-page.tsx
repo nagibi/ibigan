@@ -5,9 +5,11 @@ import { Plus, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
-import { HtmlEditor } from '@/components/editor/html-editor';
+import { MessageTemplateBodyEditor } from '@/components/message-templates/message-template-body-editor';
+import { MessageTemplateEmailPreview } from '@/components/message-templates/message-template-email-preview';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import { formatFormPageTitle } from '@/lib/format-form-page-title';
+import { isComplexEmailHtml } from '@/lib/is-complex-email-html';
 import { isHtmlContentEmpty } from '@/lib/is-html-content-empty';
 import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
 import { messageTemplatesService } from '@/services/message-templates.service';
@@ -38,6 +40,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 
 const schema = z.object({
   name: z.string().min(1, 'Nome é obrigatório.'),
@@ -68,6 +73,16 @@ export function MessageTemplateFormPage() {
   const listPath = catalogPaths.listPath;
   const isEditing = Boolean(id);
   const [tagInput, setTagInput] = useState('');
+  const [bodyTab, setBodyTab] = useState<'editor' | 'preview'>('editor');
+  const tenantUser = useAuthStore((state) => state.user);
+  const centralUser = useCentralAuthStore((state) => state.centralUser);
+  const previewUser = useMemo(() => {
+    const currentUser = isPlatformCatalog ? centralUser : tenantUser;
+    return {
+      name: currentUser?.name ?? 'Maria Silva',
+      email: currentUser?.email ?? 'maria@exemplo.com',
+    };
+  }, [centralUser, isPlatformCatalog, tenantUser]);
 
   const { data: templateData, isLoading, isFetching, refetch } = useQuery({
     queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id],
@@ -131,8 +146,16 @@ export function MessageTemplateFormPage() {
         },
         { keepDirty: false, keepErrors: false },
       );
+
+      if (isComplexEmailHtml(template.body)) {
+        setBodyTab('preview');
+      }
     }
   }, [template, form]);
+
+  const watchedSubject = form.watch('subject');
+  const watchedBody = form.watch('body');
+  const watchedMergeTags = form.watch('merge_tags');
 
   const saveMutation = useMutation({
     mutationFn: (data: FormData) => {
@@ -373,16 +396,33 @@ export function MessageTemplateFormPage() {
                 <FormField control={form.control} name="body" render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Conteúdo</FormLabel>
-                    <HtmlEditor
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      placeholder="Olá {{nome}}, bem-vindo à {{empresa}}!"
-                      onImageUpload={isReadOnly ? undefined : handleImageUpload}
-                      disabled={isReadOnly}
-                    />
+                    <Tabs value={bodyTab} onValueChange={(value) => setBodyTab(value as 'editor' | 'preview')}>
+                      <TabsList variant="line" className="mb-3 w-full justify-start">
+                        <TabsTrigger value="editor">Editor</TabsTrigger>
+                        <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="editor" className="mt-0" forceMount hidden={bodyTab !== 'editor'}>
+                        <MessageTemplateBodyEditor
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Olá {{nome}}, bem-vindo à {{empresa}}!"
+                          onImageUpload={isReadOnly ? undefined : handleImageUpload}
+                          disabled={isReadOnly}
+                          isSystemTemplate={Boolean(template?.is_system || isPlatformCatalog)}
+                        />
+                      </TabsContent>
+                      <TabsContent value="preview" className="mt-0" forceMount hidden={bodyTab !== 'preview'}>
+                        <MessageTemplateEmailPreview
+                          subject={watchedSubject}
+                          body={watchedBody}
+                          mergeTags={watchedMergeTags}
+                          user={previewUser}
+                        />
+                      </TabsContent>
+                    </Tabs>
                     <FormDescription>
-                      Editor HTML com suporte a imagens. Use {'{{variavel}}'} para merge tags.
+                      Templates de e-mail com layout completo devem ser editados em Código HTML. Use Pré-visualização para ver cores, botões e layout finais.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

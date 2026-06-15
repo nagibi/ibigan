@@ -7,9 +7,9 @@ import {
 } from 'lucide-react';
 import type { ActivityLog } from '@/services/activity-logs.service';
 
-export const descriptionVariant: Record<string, 'primary' | 'secondary' | 'destructive' | 'outline'> = {
-  created: 'primary',
-  updated: 'secondary',
+export const descriptionVariant: Record<string, 'primary' | 'secondary' | 'success' | 'destructive' | 'outline'> = {
+  created: 'success',
+  updated: 'primary',
   deleted: 'destructive',
 };
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { resolveApiBaseUrl } from '@/lib/api-base-url';
 import { Icons } from '@/components/layouts/layout-1/shared/common/icons';
 import { Button } from '@/components/ui/button';
 
@@ -33,8 +34,18 @@ const PROVIDERS: Array<{
   },
 ];
 
+function resolveOAuthApiBase(): string {
+  const base = resolveApiBaseUrl();
+
+  if (base.startsWith('/')) {
+    return `${window.location.origin}${base}`;
+  }
+
+  return base;
+}
+
 function getOAuthStartUrl(scope: 'tenant' | 'central', provider: SocialProvider, tenantId?: string): string {
-  const apiBase = (import.meta.env.VITE_API_URL ?? 'http://localhost/api').replace(/\/$/, '');
+  const apiBase = resolveOAuthApiBase().replace(/\/$/, '');
 
   if (scope === 'central') {
     return `${apiBase}/central/v1/auth/${provider}`;
@@ -59,7 +70,7 @@ export function SocialLoginButtons({
     }
 
     const config = PROVIDERS.find((item) => item.id === provider)!;
-    const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost/api';
+    const apiBase = resolveOAuthApiBase();
 
     if (!apiBase.trim()) {
       onError(t(config.startFailedKey));

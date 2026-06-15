@@ -1,16 +1,27 @@
 import axios from 'axios';
 import i18n from '@/i18n/i18next';
+import { applyTenantHostHeader, resolveApiBaseUrl } from '@/lib/api-base-url';
 
 const publicApi = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost/api',
+  baseURL: resolveApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
 });
 
+publicApi.interceptors.request.use((config) => {
+  if (!config.headers) {
+    config.headers = {};
+  }
+
+  applyTenantHostHeader(config.headers as Record<string, string>);
+
+  return config;
+});
+
 /**
- * Carrega sobrescritas do tenant (tenant_translations) e mescla sobre o JSON local.
+ * Carrega sobrescritas da empresa (platform_translations no banco central).
  * O bundle local já renderiza a UI; a API só customiza chaves específicas.
  */
 export async function loadTenantTranslationOverrides(

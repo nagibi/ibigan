@@ -3,7 +3,7 @@ import api from '@/lib/axios';
 export interface LoginPayload {
   email: string;
   password: string;
-  tenant_id: string;
+  tenant_id?: string;
 }
 
 export interface LoginResponse {
@@ -39,6 +39,25 @@ export interface UserTenant {
 }
 
 export const authService = {
+  tenantContext: (tenant?: string) =>
+    api.get<{
+      status: number;
+      result: {
+        resolved: boolean;
+        is_central_host: boolean;
+        host: string;
+        source: 'domain' | 'subdomain' | 'query' | 'request' | null;
+        tenant: {
+          id: string;
+          slug: string;
+          name: string | null;
+          locale: string | null;
+        } | null;
+      };
+    }>('/v1/auth/tenant-context', {
+      params: tenant ? { tenant } : undefined,
+    }),
+
   login: (payload: LoginPayload) =>
     api.post<LoginResponse>('/v1/auth/login', payload),
 
@@ -66,8 +85,11 @@ export const authService = {
       { tenant_id },
     ),
 
-  forgotPassword: (email: string, tenant_id: string) =>
-    api.post('/v1/auth/forgot-password', { email, tenant_id }),
+  forgotPassword: (email: string, tenant_id?: string) =>
+    api.post('/v1/auth/forgot-password', {
+      email,
+      ...(tenant_id ? { tenant_id } : {}),
+    }),
 
   resetPassword: (payload: {
     email: string;

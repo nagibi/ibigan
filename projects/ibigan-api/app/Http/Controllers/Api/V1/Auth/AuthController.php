@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Actions\Auth\ForgotPasswordAction;
 use App\Actions\Auth\RegisterAction;
 use App\Actions\Auth\ResetPasswordAction;
+use App\Http\Controllers\Concerns\ResolvesTenantFromRequest;
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
@@ -24,6 +25,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 final class AuthController extends Controller
 {
+    use ResolvesTenantFromRequest;
+
     /**
      * Autenticar usuário no tenant.
      *
@@ -32,6 +35,8 @@ final class AuthController extends Controller
      */
     public function login(Request $request, TwoFactorEmailService $twoFactorEmailService): JsonResponse
     {
+        $this->mergeResolvedTenantId($request);
+
         $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -44,6 +49,14 @@ final class AuthController extends Controller
             return ApiResponse::error(
                 'auth.login.tenant_not_found',
                 errors: [['field' => 'tenant_id', 'message_code' => 'auth.login.tenant_not_found']],
+                httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        if (! $tenant->is_active) {
+            return ApiResponse::error(
+                'auth.login.tenant_inactive',
+                errors: [['field' => 'tenant_id', 'message_code' => 'auth.login.tenant_inactive']],
                 httpStatus: Response::HTTP_UNPROCESSABLE_ENTITY,
             );
         }

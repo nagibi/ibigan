@@ -15,8 +15,7 @@ import { useFormPage } from '@/hooks/use-form-page';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
-import { translationsService } from '@/services/translations.service';
-import { useAuthStore } from '@/stores/auth.store';
+import { useTranslationAdminContext } from '@/hooks/use-translation-admin-context';
 import { PageBody } from '@/components/common/page-body';
 import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
 import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
@@ -60,29 +59,41 @@ const DEFAULT_VALUES: FormData = {
 
 export function TranslationFormPage() {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string; tenantId?: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { reloadTranslations } = useLanguage();
+  const translationContext = useTranslationAdminContext();
+  const {
+    listPath,
+    newPath,
+    getEditPath,
+    translationsApi,
+    canManage,
+    tenantId,
+  } = translationContext;
   const isEditing = Boolean(id);
-  const canManage = useAuthStore((state) => state.hasPermission('configuracao-gerenciar'));
   const prefilledKey = searchParams.get('key') ?? '';
   const prefilledLocale = searchParams.get('locale') === 'en' ? 'en' : 'pt';
   const lockIdentityFields = Boolean(prefilledKey) || isEditing;
 
   const { data: translationData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['translation', id],
+    queryKey: ['translation', tenantId, id],
     queryFn: async () => {
-      const response = await translationsService.manage({});
+      if (!('manage' in translationsApi)) {
+        throw new Error(t('settings.translations.form.not_found'));
+      }
+
+      const response = await translationsApi.manage({});
       const translation = response.data.result.find((item) => item.id === Number(id));
       if (!translation) {
         throw new Error(t('settings.translations.form.not_found'));
       }
       return translation;
     },
-    enabled: isEditing,
+    enabled: isEditing && canManage,
   });
 
   const translation = translationData;
@@ -95,8 +106,8 @@ export function TranslationFormPage() {
   });
 
   const formPage = useFormPage({
-    backPath: '/settings/translations',
-    newPath: '/settings/translations/new',
+    backPath: listPath,
+    newPath,
     entityLabel: t('settings.translations.entity'),
   });
 
@@ -122,14 +133,18 @@ export function TranslationFormPage() {
   }, [form, translation]);
 
   const saveMutation = useMutation({
-    mutationFn: (data: FormData) => (
-      isEditing
-        ? translationsService.update(Number(id), data)
-        : translationsService.store(data)
-    ),
+    mutationFn: (data: FormData) => {
+      if (!('store' in translationsApi) || !('update' in translationsApi)) {
+        return Promise.reject(new Error('unavailable'));
+      }
+
+      return isEditing
+        ? translationsApi.update(Number(id), data)
+        : translationsApi.store(data);
+    },
     onSuccess: async (response) => {
-      await queryClient.invalidateQueries({ queryKey: ['translations-manage'] });
-      await queryClient.invalidateQueries({ queryKey: ['translation', id] });
+      await queryClient.invalidateQueries({ queryKey: ['translations-manage', tenantId] });
+      await queryClient.invalidateQueries({ queryKey: ['translation', tenantId, id] });
       await reloadTranslations();
       apiNotify.showSuccess(
         isEditing
@@ -147,9 +162,9 @@ export function TranslationFormPage() {
       const createdId = !isEditing ? response.data.result.id : undefined;
       const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
-        listPath: '/settings/translations',
-        newPath: '/settings/translations/new',
-        getEditPath: (recordId) => `/settings/translations/${recordId}`,
+        listPath,
+        newPath,
+        getEditPath,
         isEditing,
         createdId,
       });
@@ -259,9 +274,9 @@ export function TranslationFormPage() {
       />
     ) : undefined,
     breadcrumbs: [
-      { title: t('menu.settings') },
-      { title: t('menu.languages') },
-      { title: t('menu.translations'), path: '/settings/translations' },
+      { title: 'Plataforma' },
+      { title: t('menu.translations'), path: '/admin/translations' },
+      ...(tenantId ? [{ title: t('settings.translations.title'), path: listPath }] : []),
       { title: pageTitle },
     ],
   });

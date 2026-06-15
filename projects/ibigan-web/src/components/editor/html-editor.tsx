@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { isComplexEmailHtml } from '@/lib/is-complex-email-html';
 import './html-editor.css';
 
 export type HtmlEditorProps = {
@@ -79,9 +80,16 @@ export function HtmlEditor({
 }: HtmlEditorProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const lastEmittedValue = useRef(value);
+  const viewModeRef = useRef<'visual' | 'html'>('visual');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [viewMode, setViewMode] = useState<'visual' | 'html'>('visual');
+  const startsAsEmailLayout = isComplexEmailHtml(value);
+  const [viewMode, setViewMode] = useState<'visual' | 'html'>(() => (
+    startsAsEmailLayout ? 'html' : 'visual'
+  ));
   const [sourceHtml, setSourceHtml] = useState(value);
+  const isEmailLayout = isComplexEmailHtml(sourceHtml || value);
+
+  viewModeRef.current = viewMode;
 
   const editor = useEditor({
     extensions: [
@@ -97,9 +105,13 @@ export function HtmlEditor({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder }),
     ],
-    content: value,
+    content: startsAsEmailLayout ? '' : value,
     editable: !disabled,
     onUpdate: ({ editor: currentEditor }) => {
+      if (viewModeRef.current !== 'visual') {
+        return;
+      }
+
       const html = currentEditor.getHTML();
       lastEmittedValue.current = html;
       onChange?.(html);
@@ -121,7 +133,7 @@ export function HtmlEditor({
     if (!editor) return;
     if (value === lastEmittedValue.current) return;
 
-    if (viewMode === 'html') {
+    if (viewMode === 'html' || isComplexEmailHtml(value)) {
       setSourceHtml(value);
       lastEmittedValue.current = value;
       return;
@@ -137,14 +149,18 @@ export function HtmlEditor({
 
   const switchToHtml = useCallback(() => {
     if (!editor) return;
-    const html = editor.getHTML();
+
+    const html = isComplexEmailHtml(sourceHtml || value)
+      ? (sourceHtml || value)
+      : editor.getHTML();
+
     setSourceHtml(html);
     lastEmittedValue.current = html;
     setViewMode('html');
-  }, [editor]);
+  }, [editor, sourceHtml, value]);
 
   const switchToVisual = useCallback(() => {
-    if (!editor) return;
+    if (!editor || isComplexEmailHtml(sourceHtml)) return;
     editor.commands.setContent(sourceHtml || '', { emitUpdate: false });
     lastEmittedValue.current = sourceHtml;
     onChange?.(sourceHtml);
@@ -314,11 +330,16 @@ export function HtmlEditor({
         )}
 
         <div className="ms-auto flex items-center gap-0.5">
+          {isEmailLayout ? (
+            <span className="me-2 hidden text-xs text-muted-foreground sm:inline">
+              Layout de e-mail — use Código HTML ou Pré-visualização
+            </span>
+          ) : null}
           <ToolbarButton
             label="Editor visual"
             icon={Type}
             active={viewMode === 'visual'}
-            disabled={disabled}
+            disabled={disabled || isEmailLayout}
             onClick={() => {
               if (viewMode === 'html') switchToVisual();
             }}

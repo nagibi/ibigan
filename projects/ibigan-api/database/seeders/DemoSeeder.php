@@ -176,6 +176,10 @@ class DemoSeeder extends Seeder
             $tenant->updated_at = now();
             $tenant->saveQuietly();
 
+            $tenant->domains()->updateOrCreate(
+                ['domain' => "{$tenant->slug}.localhost"],
+            );
+
             $tenant->run(function () use ($tenantData, $tenantIndex): void {
                 $this->call(RolePermissionSeeder::class);
                 $this->call(MenuSeeder::class);

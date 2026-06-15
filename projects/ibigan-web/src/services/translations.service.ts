@@ -26,21 +26,4 @@ export interface TranslationManageFilters {
 export const translationsService = {
   overrides: (locale: string) =>
     api.get<TranslationOverridesResponse>('/v1/translations', { params: { locale } }),
-
-  manage: (filters: TranslationManageFilters = {}) =>
-    api.get<{ status: number; result: TenantTranslation[] }>('/v1/translations/manage', {
-      params: filters,
-    }),
-
-  store: (payload: Omit<TenantTranslation, 'id' | 'created_at' | 'updated_at'>) =>
-    api.post<{ status: number; result: TenantTranslation; message_code: string; severity?: string }>(
-      '/v1/translations',
-      payload,
-    ),
-
-  update: (id: number, payload: Partial<Omit<TenantTranslation, 'id' | 'created_at' | 'updated_at'>>) =>
-    api.put<{ status: number; result: TenantTranslation; message_code: string; severity?: string }>(
-      `/v1/translations/${id}`,
-      payload,
-    ),
 };

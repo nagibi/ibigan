@@ -391,18 +391,18 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'name',
         filter: { type: 'multi', filterKey: 'user', placeholder: t('users.filter.name_or_email') },
-        className: 'min-w-[220px]',
+        className: 'min-w-[240px] w-[280px]',
         render: (user) => (
-          <div className="flex items-center gap-3">
-            <Avatar className="size-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className="size-8 shrink-0">
               <AvatarImage src={user.avatar_url ?? undefined} />
               <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                 {getInitials(user.name, 2)}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-max">
-              <p className="text-sm">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm">{user.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
             </div>
           </div>
         ),
@@ -411,9 +411,9 @@ export function UsersPage() {
         id: 'roles',
         label: t('users.column.role'),
         filter: { type: 'text', filterKey: 'role', placeholder: t('users.column.role') },
-        className: 'min-w-[120px]',
+        className: 'min-w-[120px] w-[140px]',
         render: (user) => (
-          <div className="flex gap-1">
+          <div className="flex min-w-0 flex-wrap gap-1">
             {user.roles.map((role) => (
               <GridBadge key={role} variant="outline">
                 {role}

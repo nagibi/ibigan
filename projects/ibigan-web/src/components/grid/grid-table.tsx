@@ -130,7 +130,7 @@ function SortableHeaderCell<T>({
         transition,
       }}
       className={cn(
-        'overflow-visible whitespace-nowrap',
+        'overflow-hidden whitespace-nowrap',
         getGridColumnCellClassName(column.id, column.className),
         enableColumnReorder && 'min-w-[6.5rem]',
         isDragging && 'opacity-60',
@@ -156,7 +156,7 @@ function SortableHeaderCell<T>({
           <ToolbarTooltip content={getSortTooltip(isActive, sortDir, t)}>
             <button
               type="button"
-              className="flex min-w-0 items-center gap-1 text-left text-xs font-normal text-muted-foreground hover:text-foreground"
+              className="flex min-w-0 items-center gap-1 text-left text-xs font-semibold text-muted-foreground hover:text-foreground"
               onClick={() => onSort?.(sortKey)}
             >
               {resolveGridColumnLabel(column.id, column.label)}
@@ -164,7 +164,7 @@ function SortableHeaderCell<T>({
             </button>
           </ToolbarTooltip>
         ) : (
-          <span className="text-xs font-normal text-muted-foreground">{resolveGridColumnLabel(column.id, column.label)}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{resolveGridColumnLabel(column.id, column.label)}</span>
         )}
       </div>
     </TableHead>
@@ -193,7 +193,7 @@ function PinnedHeaderCell<T>({
 
   return (
     <TableHead className={cn(
-      'overflow-visible whitespace-nowrap',
+      'overflow-hidden whitespace-nowrap',
       getGridColumnCellClassName(column.id, column.className),
       column.sortable && 'min-w-[4.5rem]',
     )}>
@@ -202,7 +202,7 @@ function PinnedHeaderCell<T>({
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground',
+              'flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground',
               isGridCenteredColumn(column.id) ? 'justify-center w-full' : 'text-left',
             )}
             onClick={() => onSort?.(sortKey)}
@@ -213,7 +213,7 @@ function PinnedHeaderCell<T>({
         </ToolbarTooltip>
       ) : (
         <span className={cn(
-          'text-xs font-normal text-muted-foreground',
+          'text-xs font-semibold text-muted-foreground',
           isGridCenteredColumn(column.id) && 'flex justify-center',
         )}
         >
@@ -427,7 +427,7 @@ export function GridTable<T>({
         {columns.map((column) => (
           <TableCell
             key={column.id}
-            className={cn('whitespace-nowrap', GRID_BODY_CELL_CLASS, getGridColumnCellClassName(column.id, column.className))}
+            className={cn('overflow-hidden align-middle', GRID_BODY_CELL_CLASS, getGridColumnCellClassName(column.id, column.className))}
           >
             {isGridCenteredColumn(column.id) ? (
               <div className="flex justify-center">{column.render(row)}</div>
@@ -444,7 +444,7 @@ export function GridTable<T>({
   return (
     <GridTableScroll maxHeight={maxBodyHeight}>
       <GridTableColumnDndContext columns={columns} onColumnOrderChange={onColumnOrderChange}>
-        <table className="w-full min-w-full table-fixed caption-bottom text-sm font-normal text-muted-foreground">
+        <table className="min-w-full w-max caption-bottom text-sm font-normal text-muted-foreground">
           <GridTableHeader
             columns={columns}
             sort={sort}

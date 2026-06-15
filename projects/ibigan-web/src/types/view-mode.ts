@@ -21,6 +21,7 @@ export const VIEW_PREFERENCE_KEYS = {
   centralUsers: 'central-users.view',
   platformMessageTemplates: 'platform-message-templates.view',
   platformReports: 'platform-reports.view',
+  centralTranslations: 'central-translations.view',
 } as const;
 
 export type ViewPreferenceKey = (typeof VIEW_PREFERENCE_KEYS)[keyof typeof VIEW_PREFERENCE_KEYS];
