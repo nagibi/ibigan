@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'name' => 'Raphael Acunha da Silva',
                     'email' => 'raphaelacunhadasilva@gmail.com',
-                    'cpf' => '39053344705',
+                    'cpf' => '15350946056',
                 ],
                 [
                     'name' => 'Hemily Monteiro',
@@ -56,21 +56,7 @@ class DatabaseSeeder extends Seeder
             $catalogSyncUser = null;
 
             foreach ($superAdmins as $admin) {
-                $user = User::updateOrCreate(
-                    ['email' => $admin['email']],
-                    [
-                        'name' => $admin['name'],
-                        'cpf' => $admin['cpf'],
-                        'phone' => '11987654321',
-                        'birth_date' => '1990-01-15',
-                        'gender' => 'prefer_not_to_say',
-                        'bio' => 'Super-admin do tenant Acme.',
-                        'password' => Hash::make('A12345'),
-                        'status' => 'active',
-                        'is_super_admin' => true,
-                    ]
-                );
-
+                $user = $this->upsertAcmeSuperAdmin($admin);
                 $user->syncRoles(['super-admin']);
                 $catalogSyncUser ??= $user;
             }
@@ -79,5 +65,41 @@ class DatabaseSeeder extends Seeder
                 app(\App\Services\PlatformCatalogService::class)->sync($catalogSyncUser->id, force: true);
             }
         });
+    }
+
+    /**
+     * @param  array{name: string, email: string, cpf: string}  $admin
+     */
+    private function upsertAcmeSuperAdmin(array $admin): User
+    {
+        $user = User::query()->firstOrNew(['email' => $admin['email']]);
+        $isNew = ! $user->exists;
+
+        $user->fill([
+            'name' => $admin['name'],
+            'phone' => '11987654321',
+            'birth_date' => '1990-01-15',
+            'gender' => 'prefer_not_to_say',
+            'bio' => 'Super-admin do tenant Acme.',
+            'status' => 'active',
+            'is_super_admin' => true,
+        ]);
+
+        if ($isNew) {
+            $user->password = Hash::make('A12345');
+        }
+
+        $cpfAvailable = ! User::query()
+            ->where('cpf', $admin['cpf'])
+            ->when($user->exists, fn ($query) => $query->whereKeyNot($user->id))
+            ->exists();
+
+        if ($cpfAvailable || $user->cpf === $admin['cpf']) {
+            $user->cpf = $admin['cpf'];
+        }
+
+        $user->save();
+
+        return $user;
     }
 }
