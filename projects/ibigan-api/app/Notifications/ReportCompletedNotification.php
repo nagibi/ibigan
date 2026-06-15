@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\ReportExecution;
+use App\Mail\TemplateMailable;
 use App\Notifications\Concerns\ResolvesMessageTemplate;
 use App\Support\MessageTemplateSlugs;
-use App\Support\PlainTextMailMessageBuilder;
-use App\Support\SystemMessageTemplates;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
@@ -35,16 +33,13 @@ final class ReportCompletedNotification extends Notification implements ShouldBr
         };
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): TemplateMailable
     {
-        $data = $this->mergeData($notifiable);
         $content = $this->resolveTemplate($notifiable);
 
-        return PlainTextMailMessageBuilder::build(
-            $content['subject'],
-            $content['body'],
-            SystemMessageTemplates::REPORT_COMPLETED_ACTION_LABEL,
-            $data['download_url'],
+        return new TemplateMailable(
+            emailSubject: $content['subject'],
+            emailBody: $content['body'],
         );
     }
 

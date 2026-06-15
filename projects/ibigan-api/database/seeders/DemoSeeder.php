@@ -132,6 +132,20 @@ class DemoSeeder extends Seeder
         ['name' => 'Hemily Monteiro', 'email' => 'hemily.monteiro01@gmail.com'],
         ['name' => 'Jean Schletz',   'email' => 'jeanschletz@gmail.com'],
         ['name' => 'Breno Silva',    'email' => 'breno.silva@ibigan.com'],
+        ['name' => 'Raphael Acunha da Silva', 'email' => 'raphaelacunhadasilva@gmail.com'],
+    ];
+
+    /** Usuários fixos por tenant (e-mail real, independente do padrão demo). */
+    private array $fixedTenantUsers = [
+        'techsolutions' => [
+            [
+                'name'   => 'Ibigan',
+                'email'  => 'ibigan@gmail.com',
+                'cpf'    => '52998224725',
+                'role'   => 'viewer',
+                'gender' => 'prefer_not_to_say',
+            ],
+        ],
     ];
 
     /** Volumes mensais de entregas (últimos 6 meses) por tenant. */
@@ -204,6 +218,11 @@ class DemoSeeder extends Seeder
                     $tenantUsers[] = $user;
                 }
 
+                $tenantUsers = array_merge(
+                    $tenantUsers,
+                    $this->seedFixedTenantUsers($tenantData['id']),
+                );
+
                 $this->backdateUserTimestamps($tenantUsers, $tenantIndex);
                 $this->seedMessageTemplates();
                 $this->seedWebhooks($tenantData['id']);
@@ -223,6 +242,36 @@ class DemoSeeder extends Seeder
                 $this->command->info("  ✓ Tenant {$tenantData['id']} populado com sucesso");
             });
         }
+    }
+
+    /**
+     * @return list<User>
+     */
+    private function seedFixedTenantUsers(string $tenantId): array
+    {
+        $users = [];
+
+        foreach ($this->fixedTenantUsers[$tenantId] ?? [] as $userData) {
+            $user = User::firstOrCreate(
+                ['email' => $userData['email']],
+                [
+                    'name'           => $userData['name'],
+                    'cpf'            => $userData['cpf'],
+                    'phone'          => '11987654321',
+                    'birth_date'     => '1990-01-15',
+                    'gender'         => $userData['gender'],
+                    'password'       => Hash::make('A12345'),
+                    'status'         => 'active',
+                    'is_super_admin' => false,
+                ]
+            );
+            $user->syncRoles([$userData['role']]);
+            $users[] = $user;
+
+            $this->command->info("  ✓ Usuário fixo criado: {$userData['email']} ({$userData['role']})");
+        }
+
+        return $users;
     }
 
     private function seedCentralSuperAdmins(): void

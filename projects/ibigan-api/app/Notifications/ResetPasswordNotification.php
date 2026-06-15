@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Mail\TemplateMailable;
 use App\Notifications\Concerns\ResolvesMessageTemplate;
 use App\Support\MessageTemplateSlugs;
-use App\Support\PlainTextMailMessageBuilder;
-use App\Support\SystemMessageTemplates;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 final class ResetPasswordNotification extends Notification
@@ -29,16 +27,13 @@ final class ResetPasswordNotification extends Notification
         return ['mail'];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): TemplateMailable
     {
         $content = $this->resolveTemplate($notifiable);
-        $resetUrl = $this->resetUrl($notifiable);
 
-        return PlainTextMailMessageBuilder::build(
-            $content['subject'],
-            $content['body'],
-            SystemMessageTemplates::PASSWORD_RESET_ACTION_LABEL,
-            $resetUrl,
+        return new TemplateMailable(
+            emailSubject: $content['subject'],
+            emailBody: $content['body'],
         );
     }
 

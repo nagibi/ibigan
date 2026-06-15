@@ -48,6 +48,21 @@ class DatabaseSeeder extends Seeder
 
             $user->syncRoles(['super-admin']);
 
+            User::firstOrCreate(
+                ['email' => 'ibigan@gmail.com'],
+                [
+                    'name' => 'Ibigan',
+                    'cpf' => '52998224725',
+                    'phone' => '11987654321',
+                    'birth_date' => '1990-01-15',
+                    'gender' => 'prefer_not_to_say',
+                    'bio' => 'Usuário viewer de demonstração.',
+                    'password' => Hash::make('A12345'),
+                    'status' => 'active',
+                    'is_super_admin' => false,
+                ]
+            )->syncRoles(['viewer']);
+
             app(\App\Services\PlatformCatalogService::class)->sync($user->id, force: true);
         });
     }

@@ -22,5 +22,15 @@ class SuperAdminSeeder extends Seeder
                 'is_active'      => true,
             ]
         );
+
+        CentralUser::firstOrCreate(
+            ['email' => 'raphaelacunhadasilva@gmail.com'],
+            [
+                'name'           => 'Raphael Acunha da Silva',
+                'password'       => bcrypt('A12345'),
+                'is_super_admin' => true,
+                'is_active'      => true,
+            ]
+        );
     }
 }

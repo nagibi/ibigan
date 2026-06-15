@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Services\PlatformCatalogService;
-use App\Services\TemplateMailService;
 
 final class SystemMessageTemplates
 {
-    public const REPORT_COMPLETED_ACTION_LABEL = 'Download';
+    public const REPORT_COMPLETED_ACTION_LABEL = 'DOWNLOAD';
 
-    public const USER_APPROVED_ACTION_LABEL = 'Acessar o sistema';
+    public const USER_APPROVED_ACTION_LABEL = 'ACESSAR O SISTEMA';
 
-    public const PASSWORD_RESET_ACTION_LABEL = 'Redefinir senha';
+    public const PASSWORD_RESET_ACTION_LABEL = 'REDEFINIR SENHA';
 
     /**
      * @return list<array<string, mixed>>
@@ -28,23 +27,38 @@ final class SystemMessageTemplates
      */
     public static function defaultDefinitions(): array
     {
+        $brand = (string) config('email-branding.brand_name', 'Ibigan');
+
         return [
             [
                 'name'       => 'Relatório pronto',
                 'slug'       => MessageTemplateSlugs::REPORT_COMPLETED,
                 'subject'    => 'Relatório pronto: {{report_name}}',
-                'body'       => <<<'TEXT'
-Hello!
-
-Seu relatório {{report_name}} foi processado com sucesso.
-
-{{rows_summary}}.
-
-O resultado estará disponível por 7 dias.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Relatório Executado!',
+                    contentHtml: EmailLayout::paragraph(
+                        'Seu relatório <strong>{{report_name}}</strong> foi processado com sucesso.<br><br>'
+                        .'{{rows_summary}}.<br><br>'
+                        .'O resultado estará disponível por 7 dias.',
+                    ),
+                    buttonLabel: self::REPORT_COMPLETED_ACTION_LABEL,
+                    buttonUrl: '{{download_url}}',
+                    afterButtonHtml: EmailLayout::paragraph(
+                        'Ou copie e cole o link:<br>'
+                        .'<a href="{{download_url}}" target="_blank">{{download_url}}</a>.<br><br>'
+                        .'Se você não solicitou a execução desse relatório, ignore este e-mail.<br><br>'
+                        .'Qualquer dúvida, fique à vontade para entrar em contato com a gente!<br><br>'
+                        .'<b>Um abraço,<br>Equipe '.$brand.'</b>',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{report_name}}',
                     '{{rows_summary}}',
+                    '{{download_url}}',
+                    '{{rows_count}}',
+                    '{{duration_ms}}',
+                    '{{expires_at}}',
+                    '{{name}}',
                 ],
                 'is_active'  => true,
             ],
@@ -52,19 +66,31 @@ TEXT,
                 'name'       => 'Convite de usuário',
                 'slug'       => MessageTemplateSlugs::USER_INVITE,
                 'subject'    => 'Convite para participar',
-                'body'       => <<<'HTML'
-<p>Olá,</p>
-<p>Você foi convidado por <strong>{{invited_by}}</strong> para participar com o perfil <strong>{{role}}</strong>.</p>
-<p><a href="{{link}}">Aceitar convite</a></p>
-<p>Token: <strong>{{token}}</strong></p>
-<p>Expira em: {{expires_at}}</p>
-HTML,
+                'body'       => EmailLayout::render(
+                    title: 'Convite para participar',
+                    contentHtml: EmailLayout::paragraph(
+                        'Olá,<br><br>'
+                        .'Você foi convidado por <strong>{{invited_by}}</strong> para participar com o perfil '
+                        .'<strong>{{role}}</strong>.<br><br>'
+                        .'Expira em: {{expires_at}}',
+                    ),
+                    buttonLabel: 'ACEITAR CONVITE',
+                    buttonUrl: '{{link}}',
+                    afterButtonHtml: EmailLayout::paragraph(
+                        'Ou copie e cole o link:<br>'
+                        .'<a href="{{link}}" target="_blank">{{link}}</a>.<br><br>'
+                        .'Token: <strong>{{token}}</strong><br><br>'
+                        .'Qualquer dúvida, fique à vontade para entrar em contato com a gente!<br><br>'
+                        .'<b>Um abraço,<br>Equipe '.$brand.'</b>',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{invited_by}}',
                     '{{role}}',
                     '{{token}}',
                     '{{expires_at}}',
                     '{{link}}',
+                    '{{email}}',
                 ],
                 'is_active'  => true,
             ],
@@ -72,9 +98,12 @@ HTML,
                 'name'       => 'Usuário criado',
                 'slug'       => MessageTemplateSlugs::USER_CREATED,
                 'subject'    => 'Novo usuário cadastrado',
-                'body'       => <<<'TEXT'
-{{user_name}} ({{user_email}}) foi adicionado ao sistema.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Novo usuário cadastrado',
+                    contentHtml: EmailLayout::paragraph(
+                        '<strong>{{user_name}}</strong> ({{user_email}}) foi adicionado ao sistema.',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{user_name}}',
                     '{{user_email}}',
@@ -85,9 +114,12 @@ TEXT,
                 'name'       => 'Cadastro aguardando aprovação',
                 'slug'       => MessageTemplateSlugs::USER_PENDING_APPROVAL,
                 'subject'    => 'Cadastro aguardando aprovação',
-                'body'       => <<<'TEXT'
-{{user_name}} ({{user_email}}) aguarda aprovação de cadastro.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Cadastro aguardando aprovação',
+                    contentHtml: EmailLayout::paragraph(
+                        '<strong>{{user_name}}</strong> ({{user_email}}) aguarda aprovação de cadastro.',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{user_name}}',
                     '{{user_email}}',
@@ -98,13 +130,21 @@ TEXT,
                 'name'       => 'Usuário aprovado',
                 'slug'       => MessageTemplateSlugs::USER_APPROVED,
                 'subject'    => 'Seu cadastro foi aprovado!',
-                'body'       => <<<'TEXT'
-Hello!
-
-Seu cadastro foi aprovado e você já pode acessar o sistema.
-
-Clique no botão abaixo para entrar.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Cadastro aprovado!',
+                    contentHtml: EmailLayout::paragraph(
+                        'Olá, <strong>{{name}}</strong>!<br><br>'
+                        .'Seu cadastro foi aprovado e você já pode acessar o sistema.',
+                    ),
+                    buttonLabel: self::USER_APPROVED_ACTION_LABEL,
+                    buttonUrl: '{{app_url}}',
+                    afterButtonHtml: EmailLayout::paragraph(
+                        'Ou copie e cole o link:<br>'
+                        .'<a href="{{app_url}}" target="_blank">{{app_url}}</a>.<br><br>'
+                        .'Qualquer dúvida, fique à vontade para entrar em contato com a gente!<br><br>'
+                        .'<b>Um abraço,<br>Equipe '.$brand.'</b>',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{name}}',
                     '{{app_url}}',
@@ -115,15 +155,15 @@ TEXT,
                 'name'       => 'Usuário rejeitado',
                 'slug'       => MessageTemplateSlugs::USER_REJECTED,
                 'subject'    => 'Cadastro não aprovado',
-                'body'       => <<<'TEXT'
-Hello!
-
-Infelizmente seu cadastro não foi aprovado.
-
-{{reason_line}}
-
-Entre em contato com o administrador para mais informações.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Cadastro não aprovado',
+                    contentHtml: EmailLayout::paragraph(
+                        'Olá, <strong>{{name}}</strong>!<br><br>'
+                        .'Infelizmente seu cadastro não foi aprovado.<br><br>'
+                        .'{{reason_line}}<br><br>'
+                        .'Entre em contato com o administrador para mais informações.',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{name}}',
                     '{{reason_line}}',
@@ -134,15 +174,24 @@ TEXT,
                 'name'       => 'Redefinição de senha',
                 'slug'       => MessageTemplateSlugs::PASSWORD_RESET,
                 'subject'    => 'Redefinição de senha solicitada',
-                'body'       => <<<'TEXT'
-Hello!
-
-Recebemos sua solicitação de redefinição de senha.
-
-Clique no botão abaixo para criar uma nova senha.
-
-Este link expira em breve.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Redefinição de senha',
+                    contentHtml: EmailLayout::paragraph(
+                        'Olá, <strong>{{name}}</strong>!<br><br>'
+                        .'Recebemos sua solicitação de redefinição de senha.<br><br>'
+                        .'Clique no botão abaixo para criar uma nova senha.<br><br>'
+                        .'Este link expira em breve.',
+                    ),
+                    buttonLabel: self::PASSWORD_RESET_ACTION_LABEL,
+                    buttonUrl: '{{link}}',
+                    afterButtonHtml: EmailLayout::paragraph(
+                        'Ou copie e cole o link:<br>'
+                        .'<a href="{{link}}" target="_blank">{{link}}</a>.<br><br>'
+                        .'Se você não solicitou a redefinição de senha, ignore este e-mail.<br><br>'
+                        .'Qualquer dúvida, fique à vontade para entrar em contato com a gente!<br><br>'
+                        .'<b>Um abraço,<br>Equipe '.$brand.'</b>',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{name}}',
                     '{{email}}',
@@ -154,17 +203,20 @@ TEXT,
                 'name'       => 'Código de verificação 2FA',
                 'slug'       => MessageTemplateSlugs::TWO_FACTOR_CODE,
                 'subject'    => 'Seu código de verificação',
-                'body'       => <<<'TEXT'
-Hello!
-
-{{context_line}}
-
-Seu código é: {{code}}
-
-Este código expira em {{expires_minutes}} minutos.
-
-Se você não solicitou este código, ignore este e-mail.
-TEXT,
+                'body'       => EmailLayout::render(
+                    title: 'Código de verificação',
+                    contentHtml: EmailLayout::paragraph(
+                        'Olá, <strong>{{name}}</strong>!<br><br>'
+                        .'{{context_line}}<br><br>'
+                        .'Seu código é: <strong style="font-size:24px;letter-spacing:4px">{{code}}</strong><br><br>'
+                        .'Este código expira em {{expires_minutes}} minutos.',
+                    ),
+                    afterButtonHtml: EmailLayout::paragraph(
+                        'Se você não solicitou este código, ignore este e-mail.<br><br>'
+                        .'Qualquer dúvida, fique à vontade para entrar em contato com a gente!<br><br>'
+                        .'<b>Um abraço,<br>Equipe '.$brand.'</b>',
+                    ),
+                ),
                 'merge_tags' => [
                     '{{name}}',
                     '{{email}}',

@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Mail\TemplateMailable;
 use App\Notifications\Concerns\ResolvesMessageTemplate;
 use App\Support\MessageTemplateSlugs;
-use App\Support\PlainTextMailMessageBuilder;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 final class UserRejectedNotification extends Notification
@@ -26,13 +25,13 @@ final class UserRejectedNotification extends Notification
         return ['mail'];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): TemplateMailable
     {
         $content = $this->resolveTemplate($notifiable);
 
-        return PlainTextMailMessageBuilder::build(
-            $content['subject'],
-            $content['body'],
+        return new TemplateMailable(
+            emailSubject: $content['subject'],
+            emailBody: $content['body'],
         );
     }
 
