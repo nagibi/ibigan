@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { buildTenantAuthQuery, useTenantAuthContext } from '@/hooks/use-tenant-auth-context';
 import { loadTenantTranslationOverrides } from '@/lib/load-translations';
 import { resolveApiMessage } from '@/lib/resolve-api-message';
+import { resolvePostLoginDestination } from '@/lib/post-login-navigation';
 import { useLanguage } from '@/providers/i18n-provider';
 import { authService } from '@/services/auth.service';
 import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
@@ -133,7 +134,7 @@ export function LoginPage() {
 
       centralLogout();
       setAuth(token, tenant_id, user);
-      navigate('/auth/select-tenant');
+      navigate(await resolvePostLoginDestination(tenant_id));
     } catch (err: unknown) {
       const payload = (err as { response?: { data?: { message_code?: string; errors?: Array<{ message_code?: string }> } } })
         ?.response?.data;

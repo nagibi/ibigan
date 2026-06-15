@@ -285,6 +285,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
+        {!isMobile ? (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="[&_[data-slot=dropdown-menu-sub-trigger-indicator]]:hidden">
             <currentMenuMode.icon className="size-4" />
@@ -321,6 +322,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        ) : null}
 
         <DropdownMenuItem
           className="focus:bg-transparent"

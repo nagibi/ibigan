@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Check, LoaderCircle } from 'lucide-react';
 import { type MenuMode } from '@/config/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useSettings } from '@/providers/settings-provider';
 import { cn } from '@/lib/utils';
 import { FormPanel } from '@/components/grid/form-panel';
@@ -232,6 +233,8 @@ export function useAppearanceSettings() {
 export type AppearanceSettingsState = ReturnType<typeof useAppearanceSettings>;
 
 export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsState }) {
+  const isMobile = useIsMobile();
+
   if (!state.mounted) {
     return (
       <FormPanel title="Aparência">
@@ -245,9 +248,14 @@ export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsSt
   return (
     <FormPanel
       title="Aparência"
-      description="Tema da interface, disposição do menu e preferências visuais."
+      description={
+        isMobile
+          ? 'Tema da interface e preferências visuais.'
+          : 'Tema da interface, disposição do menu e preferências visuais.'
+      }
     >
       <div className="space-y-8">
+        {!isMobile ? (
         <div className="space-y-4">
           <Label className="text-sm font-medium">Disposição do menu</Label>
           <p className="text-sm text-muted-foreground">
@@ -291,8 +299,9 @@ export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsSt
             })}
           </div>
         </div>
+        ) : null}
 
-        <Separator />
+        {!isMobile ? <Separator /> : null}
 
         <div className="space-y-4">
           <Label className="text-sm font-medium">Modo do tema</Label>
@@ -335,7 +344,7 @@ export function AppearanceSettingsPanel({ state }: { state: AppearanceSettingsSt
           </div>
         </div>
 
-        {state.draftMenuMode === 'sidebar' ? (
+        {state.draftMenuMode === 'sidebar' && !isMobile ? (
         <>
         <Separator />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

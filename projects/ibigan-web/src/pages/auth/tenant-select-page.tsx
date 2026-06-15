@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronRight, LoaderCircle } from 'lucide-react';
 import { TenantSlugIcon } from '@/components/tenant/tenant-slug-icon';
 import { authService, type UserTenant } from '@/services/auth.service';
+import { buildTenantLoginPath } from '@/lib/tenant-login-path';
+import { resolveAutoTenantId } from '@/lib/post-login-navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useTenantSwitch } from '@/hooks/use-tenant-switch';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,13 @@ export function TenantSelectPage() {
 
   const handleSelect = useCallback(
     async (tenantId: string) => {
+      const currentTenantId = useAuthStore.getState().tenantId;
+
+      if (currentTenantId === tenantId) {
+        navigate('/dashboard');
+        return;
+      }
+
       const success = await switchToTenant(tenantId);
       if (success) {
         navigate('/dashboard');
@@ -32,29 +41,31 @@ export function TenantSelectPage() {
   );
 
   useEffect(() => {
+    let keepLoading = false;
+
     async function load() {
       try {
         const res = await authService.listTenants();
         const list = res.data.result;
-        setTenants(list);
 
         if (!manualSelection) {
-          if (list.length === 1) {
-            await handleSelect(list[0].id);
-            return;
-          }
+          const autoTarget = resolveAutoTenantId(list);
 
-          const def = list.find((tenant) => tenant.is_default);
-          if (def) {
-            await handleSelect(def.id);
+          if (autoTarget) {
+            keepLoading = true;
+            await handleSelect(autoTarget);
             return;
           }
         }
+
+        setTenants(list);
       } catch {
         toast.error('Erro ao carregar organizações.');
-        navigate('/auth/login');
+        navigate(buildTenantLoginPath());
       } finally {
-        setLoading(false);
+        if (!keepLoading) {
+          setLoading(false);
+        }
       }
     }
 
@@ -111,8 +122,12 @@ export function TenantSelectPage() {
         size="sm"
         className="mt-6 text-muted-foreground"
         onClick={() => {
+          const tenantSlug =
+            tenants.find((tenant) => tenant.is_default)?.slug
+            ?? tenants[0]?.slug
+            ?? null;
           logout();
-          navigate('/auth/login');
+          navigate(buildTenantLoginPath(tenantSlug));
         }}
       >
         Sair

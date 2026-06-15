@@ -44,6 +44,7 @@ import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
 import { UserApprovalsPage } from '@/pages/user-approvals/user-approvals-page';
 import { UsersPage } from '@/pages/users/users-page';
 import { useAuthStore } from '@/stores/auth.store';
+import { buildTenantLoginPath, resolveTenantSlugForLogin } from '@/lib/tenant-login-path';
 import { Navigate, Route, Routes, useParams } from 'react-router';
 import { CentralLayout } from '@/components/layouts/central-layout';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
@@ -64,7 +65,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to={buildTenantLoginPath(resolveTenantSlugForLogin())} replace />;
   }
 
   return <>{children}</>;

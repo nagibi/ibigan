@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { buildTenantLoginPath, resolveTenantSlugForLogin } from '@/lib/tenant-login-path';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
@@ -18,5 +19,5 @@ export function RequireAccountSession() {
     return <Outlet />;
   }
 
-  return <Navigate to="/auth/login" replace />;
+  return <Navigate to={buildTenantLoginPath(resolveTenantSlugForLogin())} replace />;
 }

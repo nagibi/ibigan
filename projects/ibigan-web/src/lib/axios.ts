@@ -2,6 +2,7 @@ import axios from 'axios';
 import { applyTenantHostHeader, resolveApiBaseUrl } from '@/lib/api-base-url';
 import { trackApiRequestEnd, trackApiRequestStart } from '@/lib/api-loading-bar';
 import { isCentralApiRoute } from '@/lib/central-api';
+import { buildTenantLoginPath } from '@/lib/tenant-login-path';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
@@ -47,11 +48,12 @@ function handleCentralUnauthorized() {
 }
 
 function handleTenantUnauthorized() {
+  const tenantSlug = localStorage.getItem('ibigan_tenant_id');
   localStorage.removeItem('ibigan_token');
   localStorage.removeItem('ibigan_tenant_id');
   localStorage.removeItem('ibigan-auth');
   useAuthStore.getState().logout();
-  window.location.href = '/auth/login';
+  window.location.href = buildTenantLoginPath(tenantSlug);
 }
 
 api.interceptors.response.use(

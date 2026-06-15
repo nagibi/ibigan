@@ -4,6 +4,8 @@ import { LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/auth.store';
 import { authService } from '@/services/auth.service';
+import { buildTenantLoginPath } from '@/lib/tenant-login-path';
+import { resolvePostLoginDestination } from '@/lib/post-login-navigation';
 
 export function CallbackPage() {
   const { t } = useTranslation();
@@ -18,12 +20,12 @@ export function CallbackPage() {
 
     if (error) {
       logout();
-      navigate(`/auth/login?error=${error}`);
+      navigate(buildTenantLoginPath(tenantId, { error }));
       return;
     }
 
     if (!token || !tenantId) {
-      navigate('/auth/login');
+      navigate(buildTenantLoginPath(tenantId));
       return;
     }
 
@@ -34,10 +36,10 @@ export function CallbackPage() {
 
         const { data } = await authService.me();
         setAuth(token!, tenantId!, data.result);
-        navigate('/auth/select-tenant');
+        navigate(await resolvePostLoginDestination(tenantId!));
       } catch {
         logout();
-        navigate('/auth/login?error=auth_failed');
+        navigate(buildTenantLoginPath(tenantId, { error: 'auth_failed' }));
       }
     }
 

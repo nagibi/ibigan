@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { authService } from '@/services/auth.service';
+import { buildTenantLoginPath } from '@/lib/tenant-login-path';
+import { resolvePostLoginDestination } from '@/lib/post-login-navigation';
 import { centralAuthService } from '@/services/central-auth.service';
 import { twoFactorService } from '@/services/two-factor.service';
 import { useAuthStore } from '@/stores/auth.store';
@@ -90,7 +92,7 @@ export function TwoFactorPage() {
 
   async function submit(submittedCode: string) {
     if (!twoFactorToken) {
-      navigate(isCentralFlow ? '/central/login' : '/auth/login');
+      navigate(isCentralFlow ? '/central/login' : buildTenantLoginPath(tenantId));
       return;
     }
 
@@ -126,7 +128,7 @@ export function TwoFactorPage() {
       localStorage.setItem('ibigan_tenant_id', tenant_id);
 
       setAuth(token, tenant_id, user);
-      navigate('/auth/select-tenant');
+      navigate(await resolvePostLoginDestination(tenant_id));
     } catch {
       setError(t('auth.two_factor.invalid_code'));
     } finally {
@@ -280,7 +282,7 @@ export function TwoFactorPage() {
               type="button"
               variant="ghost"
               className={cn('w-full text-muted-foreground')}
-              onClick={() => navigate(isCentralFlow ? '/central/login' : '/auth/login')}
+              onClick={() => navigate(isCentralFlow ? '/central/login' : buildTenantLoginPath(tenantId))}
             >
               {t('auth.two_factor.back_to_login')}
             </Button>

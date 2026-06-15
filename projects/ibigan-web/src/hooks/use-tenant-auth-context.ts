@@ -1,14 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { buildTenantAuthQuery } from '@/lib/tenant-login-path';
 import { authService } from '@/services/auth.service';
 
-export function buildTenantAuthQuery(slug?: string | null): string {
-  if (!slug) {
-    return '';
-  }
-
-  return `?tenant=${encodeURIComponent(slug)}`;
-}
+export { buildTenantAuthQuery } from '@/lib/tenant-login-path';
 
 export function useTenantAuthContext() {
   const [searchParams] = useSearchParams();

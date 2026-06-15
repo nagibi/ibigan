@@ -1,10 +1,11 @@
 import { resetEcho } from '@/lib/echo';
+import { buildTenantLoginPath } from '@/lib/tenant-login-path';
 import { authService } from '@/services/auth.service';
 import { centralAuthService } from '@/services/central-auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCentralAuthStore } from '@/stores/central-auth.store';
 
-export type LogoutRedirectPath = '/central/login' | '/auth/login';
+export type LogoutRedirectPath = string;
 
 /** Sessão central (super-admin da plataforma), inclusive durante impersonação de tenant. */
 export function isPlatformSuperAdminSession(): boolean {
@@ -13,12 +14,24 @@ export function isPlatformSuperAdminSession(): boolean {
 }
 
 export function getPostLogoutPath(): LogoutRedirectPath {
-  return isPlatformSuperAdminSession() ? '/central/login' : '/auth/login';
+  if (isPlatformSuperAdminSession()) {
+    return '/central/login';
+  }
+
+  const tenantSlug = useAuthStore.getState().tenantId
+    ?? localStorage.getItem('ibigan_tenant_id');
+
+  return buildTenantLoginPath(tenantSlug);
 }
 
 export async function logoutFromApp(): Promise<LogoutRedirectPath> {
   const isSuperSession = isPlatformSuperAdminSession();
-  const redirectTo: LogoutRedirectPath = isSuperSession ? '/central/login' : '/auth/login';
+  const tenantSlug = !isSuperSession
+    ? (useAuthStore.getState().tenantId ?? localStorage.getItem('ibigan_tenant_id'))
+    : null;
+  const redirectTo: LogoutRedirectPath = isSuperSession
+    ? '/central/login'
+    : buildTenantLoginPath(tenantSlug);
   const { isAuthenticated } = useAuthStore.getState();
 
   if (isAuthenticated) {
