@@ -188,7 +188,7 @@ export function AdminTenantsPage() {
 
   const handleEditSelected = useCallback(() => {
     if (!selection.singleSelection) return;
-    navigate(`/admin/tenants/${selection.selected[0]}/editar`);
+    navigate(`/admin/tenants/${selection.selected[0]}`);
   }, [navigate, selection.selected, selection.singleSelection]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -197,7 +197,7 @@ export function AdminTenantsPage() {
   }, [selection]);
 
   const handleEditTenant = useCallback(
-    (tenantId: string) => navigate(`/admin/tenants/${tenantId}/editar`),
+    (tenantId: string) => navigate(`/admin/tenants/${tenantId}`),
     [navigate],
   );
 
@@ -516,7 +516,7 @@ export function AdminTenantsPage() {
   const toolbarActions = useMemo(
     () => (
       <StandardGridToolbar
-        onNew={() => navigate('/admin/tenants/nova')}
+        onNew={() => navigate('/admin/tenants/new')}
         onEdit={handleEditSelected}
         onActivate={() => void selection.activateSelected()}
         onDeactivate={() => void selection.deactivateSelected()}

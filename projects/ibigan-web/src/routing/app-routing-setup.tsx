@@ -4,7 +4,7 @@ import { AdminDevToolsPage } from '@/pages/admin/admin-devtools-page';
 import { AdminTenantFormPage } from '@/pages/admin/tenant-form-page';
 import { AdminTenantsPage } from '@/pages/admin/tenants-page';
 import { ActivityLogsPage } from '@/pages/activity-logs/activity-logs-page';
-import { CampaignDetailPage } from '@/pages/campaigns/campaign-detail-page';
+import { CampaignIdPage } from '@/pages/campaigns/campaign-id-page';
 import { CampaignFormPage } from '@/pages/campaigns/campaign-form-page';
 import { CampaignsPage } from '@/pages/campaigns/campaigns-page';
 import { CallbackPage } from '@/pages/auth/callback-page';
@@ -104,6 +104,21 @@ function AdminPlatformReportRedirect() {
   return <Navigate to={`/admin/reports/${id}`} replace />;
 }
 
+function LegacyTenantEditRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/admin/tenants/${id}`} replace />;
+}
+
+function LegacySuperAdminEditRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/admin/super-admins/${id}`} replace />;
+}
+
+function LegacyCampaignEditRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/campaigns/${id}`} replace />;
+}
+
 export function AppRoutingSetup() {
   return (
     <Routes>
@@ -172,10 +187,13 @@ export function AppRoutingSetup() {
       <Route element={<RequireSuperAdmin />}>
         <Route element={<CentralLayout />}>
           <Route path="/admin/tenants" element={<AdminTenantsPage />} />
-          <Route path="/admin/tenants/nova" element={<AdminTenantFormPage key="admin-tenant-new" />} />
-          <Route path="/admin/tenants/:id/editar" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
+          <Route path="/admin/tenants/new" element={<AdminTenantFormPage key="admin-tenant-new" />} />
+          <Route path="/admin/tenants/:id" element={<AdminTenantFormPage key="admin-tenant-edit" />} />
+          <Route path="/admin/tenants/nova" element={<Navigate to="/admin/tenants/new" replace />} />
+          <Route path="/admin/tenants/:id/editar" element={<LegacyTenantEditRedirect />} />
           <Route path="/admin/super-admins" element={<CentralUsersPage />} />
-          <Route path="/admin/super-admins/:id/editar" element={<CentralUserFormPage />} />
+          <Route path="/admin/super-admins/:id" element={<CentralUserFormPage />} />
+          <Route path="/admin/super-admins/:id/editar" element={<LegacySuperAdminEditRedirect />} />
           <Route path="/admin/profile" element={<Navigate to="/profile" replace />} />
           <Route path="/central-users" element={<Navigate to="/admin/super-admins" replace />} />
           <Route path="/admin/devtools" element={<AdminDevToolsPage />} />
@@ -185,6 +203,7 @@ export function AppRoutingSetup() {
           <Route path="/admin/reports/:id" element={<ReportFormPage key="platform-report-edit" />} />
           <Route path="/admin/campaigns" element={<Navigate to="/admin/campaigns/new" replace />} />
           <Route path="/admin/campaigns/new" element={<CampaignFormPage key="platform-campaign-new" />} />
+          <Route path="/admin/campaigns/:id" element={<CampaignFormPage key="platform-campaign-edit" />} />
           <Route path="/admin/translations" element={<TranslationsTenantPickerPage />} />
           <Route path="/admin/translations/:tenantId" element={<TranslationsPage key="central-translations-list" />} />
           <Route path="/admin/translations/:tenantId/new" element={<TranslationFormPage key="central-translation-new" />} />
@@ -233,8 +252,8 @@ export function AppRoutingSetup() {
         <Route path="/invites" element={<InvitesPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/new" element={<CampaignFormPage key="campaign-new" />} />
-        <Route path="/campaigns/:id/edit" element={<CampaignFormPage key="campaign-edit" />} />
-        <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
+        <Route path="/campaigns/:id/edit" element={<LegacyCampaignEditRedirect />} />
+        <Route path="/campaigns/:id" element={<CampaignIdPage />} />
         <Route path="/message-templates" element={<MessageTemplatesPage />} />
         <Route
           path="/message-templates/new"

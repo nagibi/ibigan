@@ -30,3 +30,11 @@ export const deliveryStatusBadgeTone: Record<CampaignDelivery['status'], GridBad
 export function channelBadgeToneFor(channel: string): GridBadgeTone {
   return channelBadgeTone[channel] ?? 'secondary';
 }
+
+export function isCampaignEditable(campaign: Campaign): boolean {
+  return campaign.status === 'draft';
+}
+
+export function isCampaignDeletable(campaign: Campaign): boolean {
+  return campaign.status === 'draft' || campaign.status === 'cancelled';
+}

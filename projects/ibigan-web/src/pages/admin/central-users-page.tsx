@@ -176,7 +176,7 @@ export function CentralUsersPage() {
   }
 
   const handleEditUser = useCallback(
-    (userId: number) => navigate(`/admin/super-admins/${userId}/editar`),
+    (userId: number) => navigate(`/admin/super-admins/${userId}`),
     [navigate],
   );
 

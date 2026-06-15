@@ -1,48 +1,23 @@
 import { useEffect } from 'react';
-
-function hasOpenOverlay() {
-  return Boolean(
-    document.querySelector(
-      [
-        '[data-state="open"][role="dialog"]',
-        '[data-state="open"][role="alertdialog"]',
-        '[data-radix-select-content][data-state="open"]',
-        '[data-radix-menu-content][data-state="open"]',
-        '[data-radix-popover-content][data-state="open"]',
-      ].join(', '),
-    ),
-  );
-}
-
-function shouldIgnoreEnter(event: KeyboardEvent) {
-  if (event.defaultPrevented) return true;
-  if (event.isComposing) return true;
-
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return true;
-
-  if (target instanceof HTMLTextAreaElement) return true;
-  if (target.isContentEditable) return true;
-  if (target.closest('[contenteditable="true"]')) return true;
-  if (target.closest('.page-toolbar, [data-slot="sheet-content"], [role="dialog"]')) return true;
-  if (target.closest('button[role="combobox"]')) return true;
-  if (hasOpenOverlay()) return true;
-
-  if (target instanceof HTMLButtonElement && target.type !== 'submit') return true;
-
-  return false;
-}
+import {
+  shouldIgnoreFormDeleteShortcut,
+  shouldIgnoreFormSaveShortcut,
+} from '@/lib/form-keyboard-shortcuts';
 
 export interface UseFormKeyboardOptions {
   enabled?: boolean;
   onSave?: () => void;
+  onRequestDelete?: () => void;
   isSubmitting?: boolean;
+  isDeleting?: boolean;
 }
 
 export function useFormKeyboard({
   enabled = true,
   onSave,
+  onRequestDelete,
   isSubmitting = false,
+  isDeleting = false,
 }: UseFormKeyboardOptions) {
   useEffect(() => {
     if (!enabled || !onSave) return;
@@ -51,7 +26,7 @@ export function useFormKeyboard({
       if (event.key !== 'Enter') return;
       if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
       if (isSubmitting) return;
-      if (shouldIgnoreEnter(event)) return;
+      if (shouldIgnoreFormSaveShortcut(event)) return;
 
       event.preventDefault();
       onSave();
@@ -60,4 +35,21 @@ export function useFormKeyboard({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [enabled, isSubmitting, onSave]);
+
+  useEffect(() => {
+    if (!enabled || !onRequestDelete) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Delete') return;
+      if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (isDeleting || isSubmitting) return;
+      if (shouldIgnoreFormDeleteShortcut(event)) return;
+
+      event.preventDefault();
+      onRequestDelete();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enabled, isDeleting, isSubmitting, onRequestDelete]);
 }

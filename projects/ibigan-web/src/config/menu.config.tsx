@@ -1,7 +1,6 @@
 import {
   History,
   BarChart2,
-  Bell,
   Building2,
   FileBarChart,
   LayoutDashboard,
@@ -11,7 +10,6 @@ import {
   MessageSquare,
   Shield,
   ShieldCheck,
-  User,
   UserCheck,
   Users,
   Webhook,
@@ -98,22 +96,6 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Histórico',
     icon: History,
     path: '/activity-logs',
-  },
-  {
-    title: 'Conta',
-    icon: User,
-    children: [
-      {
-        title: 'Notificações',
-        icon: Bell,
-        path: '/notifications',
-      },
-      {
-        title: 'Meu Perfil',
-        icon: User,
-        path: '/profile',
-      },
-    ],
   },
 ];
 

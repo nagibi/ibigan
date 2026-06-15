@@ -29,9 +29,18 @@ const I18N_LANGUAGES: Language[] = [
 
 const I18N_DEFAULT_LANGUAGE: Language = I18N_LANGUAGES[0];
 
+function resolveLanguage(language?: Pick<Language, 'code'> | null): Language {
+  if (!language?.code) {
+    return I18N_DEFAULT_LANGUAGE;
+  }
+
+  return I18N_LANGUAGES.find((item) => item.code === language.code) ?? I18N_DEFAULT_LANGUAGE;
+}
+
 export {
   I18N_CONFIG_KEY,
   I18N_DEFAULT_LANGUAGE,
   I18N_LANGUAGES,
   I18N_MESSAGES,
+  resolveLanguage,
 };

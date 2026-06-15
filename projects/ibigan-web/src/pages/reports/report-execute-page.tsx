@@ -325,7 +325,6 @@ export function ReportExecutePage() {
         isSubmitting={isExecuting}
         onSaveAndList={handleExecute}
         onBack={() => navigate('/reports')}
-        backImmediatelyAfterPrimary
         onRefresh={formRefresh.onRefresh}
         isRefreshing={formRefresh.isRefreshing}
         primarySaveLabel="Executar"

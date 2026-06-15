@@ -144,7 +144,7 @@ export function CentralUserFormPage() {
       const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/admin/super-admins',
-        getEditPath: () => `/admin/super-admins/${id}/editar`,
+        getEditPath: () => `/admin/super-admins/${id}`,
         isEditing: true,
       });
 

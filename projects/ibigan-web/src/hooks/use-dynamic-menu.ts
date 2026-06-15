@@ -5,7 +5,6 @@ import { menusService } from '@/services/menus.service';
 import { mapApiMenusToConfig } from '@/lib/menu-mapper';
 import { filterMenuForUser } from '@/lib/filter-menu-for-user';
 import { filterMenuByPermissions } from '@/lib/filter-menu-by-permissions';
-import { mergeAccountMenuItems } from '@/lib/merge-account-menu-items';
 import { applyTenantCentralMenuPolicy } from '@/lib/hide-central-panel-from-tenant-menu';
 import { stripDevToolsFromMenu } from '@/lib/merge-dev-tools-menu-items';
 import { mergeSaasMenuItems } from '@/lib/merge-saas-menu-items';
@@ -66,11 +65,8 @@ export function useDynamicMenu(): MenuConfig {
     }
 
     const baseMenu = stripDevToolsFromMenu(
-      mergeAccountMenuItems(
-        mergeSaasMenuItems(
-          mapApiMenusToConfig(apiMenus, (key, fallback) => t(key, fallback)),
-          MENU_SIDEBAR,
-        ),
+      mergeSaasMenuItems(
+        mapApiMenusToConfig(apiMenus, (key, fallback) => t(key, fallback)),
         MENU_SIDEBAR,
       ),
     );

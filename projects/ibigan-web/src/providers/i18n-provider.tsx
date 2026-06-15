@@ -10,6 +10,7 @@ import {
   I18N_CONFIG_KEY,
   I18N_DEFAULT_LANGUAGE,
   I18N_LANGUAGES,
+  resolveLanguage,
 } from '@/i18n/config';
 import '@/i18n/i18next';
 import i18n from '@/i18n/i18next';
@@ -27,18 +28,16 @@ const getInitialLanguage = () => {
   const langParam = urlParams.get('lang');
 
   if (langParam) {
-    const matchedLanguage = I18N_LANGUAGES.find(
-      (lang) => lang.code === langParam,
-    );
-    if (matchedLanguage) {
+    const matchedLanguage = resolveLanguage({ code: langParam as Language['code'] });
+    if (matchedLanguage.code === langParam) {
       setData(I18N_CONFIG_KEY, matchedLanguage);
       return matchedLanguage;
     }
   }
 
-  const currenLanguage = getData(I18N_CONFIG_KEY) as Language | undefined;
-  if (currenLanguage && I18N_LANGUAGES.some((lang) => lang.code === currenLanguage.code)) {
-    return currenLanguage;
+  const storedLanguage = getData(I18N_CONFIG_KEY) as Language | undefined;
+  if (storedLanguage?.code) {
+    return resolveLanguage(storedLanguage);
   }
 
   return I18N_DEFAULT_LANGUAGE;
@@ -71,8 +70,9 @@ const I18nProvider = ({ children }: PropsWithChildren) => {
   }, [currenLanguage.code]);
 
   const changeLanguage = (language: Language) => {
-    setData(I18N_CONFIG_KEY, language);
-    setCurrenLanguage(language);
+    const resolvedLanguage = resolveLanguage(language);
+    setData(I18N_CONFIG_KEY, resolvedLanguage);
+    setCurrenLanguage(resolvedLanguage);
   };
 
   const isRTL = () => currenLanguage.direction === 'rtl';

@@ -96,7 +96,7 @@ export function AdminTenantFormPage() {
 
   const formPage = useFormPage({
     backPath: '/admin/tenants',
-    newPath: '/admin/tenants/nova',
+    newPath: '/admin/tenants/new',
     entityKey: 'tenant',
     notify: apiNotify,
     onDelete: isEditing
@@ -151,15 +151,15 @@ export function AdminTenantFormPage() {
       }
 
       if (!isEditing && formPage.saveMode === 'edit') {
-        navigate(`/admin/tenants/${response.data.result.id}/editar`);
+        navigate(`/admin/tenants/${response.data.result.id}`);
         return;
       }
 
       const nextPath = resolveFormSavePath({
         saveMode: formPage.saveMode,
         listPath: '/admin/tenants',
-        newPath: '/admin/tenants/nova',
-        getEditPath: () => `/admin/tenants/${id}/editar`,
+        newPath: '/admin/tenants/new',
+        getEditPath: () => `/admin/tenants/${id}`,
         isEditing,
       });
       if (nextPath) navigate(nextPath);
@@ -241,7 +241,6 @@ export function AdminTenantFormPage() {
         onRefresh={formRefresh.onRefresh}
         isRefreshing={formRefresh.isRefreshing}
         onDelete={isEditing ? formPage.handleDelete : undefined}
-        onNew={isEditing ? () => navigate('/admin/tenants/nova') : undefined}
         entityLabel="empresa"
         recordLabel={tenant?.name ?? undefined}
       />

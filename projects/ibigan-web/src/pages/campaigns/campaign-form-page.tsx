@@ -273,7 +273,7 @@ export function CampaignFormPage() {
         saveMode: formPage.saveMode,
         listPath,
         newPath,
-        getEditPath: (recordId) => `/campaigns/${recordId}/edit`,
+        getEditPath: (recordId) => `/campaigns/${recordId}`,
         isEditing,
         createdId,
       });

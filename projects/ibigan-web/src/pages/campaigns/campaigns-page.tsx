@@ -41,25 +41,16 @@ import {
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { GridBadge } from '@/components/grid/grid-badge';
-import { campaignStatusBadgeTone, channelBadgeToneFor } from '@/lib/campaign-badges';
+import { campaignStatusBadgeTone, channelBadgeToneFor, isCampaignDeletable, isCampaignEditable } from '@/lib/campaign-badges';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const GRID_COLUMNS_KEY = 'grid-columns:campaigns';
 
-const DELETABLE_STATUSES: Campaign['status'][] = ['draft', 'cancelled'];
 const CANCELLABLE_STATUSES: Campaign['status'][] = ['draft', 'scheduled'];
 
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
   return format(new Date(value), "dd/MM/yy 'às' HH:mm", { locale: ptBR });
-}
-
-function isDeletable(campaign: Campaign) {
-  return DELETABLE_STATUSES.includes(campaign.status);
-}
-
-function isEditable(campaign: Campaign) {
-  return campaign.status === 'draft';
 }
 
 export function CampaignsPage() {
@@ -155,7 +146,7 @@ export function CampaignsPage() {
     () =>
       grid.selected.filter((id) => {
         const campaign = campaigns.find((item) => item.id === id);
-        return campaign ? isDeletable(campaign) : false;
+        return campaign ? isCampaignDeletable(campaign) : false;
       }),
     [grid.selected, campaigns],
   );
@@ -165,12 +156,12 @@ export function CampaignsPage() {
   const selectedDraftId = useMemo(() => {
     if (!grid.singleSelection) return null;
     const campaign = campaigns.find((item) => item.id === grid.selected[0]);
-    return campaign && isEditable(campaign) ? campaign.id : null;
+    return campaign && isCampaignEditable(campaign) ? campaign.id : null;
   }, [grid.singleSelection, grid.selected, campaigns]);
 
   const handleEditSelected = useCallback(() => {
     if (selectedDraftId === null) return;
-    navigate(`/campaigns/${selectedDraftId}/edit`);
+    navigate(`/campaigns/${selectedDraftId}`);
   }, [navigate, selectedDraftId]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -184,7 +175,7 @@ export function CampaignsPage() {
   );
 
   const handleEditCampaign = useCallback(
-    (campaignId: number) => navigate(`/campaigns/${campaignId}/edit`),
+    (campaignId: number) => navigate(`/campaigns/${campaignId}`),
     [navigate],
   );
 
@@ -293,7 +284,7 @@ export function CampaignsPage() {
               {
                 label: 'Visualizar',
                 icon: GRID_VIEW_ICON,
-                hidden: !isEditable(campaign),
+                hidden: !isCampaignEditable(campaign),
                 onClick: () => handleEditCampaign(campaign.id),
               },
               {
@@ -306,7 +297,7 @@ export function CampaignsPage() {
                 label: 'Excluir',
                 icon: Trash2,
                 tone: 'destructive',
-                hidden: !isDeletable(campaign),
+                hidden: !isCampaignDeletable(campaign),
                 onClick: () => grid.requestDelete([campaign.id]),
               },
             ]}

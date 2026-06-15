@@ -1,5 +1,5 @@
 import { type VariantProps } from 'class-variance-authority';
-import { type ElementType, type ReactNode, useState } from 'react';
+import { type ElementType, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
@@ -37,6 +37,7 @@ import {
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { shouldIgnoreFormDeleteShortcut } from '@/lib/form-keyboard-shortcuts';
 import {
   GridToolbarRoot,
   GridToolbarGroup,
@@ -58,7 +59,6 @@ export interface FormToolbarProps {
   onBack?: () => void;
   onClear?: () => void;
   onNew?: () => void;
-  backImmediatelyAfterPrimary?: boolean;
 
   onToggleActive?: () => void;
   onDelete?: () => void;
@@ -150,7 +150,6 @@ export function FormToolbar({
   onBack,
   onClear,
   onNew,
-  backImmediatelyAfterPrimary = false,
   onToggleActive,
   onDelete,
   onDuplicate,
@@ -176,6 +175,22 @@ export function FormToolbar({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!onDelete || isDeleting) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Delete') return;
+      if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (shouldIgnoreFormDeleteShortcut(event)) return;
+
+      event.preventDefault();
+      setDeleteOpen(true);
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDeleting, onDelete]);
 
   const hasSave = Boolean(onSaveAndList || onSaveAndNew || onSaveAndEdit);
   const primarySaveAction = onSaveAndList ?? onSaveAndNew ?? onSaveAndEdit;
@@ -287,7 +302,7 @@ export function FormToolbar({
                 </DropdownMenu>
               )}
 
-              {backImmediatelyAfterPrimary && backButton}
+              {backButton}
             </GridToolbarGroup>
 
             {isEditing && onNew && (
@@ -299,8 +314,6 @@ export function FormToolbar({
                 iconOnly
               />
             )}
-
-            {!backImmediatelyAfterPrimary && backButton}
 
             {onClear && (
               <FormButton

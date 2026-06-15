@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
-import { useIntl } from 'react-intl';
 import {
   Bell,
   Globe,
   LayoutDashboard,
+  LogOut,
   Moon,
   PanelLeft,
   PanelTop,
@@ -43,20 +43,16 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ToolbarTooltip } from '@/components/grid/toolbar-tooltip';
+import { useHoverDropdown } from '@/hooks/use-hover-dropdown';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 interface UserDropdownMenuProps {
   trigger?: ReactNode;
 }
 
 const MENU_MODE_OPTIONS: Array<{ value: MenuMode; labelKey: string; icon: typeof PanelTop }> = [
-  { value: 'horizontal', labelKey: 'USER.MENU.NAVIGATION_HORIZONTAL', icon: PanelTop },
-  { value: 'sidebar', labelKey: 'USER.MENU.NAVIGATION_SIDEBAR', icon: PanelLeft },
+  { value: 'horizontal', labelKey: 'user.menu.navigation_horizontal', icon: PanelTop },
+  { value: 'sidebar', labelKey: 'user.menu.navigation_sidebar', icon: PanelLeft },
 ];
 
 function formatRole(role: string): string {
@@ -66,7 +62,6 @@ function formatRole(role: string): string {
 export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const intl = useIntl();
   const { user, isAuthenticated } = useAuthStore();
   const { centralUser } = useCentralAuthStore();
   const isCentralOnly = useCentralOnlySession();
@@ -75,6 +70,8 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { settings, storeOption } = useSettings();
   const isMobile = useIsMobile();
+  const hover = useHoverDropdown(180);
+  const useHoverMenu = !isMobile;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -96,9 +93,8 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
   const profileMenu = useApiMenuByPath('/profile');
   const myNotificationsMenu = useApiMenuByPath('/notifications');
 
-  const profileLabel = profileMenu?.title ?? intl.formatMessage({ id: 'USER.MENU.MY_PROFILE' });
-  const myNotificationsLabel = myNotificationsMenu?.title
-    ?? intl.formatMessage({ id: 'USER.MENU.NOTIFICATIONS' });
+  const profileLabel = profileMenu?.title ?? t('user.menu.my_profile');
+  const myNotificationsLabel = myNotificationsMenu?.title ?? t('user.menu.notifications');
 
   const ProfileIcon = profileMenu
     ? resolveMenuIcon({
@@ -143,7 +139,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     storeOption('layouts.demo1.menuMode', value);
   }
 
-  const avatarTrigger = trigger ?? (
+  const defaultTrigger = (
     <span className="inline-flex shrink-0 cursor-pointer rounded-full outline-none">
       <Avatar className="size-8 sm:size-9">
         <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
@@ -154,22 +150,33 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
     </span>
   );
 
-  return (
-    <DropdownMenu modal={false}>
-      {isMobile ? (
-        <DropdownMenuTrigger asChild>{avatarTrigger}</DropdownMenuTrigger>
-      ) : (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>{avatarTrigger}</DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" variant="light">
-            {t('header.tooltip.profile')}
-          </TooltipContent>
-        </Tooltip>
-      )}
+  const menuTrigger = useHoverMenu ? (
+    <span
+      className="inline-flex"
+      onMouseEnter={hover.handleEnter}
+      onMouseLeave={hover.handleLeave}
+    >
+      {trigger ?? defaultTrigger}
+    </span>
+  ) : (
+    trigger ?? defaultTrigger
+  );
 
-      <DropdownMenuContent align="end" side="bottom" className="w-64">
+  return (
+    <DropdownMenu
+      modal={false}
+      open={useHoverMenu ? hover.open : undefined}
+      onOpenChange={useHoverMenu ? hover.setOpen : undefined}
+    >
+      <DropdownMenuTrigger asChild>{menuTrigger}</DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        className="w-64"
+        onMouseEnter={useHoverMenu ? hover.handleEnter : undefined}
+        onMouseLeave={useHoverMenu ? hover.handleLeave : undefined}
+      >
         <div className="flex items-center justify-between gap-2 p-3">
           <div className="flex min-w-0 items-center gap-2">
             {avatarUrl ? (
@@ -225,7 +232,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             {canAccessCentralFromTenant ? (
               <DropdownMenuItem onClick={() => navigate('/admin/tenants')}>
                 <LayoutDashboard className="size-4" />
-                Painel central
+                {t('user.menu.central_panel')}
               </DropdownMenuItem>
             ) : null}
           </>
@@ -237,7 +244,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
           <DropdownMenuSubTrigger className="[&_[data-slot=dropdown-menu-sub-trigger-indicator]]:hidden">
             <Globe className="size-4" />
             <span className="relative flex grow items-center justify-between gap-2">
-              {intl.formatMessage({ id: 'USER.MENU.LANGUAGE' })}
+              {t('user.menu.language')}
               <Badge variant="outline" className="gap-1 pe-1.5">
                 <span className="max-w-20 truncate">{currenLanguage.label}</span>
                 <img
@@ -248,7 +255,11 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
               </Badge>
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-52">
+          <DropdownMenuSubContent
+            className="w-52"
+            onMouseEnter={useHoverMenu ? hover.handleEnter : undefined}
+            onMouseLeave={useHoverMenu ? hover.handleLeave : undefined}
+          >
             <DropdownMenuRadioGroup
               value={currenLanguage.code}
               onValueChange={(code) => {
@@ -278,13 +289,17 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
           <DropdownMenuSubTrigger className="[&_[data-slot=dropdown-menu-sub-trigger-indicator]]:hidden">
             <currentMenuMode.icon className="size-4" />
             <span className="relative flex grow items-center justify-between gap-2">
-              {intl.formatMessage({ id: 'USER.MENU.NAVIGATION_MENU' })}
+              {t('user.menu.navigation_menu')}
               <Badge variant="outline" className="max-w-24 truncate">
-                {intl.formatMessage({ id: currentMenuMode.labelKey })}
+                {t(currentMenuMode.labelKey)}
               </Badge>
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-52">
+          <DropdownMenuSubContent
+            className="w-52"
+            onMouseEnter={useHoverMenu ? hover.handleEnter : undefined}
+            onMouseLeave={useHoverMenu ? hover.handleLeave : undefined}
+          >
             <DropdownMenuRadioGroup
               value={menuMode}
               onValueChange={(value) => handleMenuModeChange(value as MenuMode)}
@@ -299,7 +314,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
                     className="gap-2"
                   >
                     <Icon className="size-4" />
-                    <span>{intl.formatMessage({ id: option.labelKey })}</span>
+                    <span>{t(option.labelKey)}</span>
                   </DropdownMenuRadioItem>
                 );
               })}
@@ -313,7 +328,7 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
         >
           <Moon className="size-4" />
           <div className="flex grow items-center justify-between gap-2">
-            {intl.formatMessage({ id: 'USER.MENU.DARK_MODE' })}
+            {t('user.menu.dark_mode')}
             <ToolbarTooltip
               content={isDarkMode
                 ? t('header.tooltip.dark_mode_off')
@@ -341,10 +356,11 @@ export function UserDropdownMenu({ trigger }: UserDropdownMenuProps) {
             type="button"
             variant="outline"
             size="sm"
-            className="w-full"
+            className="w-full gap-1.5"
             onClick={() => void handleLogout()}
           >
-            {intl.formatMessage({ id: 'USER.MENU.LOGOUT' })}
+            <LogOut className="size-4" />
+            {t('user.menu.logout')}
           </Button>
         </div>
       </DropdownMenuContent>

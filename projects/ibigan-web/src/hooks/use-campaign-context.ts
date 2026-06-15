@@ -14,7 +14,7 @@ export function useCampaignContext() {
     isCentralDispatch,
     listPath: isCentralDispatch ? '/admin/campaigns' : '/campaigns',
     newPath: isCentralDispatch ? '/admin/campaigns/new' : '/campaigns/new',
-    getEditPath: (id: number) => (isCentralDispatch ? `/admin/campaigns/${id}` : `/campaigns/${id}/edit`),
+    getEditPath: (id: number) => (isCentralDispatch ? `/admin/campaigns/${id}` : `/campaigns/${id}`),
     getDetailPath: (id: number) => (isCentralDispatch ? `/admin/campaigns/${id}` : `/campaigns/${id}`),
     campaignsApi: isCentralDispatch ? platformCampaignsService : campaignsService,
     templatesApi: isCentralDispatch ? platformCatalogMessageTemplatesService : messageTemplatesService,

@@ -217,49 +217,13 @@ class MenuSeeder extends Seeder
             'roles' => ['admin', 'super-admin'],
         ]);
 
-        // ── Conta ─────────────────────────────────────────────────
-        $conta = Menu::create([
-            'title' => 'Conta',
-            'slug' => 'conta',
-            'icon' => 'User',
-            'path' => null,
-            'order' => 4,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Notificações',
-            'slug' => 'notificacoes',
-            'icon' => 'Bell',
-            'path' => '/notifications',
-            'parent_id' => $conta->id,
-            'order' => 0,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
-        ]);
-
-        Menu::create([
-            'title' => 'Meu Perfil',
-            'slug' => 'meu-perfil',
-            'icon' => 'User',
-            'path' => '/profile',
-            'parent_id' => $conta->id,
-            'order' => 1,
-            'is_active' => true,
-            'requires_auth' => true,
-            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
-        ]);
-
         // ── Ferramentas (dev) ─────────────────────────────────────
         $ferramentas = Menu::create([
             'title' => 'Ferramentas',
             'slug' => 'ferramentas',
             'icon' => 'Wrench',
             'path' => null,
-            'order' => 5,
+            'order' => 4,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -362,7 +326,7 @@ class MenuSeeder extends Seeder
             'slug' => 'configuracoes',
             'icon' => 'Settings',
             'path' => null,
-            'order' => 6,
+            'order' => 5,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -386,9 +350,6 @@ class MenuSeeder extends Seeder
             'permissoes' => 'menu.permissions',
             'webhooks' => 'menu.webhooks',
             'activity-log' => 'menu.activity_log',
-            'conta' => 'menu.account',
-            'notificacoes' => 'menu.notifications',
-            'meu-perfil' => 'menu.profile',
             'ferramentas' => 'menu.tools',
             'documentacao-api' => 'menu.api_docs',
             'horizon' => 'menu.horizon',
