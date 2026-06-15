@@ -192,6 +192,56 @@ Produção usa `docker-compose.prod.yml` (sem Vite, Mailpit, Grafana). Nginx ser
 - `/` → SPA em `projects/ibigan-web/dist`
 - `/app/` → Reverb (WebSocket via proxy)
 
+### 6.5 Login por subdomínio do tenant (ex.: odontomax.nagibi.com.br)
+
+O erro **DNS_PROBE_FINISHED_NXDOMAIN** significa que o nome **não existe no DNS** — o navegador nem chega ao servidor.
+
+**Situação atual (verificado):**
+
+| Host | DNS |
+|------|-----|
+| `nagibi.com.br` | OK → `216.238.124.52` |
+| `odontomax.nagibi.com.br` | **não existe** (NXDOMAIN) |
+| `*.nagibi.com.br` | **não existe** (sem wildcard) |
+
+**Solução imediata (sem subdomínio):**
+
+```
+https://nagibi.com.br/auth/login?tenant=odontomax
+```
+
+**Solução definitiva (subdomínio por empresa):**
+
+1. **DNS** (Registro.br ou painel do domínio):
+   - Opção A — wildcard (recomendado): `*.nagibi.com.br` → `A` → `216.238.124.52`
+   - Opção B — por tenant: `odontomax.nagibi.com.br` → `A` → `216.238.124.52`
+
+2. **SSL** — o certificado atual cobre só `nagibi.com.br` e `www`. Subdomínios exigem certificado wildcard:
+   ```bash
+   # Exemplo com plugin DNS do provedor (Cloudflare, etc.)
+   certbot certonly --dns-<provedor> -d nagibi.com.br -d '*.nagibi.com.br'
+   ```
+   Depois atualize os paths em `docker/nginx/conf.d/production.conf` e recarregue o nginx.
+
+3. **`.env` de produção** (`/opt/ibigan/.env`):
+   ```env
+   CENTRAL_DOMAIN=nagibi.com.br
+   TENANT_DEV_DOMAIN_SUFFIXES=nagibi.com.br
+   ```
+   Reinicie: `docker compose -f docker-compose.prod.yml exec app php artisan config:cache`
+
+4. **Banco central** — confirme que o tenant existe e, opcionalmente, registre o domínio:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app php artisan tenants:list
+   docker compose -f docker-compose.prod.yml exec app php artisan tinker --execute="
+     \$t = App\Models\Tenant::where('slug','odontomax')->first();
+     \$t?->domains()->updateOrCreate(['domain' => 'odontomax.nagibi.com.br']);
+   "
+   ```
+
+5. Aguarde propagação DNS (minutos a algumas horas) e teste:
+   `https://odontomax.nagibi.com.br/auth/login`
+
 ---
 
 ## 7. Comandos úteis
@@ -216,6 +266,9 @@ Confirme que o nginx monta `local.conf` (compose dev), não `production.conf`.
 
 **Horizon não processa jobs**  
 `docker compose logs horizon` — verifique `QUEUE_CONNECTION=redis` e Redis saudável.
+
+**Subdomínio do tenant não abre (NXDOMAIN)**  
+O DNS do subdomínio não foi criado. Veja [§6.5](#65-login-por-subdomínio-do-tenant-ex-odontomaxnagibicombr). Use `?tenant=slug` em `https://nagibi.com.br` até configurar DNS + SSL wildcard.
 
 **WebSocket não conecta**  
 Confirme `VITE_REVERB_*` no frontend e `REVERB_PUBLIC_*` no Laravel. Local: porta `8082`.

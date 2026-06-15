@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { generalSettings } from '@/config/general.config';
 import { Container } from '@/components/common/container';
 
@@ -24,14 +25,20 @@ export function Footer() {
             >
               {generalSettings.appName}
             </a>
-            <a
-              href={generalSettings.docsLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary"
-            >
-              {t('footer.docs')}
-            </a>
+            {generalSettings.docsLink.startsWith('/') ? (
+              <Link to={generalSettings.docsLink} className="hover:text-primary">
+                {t('footer.docs')}
+              </Link>
+            ) : (
+              <a
+                href={generalSettings.docsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary"
+              >
+                {t('footer.docs')}
+              </a>
+            )}
             <a
               href={`mailto:${generalSettings.supportEmail}`}
               className="hover:text-primary"

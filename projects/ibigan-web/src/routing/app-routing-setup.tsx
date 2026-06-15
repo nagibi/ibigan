@@ -17,6 +17,7 @@ import { RegisterPage } from '@/pages/auth/register-page';
 import { TenantSelectPage } from '@/pages/auth/tenant-select-page';
 import { TwoFactorPage } from '@/pages/auth/two-factor-page';
 import { DashboardPage } from '@/pages/dashboard/dashboard-page';
+import { SystemDocsPage } from '@/pages/docs/system-docs-page';
 import { InvitesPage } from '@/pages/invites/invites-page';
 import { MenuFormPage } from '@/pages/menus/menu-form-page';
 import { MenusPage } from '@/pages/menus/menus-page';
@@ -180,6 +181,7 @@ export function AppRoutingSetup() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/notification-preferences" element={<NotificationPreferencesPage />} />
+          <Route path="/docs" element={<SystemDocsPage />} />
         </Route>
       </Route>
 
