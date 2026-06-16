@@ -6,6 +6,7 @@ import {
 
 export interface AppNotification {
   id: string;
+  record_id?: number;
   type: string;
   data: Record<string, unknown>;
   read_at: string | null;

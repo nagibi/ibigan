@@ -13,7 +13,6 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -278,8 +277,6 @@ export interface GridPanelToolbarProps {
 
   onRefresh?: () => void;
   isRefreshing?: boolean;
-  onExport?: () => void;
-  isExporting?: boolean;
 
   search?: string;
   onSearch?: (v: string) => void;
@@ -304,8 +301,6 @@ export function GridPanelToolbar({
   onClearSelection,
   onRefresh,
   isRefreshing,
-  onExport,
-  isExporting,
   search,
   onSearch,
   searchPlaceholder,
@@ -362,29 +357,24 @@ export function GridPanelToolbar({
             {resolvedFiltersControl}
             {columnsControl}
             {resetControl}
-            {onExport && (
-              <GridToolbarButton
-                label={t('grid.export')}
-                tooltip={t('grid.tooltip.export')}
-                icon={GRID_DOWNLOAD_ICON}
-                onClick={onExport}
-                loading={isExporting}
-              />
-            )}
             {viewModeControl}
-            {quickFiltersControl}
           </div>
 
-          {onSearch && !hideToolbarSearchOnMobile && (
-            <div className="w-full shrink-0 xl:w-56">
-              <GridToolbarSearch
-                value={search ?? ''}
-                onChange={onSearch}
-                placeholder={resolvedSearchPlaceholder}
-                className="w-full"
-              />
+          {(onSearch && !hideToolbarSearchOnMobile) || quickFiltersControl ? (
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 xl:w-auto xl:shrink-0">
+              {quickFiltersControl}
+              {onSearch && !hideToolbarSearchOnMobile ? (
+                <div className="min-w-0 w-full flex-1 sm:w-auto sm:flex-none xl:w-56">
+                  <GridToolbarSearch
+                    value={search ?? ''}
+                    onChange={onSearch}
+                    placeholder={resolvedSearchPlaceholder}
+                    className="w-full"
+                  />
+                </div>
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </ToolbarAlertHost>
       {recordCount != null ? (
@@ -409,8 +399,6 @@ export interface StandardGridToolbarProps {
 
   onRefresh?: () => void;
   isRefreshing?: boolean;
-  onExport?: () => void;
-  isExporting?: boolean;
 
   search?: string;
   onSearch?: (v: string) => void;
@@ -431,8 +419,6 @@ export function StandardGridToolbar({
   isTogglingActive = false,
   onRefresh,
   isRefreshing,
-  onExport,
-  isExporting,
   search,
   onSearch,
   extra,
@@ -497,15 +483,6 @@ export function StandardGridToolbar({
           icon={RefreshCw}
           onClick={onRefresh}
           loading={isRefreshing}
-        />
-      )}
-      {onExport && (
-        <GridToolbarButton
-          label={t('grid.export')}
-          tooltip={t('grid.tooltip.export')}
-          icon={GRID_DOWNLOAD_ICON}
-          onClick={onExport}
-          loading={isExporting}
         />
       )}
       {onSearch && (

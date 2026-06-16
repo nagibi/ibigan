@@ -12,7 +12,6 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
   dateRangeFilterFromKey,
@@ -388,11 +387,6 @@ export function InvitesPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'convites',
-    columns: gridColumns.visibleColumns,
-    rows: displayInvites,
-  });
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
@@ -461,12 +455,10 @@ export function InvitesPage() {
       <StandardGridToolbar
         onNew={() => setCreateOpen(true)}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={hasPendingSelection}
       />
     ),
-    [handleDeleteSelected, handleExport, hasPendingSelection, isExporting],
+    [handleDeleteSelected, hasPendingSelection],
   );
 
   usePageToolbar({
@@ -495,8 +487,6 @@ export function InvitesPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={load}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

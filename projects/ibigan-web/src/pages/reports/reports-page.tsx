@@ -12,7 +12,6 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
@@ -373,11 +372,6 @@ export function ReportsPage() {
 
   const gridColumns = useGridColumns(catalogPaths.gridColumnsKey, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'relatorios',
-    columns: gridColumns.visibleColumns,
-    rows: displayReports,
-  });
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
@@ -434,8 +428,6 @@ export function ReportsPage() {
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
         onDelete={isPlatformCatalog ? undefined : handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -450,8 +442,6 @@ export function ReportsPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
-      handleExport,
-      isExporting,
     ],
   );
 
@@ -483,8 +473,6 @@ export function ReportsPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={load}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

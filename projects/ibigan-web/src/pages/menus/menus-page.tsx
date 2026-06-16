@@ -24,7 +24,6 @@ import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getColumnFilterDisplayValue, matchesSelectFilterValue } from '@/lib/grid-filter-display';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
@@ -694,16 +693,6 @@ export function MenusPage() {
     gridToasts.gridRestored();
   }
 
-  const exportMenus = useMemo(
-    () => cardListRows.map(({ menu }) => menu),
-    [cardListRows],
-  );
-
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'menus',
-    columns: gridColumns.visibleColumns,
-    rows: exportMenus,
-  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -838,8 +827,6 @@ export function MenusPage() {
         onDelete={handleDeleteSelected}
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={grid.hasSelection}
         singleSelection={grid.singleSelection}
         isTogglingActive={grid.isTogglingActive}
@@ -853,8 +840,6 @@ export function MenusPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
-      handleExport,
-      isExporting,
       navigate,
     ],
   );
@@ -951,8 +936,6 @@ export function MenusPage() {
             isAllSelected={allVisibleSelected}
             selectedCount={grid.selected.length}
             onClearSelection={grid.clearSelection}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{
