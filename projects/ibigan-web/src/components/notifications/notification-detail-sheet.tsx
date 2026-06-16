@@ -5,6 +5,9 @@ import { ptBR } from 'date-fns/locale';
 import { BarChart2, Bell, CheckCircle, Eye, LoaderCircle, Mail, Trash2 } from 'lucide-react';
 import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
 import {
+  getNotificationActions,
+  getNotificationCategoryLabel,
+  getNotificationSeverity,
   getNotificationTitle,
   getNotificationType,
   getReportDownloadMeta,
@@ -13,6 +16,7 @@ import {
 } from '@/lib/notification-utils';
 import { type AppNotification } from '@/services/notifications.service';
 import { downloadReportResultCsvWithToast } from '@/services/reports.service';
+import { NotificationActionsBar } from '@/components/notifications/notification-actions-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -63,7 +67,9 @@ export function NotificationDetailSheet({
   const title = getNotificationTitle(notification);
   const typeLabel = isReportNotification(notification)
     ? 'Relatórios'
-    : getNotificationType(notification);
+    : getNotificationCategoryLabel(notification) ?? getNotificationType(notification);
+  const severity = getNotificationSeverity(notification);
+  const actions = getNotificationActions(notification);
   const isUnread = !notification.read_at;
   const reportMeta = isReportNotification(notification)
     ? getReportDownloadMeta(notification)
@@ -87,7 +93,7 @@ export function NotificationDetailSheet({
   const extraFields = Object.entries(notification.data)
     .filter(([key, value]) => {
       if (value === null || value === undefined || value === '') return false;
-      return !['template_name', 'message', 'title', 'subject', 'body'].includes(key);
+      return !['template_name', 'message', 'title', 'subject', 'body', 'actions', 'event_slug', 'event', 'severity'].includes(key);
     })
     .map(([key, value]) => ({
       label: key.replace(/_/g, ' '),
@@ -110,6 +116,12 @@ export function NotificationDetailSheet({
                     {isUnread ? 'Não lida' : 'Lida'}
                   </Badge>
                   <Badge variant="secondary">{typeLabel}</Badge>
+                  {severity === 'critical' ? (
+                    <Badge variant="destructive">Crítico</Badge>
+                  ) : null}
+                  {severity === 'warning' ? (
+                    <Badge variant="warning">Atenção</Badge>
+                  ) : null}
                 </div>
                 <h2 className="text-base font-semibold leading-snug">{title}</h2>
                 <p className="text-sm text-muted-foreground">
@@ -129,6 +141,12 @@ export function NotificationDetailSheet({
                   <p className="text-sm whitespace-pre-wrap">{String(notification.data.message)}</p>
                 </div>
               ) : null}
+
+              <NotificationActionsBar
+                actions={actions}
+                onActionComplete={() => onOpenChange(false)}
+                className="rounded-lg border border-border p-3"
+              />
 
               {reportMeta ? (
                 <div className="space-y-3 rounded-lg border border-border p-3">
