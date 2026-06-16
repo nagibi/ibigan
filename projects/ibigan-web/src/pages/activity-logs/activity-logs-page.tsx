@@ -8,7 +8,6 @@ import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
@@ -313,11 +312,6 @@ export function ActivityLogsPage() {
     });
   }, [columnFilters.debouncedFilters, displayLogs, grid.debouncedSearch]);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'activity-logs',
-    columns: gridColumns.visibleColumns,
-    rows: filteredLogs,
-  });
 
   usePageToolbar({
     title: t('menu.activity_log'),
@@ -331,8 +325,6 @@ export function ActivityLogsPage() {
           <GridPanelToolbar
             onRefresh={() => void load()}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

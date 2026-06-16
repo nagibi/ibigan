@@ -9,7 +9,6 @@ import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridPageActions } from '@/hooks/use-grid-page-actions';
@@ -360,12 +359,6 @@ export function ObrasPage() {
     resetSettings: grid.resetSettings,
   });
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'obras',
-    columns: gridColumns.visibleColumns,
-    rows: items,
-  });
-
   const activeFilters = useMemo(
     () =>
       buildCatalogActiveFilters({
@@ -436,8 +429,6 @@ export function ObrasPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
             isRefreshing={isFetching}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

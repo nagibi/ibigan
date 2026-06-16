@@ -1,7 +1,6 @@
-import type { VariantProps } from 'class-variance-authority';
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/i18next';
+import type { VariantProps } from 'class-variance-authority';
 import {
   Eye,
   LoaderCircle,
@@ -13,18 +12,12 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
+import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import {
-  formatToolbarSelectedCount,
-  ToolbarAlertHost,
-  type ToolbarAlertConfig,
-} from './toolbar-alert';
-import { ToolbarTooltip } from './toolbar-tooltip';
 import {
   GridFiltersControl,
   type GridActiveFilter,
@@ -34,6 +27,12 @@ import {
   GridMobileRecordCountBar,
   type GridRecordCountInfo,
 } from './grid-record-count';
+import {
+  formatToolbarSelectedCount,
+  ToolbarAlertHost,
+  type ToolbarAlertConfig,
+} from './toolbar-alert';
+import { ToolbarTooltip } from './toolbar-tooltip';
 
 export interface GridPanelFiltersConfig {
   active: GridActiveFilter[];
@@ -49,7 +48,12 @@ export function GridToolbarRoot({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-wrap items-center justify-start gap-0.5', className)}>
+    <div
+      className={cn(
+        'flex flex-wrap items-center justify-start gap-0.5',
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -62,7 +66,13 @@ export function GridToolbarGroup({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={cn('flex min-w-0 flex-wrap items-center gap-0.5', className)}>{children}</div>;
+  return (
+    <div
+      className={cn('flex min-w-0 flex-wrap items-center gap-0.5', className)}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function GridToolbarSpacer() {
@@ -190,10 +200,11 @@ export function GridToolbarPrimary({
         aria-label={label}
         className="h-8 shrink-0 gap-1.5 px-2.5"
       >
-        {loading
-          ? <LoaderCircle className="size-4 shrink-0 animate-spin" />
-          : Icon && <Icon className="size-4 shrink-0" />
-        }
+        {loading ? (
+          <LoaderCircle className="size-4 shrink-0 animate-spin" />
+        ) : (
+          Icon && <Icon className="size-4 shrink-0" />
+        )}
         {label}
       </Button>
     </ToolbarTooltip>
@@ -278,8 +289,6 @@ export interface GridPanelToolbarProps {
 
   onRefresh?: () => void;
   isRefreshing?: boolean;
-  onExport?: () => void;
-  isExporting?: boolean;
 
   search?: string;
   onSearch?: (v: string) => void;
@@ -304,8 +313,6 @@ export function GridPanelToolbar({
   onClearSelection,
   onRefresh,
   isRefreshing,
-  onExport,
-  isExporting,
   search,
   onSearch,
   searchPlaceholder,
@@ -320,18 +327,21 @@ export function GridPanelToolbar({
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const resolvedSelectAllLabel = selectAllLabel ?? t('grid.select_all');
-  const resolvedSearchPlaceholder = searchPlaceholder ?? t('grid.search_placeholder');
+  const resolvedSearchPlaceholder =
+    searchPlaceholder ?? t('grid.search_placeholder');
   const selectionAlert = buildSelectionAlert(selectedCount, onClearSelection);
-  const resolvedFiltersControl = filtersControl ?? (filters ? (
-    <GridFiltersControl
-      filters={filters.active}
-      onClearAll={filters.onClearAll}
-      columnFilters={filters.columnFilters}
-      search={search}
-      onSearch={onSearch}
-      searchPlaceholder={resolvedSearchPlaceholder}
-    />
-  ) : null);
+  const resolvedFiltersControl =
+    filtersControl ??
+    (filters ? (
+      <GridFiltersControl
+        filters={filters.active}
+        onClearAll={filters.onClearAll}
+        columnFilters={filters.columnFilters}
+        search={search}
+        onSearch={onSearch}
+        searchPlaceholder={resolvedSearchPlaceholder}
+      />
+    ) : null);
   const hideToolbarSearchOnMobile = isMobile && Boolean(filters);
 
   return (
@@ -345,8 +355,13 @@ export function GridPanelToolbar({
             {onSelectAll && (
               <ToolbarTooltip content={t('grid.tooltip.select_all')}>
                 <label className="flex shrink-0 cursor-pointer items-center gap-2 pe-1 text-xs font-medium text-muted-foreground">
-                  <Checkbox checked={isAllSelected} onCheckedChange={onSelectAll} />
-                  <span className="hidden sm:inline">{resolvedSelectAllLabel}</span>
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={onSelectAll}
+                  />
+                  <span className="hidden sm:inline">
+                    {resolvedSelectAllLabel}
+                  </span>
                 </label>
               </ToolbarTooltip>
             )}
@@ -362,19 +377,10 @@ export function GridPanelToolbar({
             {resolvedFiltersControl}
             {columnsControl}
             {resetControl}
-            {onExport && (
-              <GridToolbarButton
-                label={t('grid.export')}
-                tooltip={t('grid.tooltip.export')}
-                icon={GRID_DOWNLOAD_ICON}
-                onClick={onExport}
-                loading={isExporting}
-              />
-            )}
             {viewModeControl}
           </div>
 
-          {(quickFiltersControl || (onSearch && !hideToolbarSearchOnMobile)) ? (
+          {quickFiltersControl || (onSearch && !hideToolbarSearchOnMobile) ? (
             <div className="flex w-full min-w-0 items-center gap-2 xl:w-auto xl:shrink-0">
               {quickFiltersControl}
               {onSearch && !hideToolbarSearchOnMobile ? (
@@ -392,7 +398,10 @@ export function GridPanelToolbar({
         </div>
       </ToolbarAlertHost>
       {recordCount != null ? (
-        <GridMobileRecordCountBar total={recordCount.total} loaded={recordCount.loaded} />
+        <GridMobileRecordCountBar
+          total={recordCount.total}
+          loaded={recordCount.loaded}
+        />
       ) : null}
     </div>
   );
@@ -413,8 +422,6 @@ export interface StandardGridToolbarProps {
 
   onRefresh?: () => void;
   isRefreshing?: boolean;
-  onExport?: () => void;
-  isExporting?: boolean;
 
   search?: string;
   onSearch?: (v: string) => void;
@@ -435,8 +442,6 @@ export function StandardGridToolbar({
   isTogglingActive = false,
   onRefresh,
   isRefreshing,
-  onExport,
-  isExporting,
   search,
   onSearch,
   extra,
@@ -501,15 +506,6 @@ export function StandardGridToolbar({
           icon={RefreshCw}
           onClick={onRefresh}
           loading={isRefreshing}
-        />
-      )}
-      {onExport && (
-        <GridToolbarButton
-          label={t('grid.export')}
-          tooltip={t('grid.tooltip.export')}
-          icon={GRID_DOWNLOAD_ICON}
-          onClick={onExport}
-          loading={isExporting}
         />
       )}
       {onSearch && (

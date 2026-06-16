@@ -1,59 +1,41 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { History, ShieldCheck, Trash2 } from 'lucide-react';
-import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
-import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { useAuthStore } from '@/stores/auth.store';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { History, ShieldCheck, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
+import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
+import { formatGridMaskedCell } from '@/lib/grid-masked-field';
+import { parseGridUrlState } from '@/lib/grid-url-state';
+import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
+import { getInitials } from '@/lib/helpers';
+import { buildRolesUrlWithUserFilter } from '@/lib/roles-user-filter';
+import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
+import { formatUserGender, getUserGenderOptions } from '@/lib/user-gender';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
-import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
-import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
-import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridToasts } from '@/hooks/use-grid-toasts';
-import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
   dateRangeFilterFromKey,
   dateRangeFilterToKey,
   useGridFilters,
 } from '@/hooks/use-grid-filters';
-import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
-import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
-import { formatGridMaskedCell } from '@/lib/grid-masked-field';
-import { formatUserGender, getUserGenderOptions } from '@/lib/user-gender';
-import { parseGridUrlState } from '@/lib/grid-url-state';
-import { buildRolesUrlWithUserFilter } from '@/lib/roles-user-filter';
-import { isUserActive, usersService, type User } from '@/services/users.service';
-import { useAuthStore } from '@/stores/auth.store';
-import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
-import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { GridResetControl } from '@/components/grid/grid-reset-control';
-import { PageBody } from '@/components/common/page-body';
-import { GridPanel } from '@/components/grid/grid-panel';
-import { getGridRecordCount } from '@/components/grid/grid-record-count';
-import { GridPagination, type GridPaginationMeta } from '@/components/grid/grid-pagination';
-import { GridTable } from '@/components/grid/grid-table';
-import { GridRowActions, type GridRowAction } from '@/components/grid/grid-row-actions';
-import { GridPanelToolbar, StandardGridToolbar } from '@/components/grid/grid-toolbar';
-import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
-import { DataView } from '@/components/grid/data-view';
-import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
-import { UserCard } from '@/components/cards/user-card';
-import { useViewMode } from '@/hooks/use-view-mode';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
-import { shouldUseGridInfiniteScroll } from '@/lib/grid-infinite-scroll';
-import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
-import { getInitials } from '@/lib/helpers';
-import { GridBadge } from '@/components/grid/grid-badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { AlertDialogPanelTitle } from '@/components/common/panel-title';
+import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
+import { useGridToasts } from '@/hooks/use-grid-toasts';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
+import { useViewMode } from '@/hooks/use-view-mode';
+import {
+  isUserActive,
+  usersService,
+  type User,
+} from '@/services/users.service';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +45,37 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
+import { UserCard } from '@/components/cards/user-card';
+import { PageBody } from '@/components/common/page-body';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
+import { DataView } from '@/components/grid/data-view';
+import { GridBadge } from '@/components/grid/grid-badge';
+import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
+import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
+import {
+  GridPagination,
+  type GridPaginationMeta,
+} from '@/components/grid/grid-pagination';
+import { GridPanel } from '@/components/grid/grid-panel';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
+import { GridResetControl } from '@/components/grid/grid-reset-control';
+import {
+  GridRowActions,
+  type GridRowAction,
+} from '@/components/grid/grid-row-actions';
+import { GridTable } from '@/components/grid/grid-table';
+import {
+  GridPanelToolbar,
+  StandardGridToolbar,
+} from '@/components/grid/grid-toolbar';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 
 const USER_ACTIVITY_LOG_TYPE = 'users';
 const GRID_COLUMNS_KEY = 'grid-columns:users';
@@ -82,14 +95,12 @@ function truncateText(value?: string | null, max = 60) {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
-function getAuditUserName(
-  user: User,
-  field: 'created_by' | 'updated_by',
-) {
+function getAuditUserName(user: User, field: 'created_by' | 'updated_by') {
   const ref = user[field];
   if (ref?.name) return ref.name;
 
-  const flatName = field === 'created_by' ? user.created_by_name : user.updated_by_name;
+  const flatName =
+    field === 'created_by' ? user.created_by_name : user.updated_by_name;
   return flatName ?? '—';
 }
 
@@ -132,7 +143,9 @@ export function UsersPage() {
     },
     onDeactivate: async (ids) => {
       try {
-        await Promise.all(ids.map((id) => usersService.toggleActive(id, false)));
+        await Promise.all(
+          ids.map((id) => usersService.toggleActive(id, false)),
+        );
         showToggleActive(false, TOGGLE_ACTIVE_LABELS.user, ids.length);
         await loadRef.current();
       } catch (error) {
@@ -350,7 +363,12 @@ export function UsersPage() {
         label: cols.id,
         sortable: true,
         sortKey: 'id',
-        filter: { type: 'multi', filterKey: 'id', placeholder: cols.id, inputMode: 'numeric' },
+        filter: {
+          type: 'multi',
+          filterKey: 'id',
+          placeholder: cols.id,
+          inputMode: 'numeric',
+        },
         className: 'w-[70px] text-sm text-muted-foreground',
         render: (user) => user.id,
       },
@@ -359,9 +377,7 @@ export function UsersPage() {
         label: cols.actions,
         hideable: false,
         className: 'min-w-[100px] w-[100px]',
-        render: (user) => (
-          <GridRowActions actions={getUserRowActions(user)} />
-        ),
+        render: (user) => <GridRowActions actions={getUserRowActions(user)} />,
       },
       {
         id: 'active',
@@ -380,7 +396,9 @@ export function UsersPage() {
           <Switch
             checked={isUserActive(user)}
             disabled={rowStatusId === user.id}
-            onCheckedChange={(checked) => void handleRowStatusChange(user, checked)}
+            onCheckedChange={(checked) =>
+              void handleRowStatusChange(user, checked)
+            }
           />
         ),
       },
@@ -389,7 +407,11 @@ export function UsersPage() {
         label: t('users.column.user'),
         sortable: true,
         sortKey: 'name',
-        filter: { type: 'multi', filterKey: 'user', placeholder: t('users.filter.name_or_email') },
+        filter: {
+          type: 'multi',
+          filterKey: 'user',
+          placeholder: t('users.filter.name_or_email'),
+        },
         className: 'min-w-[240px] w-[280px]',
         render: (user) => (
           <div className="flex min-w-0 items-center gap-3">
@@ -401,7 +423,9 @@ export function UsersPage() {
             </Avatar>
             <div className="min-w-0">
               <p className="truncate text-sm">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {user.email}
+              </p>
             </div>
           </div>
         ),
@@ -409,7 +433,11 @@ export function UsersPage() {
       {
         id: 'roles',
         label: t('users.column.role'),
-        filter: { type: 'text', filterKey: 'role', placeholder: t('users.column.role') },
+        filter: {
+          type: 'text',
+          filterKey: 'role',
+          placeholder: t('users.column.role'),
+        },
         className: 'min-w-[120px] w-[140px]',
         render: (user) => (
           <div className="flex min-w-0 flex-wrap gap-1">
@@ -426,7 +454,12 @@ export function UsersPage() {
         label: t('users.column.cpf'),
         sortable: true,
         sortKey: 'cpf',
-        filter: { type: 'text', filterKey: 'cpf', placeholder: t('users.column.cpf'), mask: 'cpf' },
+        filter: {
+          type: 'text',
+          filterKey: 'cpf',
+          placeholder: t('users.column.cpf'),
+          mask: 'cpf',
+        },
         className: 'min-w-[130px] text-sm whitespace-nowrap',
         render: (user) => formatGridMaskedCell(user.cpf, 'cpf'),
       },
@@ -435,7 +468,12 @@ export function UsersPage() {
         label: t('users.column.phone'),
         sortable: true,
         sortKey: 'phone',
-        filter: { type: 'text', filterKey: 'phone', placeholder: t('users.column.phone'), mask: 'phone' },
+        filter: {
+          type: 'text',
+          filterKey: 'phone',
+          placeholder: t('users.column.phone'),
+          mask: 'phone',
+        },
         className: 'min-w-[130px] text-sm whitespace-nowrap',
         render: (user) => formatGridMaskedCell(user.phone, 'phone'),
       },
@@ -445,7 +483,8 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'birth_date',
         filter: { type: 'dateRange', filterKey: 'birth_date' },
-        className: 'min-w-[120px] text-sm text-muted-foreground whitespace-nowrap',
+        className:
+          'min-w-[120px] text-sm text-muted-foreground whitespace-nowrap',
         render: (user) => formatBirthDate(user.birth_date),
       },
       {
@@ -465,7 +504,11 @@ export function UsersPage() {
       {
         id: 'bio',
         label: t('users.column.bio'),
-        filter: { type: 'text', filterKey: 'bio', placeholder: t('users.column.bio') },
+        filter: {
+          type: 'text',
+          filterKey: 'bio',
+          placeholder: t('users.column.bio'),
+        },
         className: 'min-w-[180px] text-sm text-muted-foreground',
         render: (user) => truncateText(user.bio),
       },
@@ -475,20 +518,30 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'last_login_at',
         filter: { type: 'dateRange', filterKey: 'last_login_at' },
-        className: 'min-w-[150px] text-sm text-muted-foreground whitespace-nowrap',
+        className:
+          'min-w-[150px] text-sm text-muted-foreground whitespace-nowrap',
         render: (user) => formatAuditDate(user.last_login_at),
       },
       {
         id: 'last_login_ip',
         label: t('users.column.last_login_ip'),
-        filter: { type: 'text', filterKey: 'last_login_ip', placeholder: t('users.column.last_login_ip') },
-        className: 'min-w-[130px] text-sm text-muted-foreground font-mono text-xs',
+        filter: {
+          type: 'text',
+          filterKey: 'last_login_ip',
+          placeholder: t('users.column.last_login_ip'),
+        },
+        className:
+          'min-w-[130px] text-sm text-muted-foreground font-mono text-xs',
         render: (user) => user.last_login_ip ?? '—',
       },
       {
         id: 'last_login_device',
         label: t('users.column.last_login_device'),
-        filter: { type: 'text', filterKey: 'last_login_device', placeholder: t('users.column.last_login_device') },
+        filter: {
+          type: 'text',
+          filterKey: 'last_login_device',
+          placeholder: t('users.column.last_login_device'),
+        },
         className: 'min-w-[180px] text-sm text-muted-foreground',
         render: (user) => truncateText(user.last_login_device, 40),
       },
@@ -498,13 +551,18 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'created_at',
         filter: { type: 'dateRange', filterKey: 'created_at' },
-        className: 'min-w-[150px] text-sm text-muted-foreground whitespace-nowrap',
+        className:
+          'min-w-[150px] text-sm text-muted-foreground whitespace-nowrap',
         render: (user) => formatAuditDate(user.created_at),
       },
       {
         id: 'created_by',
         label: cols.createdBy,
-        filter: { type: 'text', filterKey: 'created_by', placeholder: t('users.column.user') },
+        filter: {
+          type: 'text',
+          filterKey: 'created_by',
+          placeholder: t('users.column.user'),
+        },
         className: 'min-w-[160px] text-sm text-muted-foreground',
         render: (user) => getAuditUserName(user, 'created_by'),
       },
@@ -514,13 +572,18 @@ export function UsersPage() {
         sortable: true,
         sortKey: 'updated_at',
         filter: { type: 'dateRange', filterKey: 'updated_at' },
-        className: 'min-w-[160px] text-sm text-muted-foreground whitespace-nowrap',
+        className:
+          'min-w-[160px] text-sm text-muted-foreground whitespace-nowrap',
         render: (user) => formatAuditDate(user.updated_at),
       },
       {
         id: 'updated_by',
         label: cols.updatedBy,
-        filter: { type: 'text', filterKey: 'updated_by', placeholder: t('users.column.user') },
+        filter: {
+          type: 'text',
+          filterKey: 'updated_by',
+          placeholder: t('users.column.user'),
+        },
         className: 'min-w-[170px] text-sm text-muted-foreground',
         render: (user) => getAuditUserName(user, 'updated_by'),
       },
@@ -555,15 +618,22 @@ export function UsersPage() {
       if (!column.filter) continue;
 
       if (column.filter.type === 'dateRange') {
-        const from = columnFilters.filters[dateRangeFilterFromKey(column.filter.filterKey)]?.trim() ?? '';
-        const to = columnFilters.filters[dateRangeFilterToKey(column.filter.filterKey)]?.trim() ?? '';
+        const from =
+          columnFilters.filters[
+            dateRangeFilterFromKey(column.filter.filterKey)
+          ]?.trim() ?? '';
+        const to =
+          columnFilters.filters[
+            dateRangeFilterToKey(column.filter.filterKey)
+          ]?.trim() ?? '';
         if (!from && !to) continue;
 
         items.push({
           id: column.filter.filterKey,
           label: column.label,
           value: formatDateRangeFilterLabel(from, to),
-          onRemove: () => columnFilters.clearDateRangeFilter(column.filter!.filterKey),
+          onRemove: () =>
+            columnFilters.clearDateRangeFilter(column.filter!.filterKey),
         });
         continue;
       }
@@ -612,7 +682,8 @@ export function UsersPage() {
   }
 
   const hasActiveFilters = grid.hasFilters || columnFilters.hasFilters;
-  const isGridCustomized = hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
+  const isGridCustomized =
+    hasActiveFilters || grid.isCustomized || gridColumns.isCustomized;
 
   const toolbarActions = useMemo(
     () => (
@@ -701,9 +772,16 @@ export function UsersPage() {
               />
             }
             viewModeControl={
-              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+              <GridViewModeControl
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+              />
             }
-            recordCount={getGridRecordCount(meta.total, displayUsers.length, infiniteScrollEnabled)}
+            recordCount={getGridRecordCount(
+              meta.total,
+              displayUsers.length,
+              infiniteScrollEnabled,
+            )}
           />
         }
         footer={!infiniteScrollEnabled ? pagination : undefined}
@@ -713,16 +791,20 @@ export function UsersPage() {
           loading={loading}
           isEmpty={!loading && displayUsers.length === 0}
           emptyMessage={t('users.empty')}
-          infiniteScroll={infiniteScrollEnabled ? {
-            enabled: true,
-            hasMore: infiniteScroll.hasMore,
-            loading,
-            loadingMore: infiniteScroll.loadingMore,
-            onLoadMore: infiniteScroll.loadMore,
-            loadedCount: infiniteScroll.loadedCount,
-            total: infiniteScroll.total,
-          } : undefined}
-          tableView={(
+          infiniteScroll={
+            infiniteScrollEnabled
+              ? {
+                  enabled: true,
+                  hasMore: infiniteScroll.hasMore,
+                  loading,
+                  loadingMore: infiniteScroll.loadingMore,
+                  onLoadMore: infiniteScroll.loadMore,
+                  loadedCount: infiniteScroll.loadedCount,
+                  total: infiniteScroll.total,
+                }
+              : undefined
+          }
+          tableView={
             <GridTable
               columns={gridColumns.visibleColumns}
               data={users}
@@ -746,41 +828,39 @@ export function UsersPage() {
               }
               onRowDoubleClick={(user) => handleEditUser(user.id)}
             />
-          )}
-          listView={(
+          }
+          listView={
             <GridListView
               data={displayUsers}
               getRowKey={(user) => String(user.id)}
               isRowSelected={(user) => grid.selected.includes(user.id)}
               onRowClick={(user) =>
-                grid.selectRow(user.id, { rangeOrder: displayUsers.map((item) => item.id) })
+                grid.selectRow(user.id, {
+                  rangeOrder: displayUsers.map((item) => item.id),
+                })
               }
               onRowDoubleClick={(user) => handleEditUser(user.id)}
               renderItem={(user) => (
-                <UserCard
-                  user={user}
-                  actions={getUserRowActions(user)}
-                />
+                <UserCard user={user} actions={getUserRowActions(user)} />
               )}
             />
-          )}
-          cardView={(
+          }
+          cardView={
             <GridCardsView
               data={displayUsers}
               getRowKey={(user) => String(user.id)}
               isRowSelected={(user) => grid.selected.includes(user.id)}
               onRowClick={(user) =>
-                grid.selectRow(user.id, { rangeOrder: displayUsers.map((item) => item.id) })
+                grid.selectRow(user.id, {
+                  rangeOrder: displayUsers.map((item) => item.id),
+                })
               }
               onRowDoubleClick={(user) => handleEditUser(user.id)}
               renderCard={(user) => (
-                <UserCard
-                  user={user}
-                  actions={getUserRowActions(user)}
-                />
+                <UserCard user={user} actions={getUserRowActions(user)} />
               )}
             />
-          )}
+          }
         />
       </GridPanel>
 
@@ -801,7 +881,9 @@ export function UsersPage() {
             <AlertDialogPanelTitle icon={Trash2}>
               {grid.deleteIds.length === 1
                 ? t('users.delete.title_one')
-                : t('users.delete.title_many', { count: grid.deleteIds.length })}
+                : t('users.delete.title_many', {
+                    count: grid.deleteIds.length,
+                  })}
             </AlertDialogPanelTitle>
             <AlertDialogDescription>
               {t('common.confirm_delete')}

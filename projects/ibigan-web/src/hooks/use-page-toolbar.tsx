@@ -6,6 +6,7 @@ import { useSetPageToolbar } from '@/providers/page-toolbar-provider';
 type UsePageToolbarOptions = {
   title: ReactNode;
   description?: ReactNode;
+  headerActions?: ReactNode;
   actions?: ReactNode;
   alert?: ToolbarAlertConfig | null;
   breadcrumbs?: PageBreadcrumbItem[];
@@ -14,6 +15,7 @@ type UsePageToolbarOptions = {
 export function usePageToolbar({
   title,
   description,
+  headerActions,
   actions,
   alert,
   breadcrumbs,
@@ -21,8 +23,8 @@ export function usePageToolbar({
   const setConfig = useSetPageToolbar();
 
   useLayoutEffect(() => {
-    setConfig({ title, description, actions, alert, breadcrumbs });
-  }, [setConfig, title, description, actions, alert, breadcrumbs]);
+    setConfig({ title, description, headerActions, actions, alert, breadcrumbs });
+  }, [setConfig, title, description, headerActions, actions, alert, breadcrumbs]);
 
   useLayoutEffect(() => {
     return () => setConfig(null);

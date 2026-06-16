@@ -3,10 +3,13 @@ import { ChevronRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { MENU_SIDEBAR } from '@/config/menu.config';
 import { type MenuConfig } from '@/config/types';
+import {
+  buildPageBreadcrumbs,
+  type PageBreadcrumbItem,
+} from '@/lib/build-page-breadcrumbs';
 import { useCentralMenu } from '@/hooks/use-central-menu';
 import { useDynamicMenu } from '@/hooks/use-dynamic-menu';
 import { useMenu } from '@/hooks/use-menu';
-import { buildPageBreadcrumbs, type PageBreadcrumbItem } from '@/lib/build-page-breadcrumbs';
 import { usePageToolbarConfig } from '@/providers/page-toolbar-provider';
 import { Container } from '@/components/common/container';
 
@@ -62,7 +65,9 @@ function PageBreadcrumbs({ menu }: { menu: MenuConfig }) {
                 <BreadcrumbItemContent item={item} />
               </span>
             )}
-            {!isLast && <ChevronRight className="size-3 text-muted-foreground" />}
+            {!isLast && (
+              <ChevronRight className="size-3 text-muted-foreground" />
+            )}
           </Fragment>
         );
       })}
@@ -89,6 +94,7 @@ export function PageContentHeader({
 
   const title = config?.title ?? menuItem?.title;
   const description = config?.description;
+  const headerActions = config?.headerActions;
   const headerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,7 +105,10 @@ export function PageContentHeader({
     if (!scrollRoot) return undefined;
 
     const syncHeight = () => {
-      scrollRoot.style.setProperty('--page-content-header-height', `${header.offsetHeight}px`);
+      scrollRoot.style.setProperty(
+        '--page-content-header-height',
+        `${header.offsetHeight}px`,
+      );
     };
 
     syncHeight();
@@ -111,31 +120,36 @@ export function PageContentHeader({
       resizeObserver.disconnect();
       scrollRoot.style.removeProperty('--page-content-header-height');
     };
-  }, [description, title]);
+  }, [description, headerActions, title]);
 
-  const containerClassName = 'max-xl:shrink-0 max-xl:flex-none max-xl:pb-3 max-xl:pt-2 xl:pb-4 xl:pt-3';
+  const containerClassName =
+    'max-xl:shrink-0 max-xl:flex-none max-xl:pb-3 max-xl:pt-2 xl:pb-4 xl:pt-3';
 
-  const content = !title && !description ? (
-    <PageBreadcrumbs menu={menu} />
-  ) : (
-    <>
+  const content =
+    !title && !description ? (
       <PageBreadcrumbs menu={menu} />
-      {title ? (
-        <h1 className="flex w-full items-baseline justify-between gap-3 font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
-          {title}
-        </h1>
-      ) : null}
-      {description ? (
-        <p className="mt-1 text-xs text-muted-foreground max-lg:hidden">{description}</p>
-      ) : null}
-    </>
-  );
+    ) : (
+      <>
+        <PageBreadcrumbs menu={menu} />
+        {title ? (
+          <h1 className="flex w-full items-baseline justify-between gap-3 font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
+            {title}
+          </h1>
+        ) : null}
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground max-lg:hidden">
+            {description}
+          </p>
+        ) : null}
+      </>
+    );
 
   return (
-    <div ref={headerRef} className="page-content-header shrink-0 max-xl:bg-background">
-      <Container className={containerClassName}>
-        {content}
-      </Container>
+    <div
+      ref={headerRef}
+      className="page-content-header shrink-0 max-xl:bg-background"
+    >
+      <Container className={containerClassName}>{content}</Container>
     </div>
   );
 }

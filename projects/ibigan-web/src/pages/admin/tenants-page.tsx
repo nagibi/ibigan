@@ -13,7 +13,6 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridStringSelection } from '@/hooks/use-grid-string-selection';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
@@ -445,11 +444,6 @@ export function AdminTenantsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'empresas',
-    columns: gridColumns.visibleColumns,
-    rows: displayTenants,
-  });
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
@@ -521,8 +515,6 @@ export function AdminTenantsPage() {
         onActivate={() => void selection.activateSelected()}
         onDeactivate={() => void selection.deactivateSelected()}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={selection.hasSelection && !selection.isTogglingActive}
         singleSelection={selection.singleSelection && !selection.isTogglingActive}
         isTogglingActive={selection.isTogglingActive}
@@ -532,8 +524,6 @@ export function AdminTenantsPage() {
       navigate,
       handleEditSelected,
       handleDeleteSelected,
-      handleExport,
-      isExporting,
       selection.activateSelected,
       selection.deactivateSelected,
       selection.hasSelection,
@@ -559,8 +549,6 @@ export function AdminTenantsPage() {
             onClearSelection={selection.clearSelection}
             onRefresh={load}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

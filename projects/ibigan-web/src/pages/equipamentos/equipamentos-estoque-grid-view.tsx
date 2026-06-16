@@ -13,7 +13,6 @@ import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridFilters, dateRangeFilterFromKey, dateRangeFilterToKey } from '@/hooks/use-grid-filters';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
@@ -794,12 +793,6 @@ export function EquipamentosEstoqueGridView() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'equipamentos-estoque',
-    columns: gridColumns.visibleColumns,
-    rows: items,
-  });
-
   const handleResetGrid = () => {
     columnFilters.clearAllFilters();
     grid.clearSearch();
@@ -930,8 +923,6 @@ export function EquipamentosEstoqueGridView() {
             onClearSelection={grid.clearSelection}
             onRefresh={refresh}
             isRefreshing={isFetching}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             searchPlaceholder={EQUIPAMENTO_SEARCH_PLACEHOLDER}

@@ -15,7 +15,6 @@ import { useApiMenuByPath } from '@/hooks/use-api-menu-by-path';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
@@ -30,6 +29,7 @@ import {
 import {
   getNotificationTitle,
   getNotificationType,
+  getNotificationRecordId,
   getReportDownloadMeta,
   isReportNotification,
 } from '@/lib/notification-utils';
@@ -345,8 +345,10 @@ export function NotificationsPage() {
         id: 'id',
         label: 'Id',
         className: 'w-[70px] text-sm text-muted-foreground',
-        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID' },
-        render: (notification) => notification.id,
+        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+        render: (notification) => (
+          <span className="font-medium tabular-nums">{getNotificationRecordId(notification)}</span>
+        ),
       },
       {
         id: 'actions',
@@ -454,11 +456,6 @@ export function NotificationsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'notificacoes',
-    columns: gridColumns.visibleColumns,
-    rows: displayNotifications,
-  });
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
@@ -543,10 +540,19 @@ export function NotificationsPage() {
   usePageToolbar({
     title: notificationsMenu?.title ?? 'Minhas notificações',
     description: 'Central de notificações do sistema.',
+    headerActions: (
+      <Button
+        variant="primary"
+        size="sm"
+        className="h-8 shrink-0"
+        onClick={openPreferences}
+      >
+        <PreferencesIcon className="mr-1.5 size-3.5" />
+        {notificationPreferencesMenu?.title ?? 'Configurações'}
+      </Button>
+    ),
     actions: (
       <StandardGridToolbar
-        onExport={handleExport}
-        isExporting={isExporting}
         onDelete={() => selectedRef.current.length > 0 && setDeleteIds([...selectedRef.current])}
         hasSelection={selected.length > 0}
         extra={(
@@ -595,22 +601,6 @@ export function NotificationsPage() {
   return (
     <PageBody>
       <GridPanel
-        header={(
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              {notificationsMenu?.title ?? 'Minhas notificações'}
-            </h2>
-            <Button
-              variant="primary"
-              size="sm"
-              className="h-8 shrink-0"
-              onClick={openPreferences}
-            >
-              <PreferencesIcon className="mr-1.5 size-3.5" />
-              Configurações
-            </Button>
-          </div>
-        )}
         toolbar={(
           <GridPanelToolbar
             onSelectAll={() => toggleSelectAll(visibleIds)}
@@ -619,8 +609,6 @@ export function NotificationsPage() {
             onClearSelection={clearSelection}
             onRefresh={() => void invalidateNotifications(queryClient)}
             isRefreshing={isLoading || isFetching}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

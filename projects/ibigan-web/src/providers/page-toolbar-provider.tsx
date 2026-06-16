@@ -13,6 +13,7 @@ import type { ToolbarAlertConfig } from '@/components/grid/toolbar-alert';
 export type PageToolbarConfig = {
   title?: ReactNode;
   description?: ReactNode;
+  headerActions?: ReactNode;
   actions?: ReactNode;
   alert?: ToolbarAlertConfig | null;
   breadcrumbs?: PageBreadcrumbItem[];
@@ -30,6 +31,7 @@ function isSameToolbarConfig(
   return (
     current.title === next.title
     && current.description === next.description
+    && current.headerActions === next.headerActions
     && current.actions === next.actions
     && current.alert === next.alert
     && current.breadcrumbs === next.breadcrumbs

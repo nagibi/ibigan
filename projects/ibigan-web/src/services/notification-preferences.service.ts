@@ -1,8 +1,9 @@
 import api from '@/lib/axios';
+import type { NotificationPreferencesMap } from '@/types/notification-events';
 
 export const notificationPreferencesService = {
   get: () =>
-    api.get<{ status: number; result: Record<string, { email: boolean; app: boolean }> }>(
+    api.get<{ status: number; result: NotificationPreferencesMap }>(
       '/v1/notification-preferences',
     ),
 
