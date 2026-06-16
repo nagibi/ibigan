@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface GridRecordCountInfo {
   total: number;
@@ -48,7 +48,9 @@ export function GridMobileRecordCountBar({
   }
 
   return (
-    <div className={cn('border-t border-border px-3 py-1.5 xl:hidden', className)}>
+    <div
+      className={cn('border-t border-border px-3 py-1.5 xl:hidden', className)}
+    >
       <p className="text-xs text-muted-foreground">
         {formatGridRecordCount({ total, loaded }, t)}
       </p>

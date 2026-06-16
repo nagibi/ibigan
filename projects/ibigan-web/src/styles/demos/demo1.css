@@ -81,6 +81,14 @@
       box-shadow: 0 1px 0 var(--border);
     }
 
+    .demo1 .page-content-scroll.equipcontrol-page .page-content-header > .container-fluid {
+      padding-bottom: 1rem;
+    }
+
+    .demo1 .page-content-scroll.equipcontrol-page > .container-fluid {
+      padding-top: 0;
+    }
+
     .demo1 .grid-panel-chrome {
       position: sticky;
       top: var(--page-content-header-height, 0px);

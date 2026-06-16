@@ -79,3 +79,20 @@ export function applyApiFormErrors<T extends FieldValues>(
 
   return true;
 }
+
+export function mapApiErrorsToRecord(error: unknown): Record<string, string> | null {
+  const apiErrors = getApiValidationErrors(error);
+
+  if (!apiErrors) return null;
+
+  const record: Record<string, string> = {};
+
+  Object.entries(apiErrors).forEach(([field, messages]) => {
+    const message = messages[0];
+    if (!message) return;
+
+    record[field] = translateApiFieldMessage(message);
+  });
+
+  return Object.keys(record).length > 0 ? record : null;
+}

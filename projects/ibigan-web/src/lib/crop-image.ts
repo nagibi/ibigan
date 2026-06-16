@@ -1,6 +1,6 @@
 import type { Area } from 'react-easy-crop';
 
-const AVATAR_OUTPUT_SIZE = 512;
+const DEFAULT_OUTPUT_SIZE = 512;
 
 function createImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -45,6 +45,7 @@ export async function getCroppedImageBlob(
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg',
   quality = 0.9,
   rotation = 0,
+  outputSize = DEFAULT_OUTPUT_SIZE,
 ): Promise<Blob> {
   const image = await createImage(imageSrc);
 
@@ -56,8 +57,8 @@ export async function getCroppedImageBlob(
       throw new Error('Canvas not supported');
     }
 
-    canvas.width = AVATAR_OUTPUT_SIZE;
-    canvas.height = AVATAR_OUTPUT_SIZE;
+    canvas.width = outputSize;
+    canvas.height = outputSize;
 
     ctx.drawImage(
       image,
@@ -67,8 +68,8 @@ export async function getCroppedImageBlob(
       pixelCrop.height,
       0,
       0,
-      AVATAR_OUTPUT_SIZE,
-      AVATAR_OUTPUT_SIZE,
+      outputSize,
+      outputSize,
     );
 
     return canvasToBlob(canvas, mimeType, quality);
@@ -99,8 +100,8 @@ export async function getCroppedImageBlob(
     throw new Error('Canvas not supported');
   }
 
-  outputCanvas.width = AVATAR_OUTPUT_SIZE;
-  outputCanvas.height = AVATAR_OUTPUT_SIZE;
+  outputCanvas.width = outputSize;
+  outputCanvas.height = outputSize;
 
   outputCtx.drawImage(
     rotatedCanvas,
@@ -110,8 +111,8 @@ export async function getCroppedImageBlob(
     pixelCrop.height,
     0,
     0,
-    AVATAR_OUTPUT_SIZE,
-    AVATAR_OUTPUT_SIZE,
+    outputSize,
+    outputSize,
   );
 
   return canvasToBlob(outputCanvas, mimeType, quality);

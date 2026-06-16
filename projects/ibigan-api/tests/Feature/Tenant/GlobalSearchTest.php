@@ -69,7 +69,8 @@ it('valida o termo mínimo de busca', function (): void {
         'X-Tenant-ID' => $this->a['tenant']->id,
     ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['q']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'q');
 });
 
 it('retorna resultados agrupados por categoria', function (): void {

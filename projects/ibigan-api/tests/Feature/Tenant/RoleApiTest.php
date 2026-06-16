@@ -194,7 +194,8 @@ it('nega criação de papel com nome reservado', function (): void {
         'name' => 'admin',
     ], roleHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['name']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'name');
 });
 
 it('nega criação de papel com permissão inválida', function (): void {
@@ -205,7 +206,8 @@ it('nega criação de papel com permissão inválida', function (): void {
         'permissions' => ['permissao-inexistente'],
     ], roleHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['permissions.0']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'permissions.0');
 });
 
 it('admin comum não pode criar papéis', function (): void {

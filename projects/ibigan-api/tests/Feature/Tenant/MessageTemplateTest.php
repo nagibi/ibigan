@@ -135,7 +135,8 @@ it('nega criação com slug duplicado', function (): void {
 
     $this->postJson('/api/v1/message-templates', templatePayload(), templateHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['slug']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'slug');
 });
 
 // --- Update ---
@@ -188,7 +189,7 @@ it('duplica um template para quem tem permissão de gerenciar', function (): voi
         ->assertJsonPath('result.is_active', false);
 
     $this->tenant->run(function (): void {
-        expect(MessageTemplate::count())->toBe(2);
+        expect(MessageTemplate::query()->where('is_system', false)->count())->toBe(2);
     });
 });
 

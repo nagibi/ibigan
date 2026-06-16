@@ -49,7 +49,7 @@ beforeEach(function (): void {
     });
 
     $this->template = $this->tenant->run(fn () => MessageTemplate::factory()->create([
-        'slug' => 'boas-vindas',
+        'slug' => 'teste-envio-'.uniqid(),
         'subject' => 'Bem-vindo, {{nome}}!',
         'body' => 'Olá {{nome}}, bem-vindo à {{empresa}}!',
         'is_active' => true,
@@ -68,25 +68,28 @@ afterEach(function (): void {
 function sendPayload(array $overrides = []): array
 {
     return array_merge([
-        'recipients' => ['destino@test.com'],
         'channels' => ['email'],
-        'data' => ['nome' => 'João', 'empresa' => 'Acme'],
+        'merge_data' => ['nome' => 'João', 'empresa' => 'Acme'],
     ], $overrides);
 }
 
-// --- Endpoint send ---
+function testSendUrl(MessageTemplate $template): string
+{
+    return "/api/v1/message-templates/{$template->id}/test-send";
+}
+
+// --- Endpoint test-send ---
 
 it('enfileira job ao enviar template por email', function (): void {
     Queue::fake();
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson(testSendUrl($this->template), sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()
         ->assertJsonPath('status', 1)
         ->assertJsonPath('result.queued', 1)
-        ->assertJsonPath('result.channels', ['email'])
-        ->assertJsonPath('result.recipients', 1);
+        ->assertJsonPath('result.recipient', $this->admin->email);
 
     Queue::assertPushed(SendTemplateEmailJob::class);
 });
@@ -96,56 +99,48 @@ it('enfileira job ao enviar template por notificação', function (): void {
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
+    $this->postJson(testSendUrl($this->template), sendPayload([
         'channels' => ['notification'],
-        'recipients' => [$this->admin->email],
     ]), ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()
-        ->assertJsonPath('result.channels', ['notification']);
+        ->assertJsonPath('result.queued', 1)
+        ->assertJsonPath('result.recipient', $this->admin->email);
 
     Queue::assertPushed(SendTemplateNotificationJob::class);
 });
 
-it('enfileira jobs para múltiplos destinatários e canais', function (): void {
+it('enfileira jobs para múltiplos canais', function (): void {
     Queue::fake();
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
-        'recipients' => ['a@test.com', 'b@test.com'],
-        'channels' => ['email', 'sms'],
+    $this->postJson(testSendUrl($this->template), sendPayload([
+        'channels' => ['email', 'notification'],
     ]), ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()
-        ->assertJsonPath('result.queued', 4);
+        ->assertJsonPath('result.queued', 2)
+        ->assertJsonPath('result.recipient', $this->admin->email);
 
-    Queue::assertPushed(SendTemplateEmailJob::class, 2);
+    Queue::assertPushed(SendTemplateEmailJob::class, 1);
+    Queue::assertPushed(SendTemplateNotificationJob::class, 1);
 });
 
 it('nega envio para viewer', function (): void {
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson(testSendUrl($this->template), sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
         ->assertForbidden();
-});
-
-it('nega envio com email inválido', function (): void {
-    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
-
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
-        'recipients' => ['email-invalido'],
-    ]), ['X-Tenant-ID' => $this->tenant->id])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['recipients.0']);
 });
 
 it('nega envio com canal inválido', function (): void {
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload([
+    $this->postJson(testSendUrl($this->template), sendPayload([
         'channels' => ['fax'],
     ]), ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['channels.0']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'channels.0');
 });
 
 it('nega envio de template inativo', function (): void {
@@ -153,7 +148,7 @@ it('nega envio de template inativo', function (): void {
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->postJson("/api/v1/message-templates/{$this->template->id}/send", sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
+    $this->postJson(testSendUrl($this->template), sendPayload(), ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable();
 });
 
@@ -204,7 +199,7 @@ it('job envia email ao ser processado', function (): void {
 
     $this->tenant->run(function (): void {
         $job = new SendTemplateEmailJob(
-            'boas-vindas',
+            $this->template->slug,
             'destino@test.com',
             ['nome' => 'João', 'empresa' => 'Acme'],
         );
@@ -220,7 +215,7 @@ it('job de notificação envia para usuário existente', function (): void {
 
     $this->tenant->run(function (): void {
         $job = new SendTemplateNotificationJob(
-            'boas-vindas',
+            $this->template->slug,
             $this->admin->email,
             ['nome' => 'João', 'empresa' => 'Acme'],
         );
@@ -236,7 +231,7 @@ it('job de notificação ignora destinatário sem usuário cadastrado', function
 
     $this->tenant->run(function (): void {
         $job = new SendTemplateNotificationJob(
-            'boas-vindas',
+            $this->template->slug,
             'inexistente@test.com',
             ['nome' => 'João'],
         );

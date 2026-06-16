@@ -234,7 +234,8 @@ it('nega admin atribuir super-admin via payload', function (): void {
         'roles' => ['super-admin', 'admin'],
     ], tenantHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['roles.0']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'roles.0');
 });
 
 it('remove um usuário para quem tem permissão de gerenciar', function (): void {

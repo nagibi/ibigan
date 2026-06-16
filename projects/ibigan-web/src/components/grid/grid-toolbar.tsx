@@ -372,19 +372,23 @@ export function GridPanelToolbar({
               />
             )}
             {viewModeControl}
-            {quickFiltersControl}
           </div>
 
-          {onSearch && !hideToolbarSearchOnMobile && (
-            <div className="w-full shrink-0 xl:w-56">
-              <GridToolbarSearch
-                value={search ?? ''}
-                onChange={onSearch}
-                placeholder={resolvedSearchPlaceholder}
-                className="w-full"
-              />
+          {(quickFiltersControl || (onSearch && !hideToolbarSearchOnMobile)) ? (
+            <div className="flex w-full min-w-0 items-center gap-2 xl:w-auto xl:shrink-0">
+              {quickFiltersControl}
+              {onSearch && !hideToolbarSearchOnMobile ? (
+                <div className="min-w-0 flex-1 xl:w-56">
+                  <GridToolbarSearch
+                    value={search ?? ''}
+                    onChange={onSearch}
+                    placeholder={resolvedSearchPlaceholder}
+                    className="w-full"
+                  />
+                </div>
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </ToolbarAlertHost>
       {recordCount != null ? (

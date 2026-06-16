@@ -43,6 +43,20 @@ import { WebhookFormPage } from '@/pages/webhooks/webhook-form-page';
 import { WebhooksPage } from '@/pages/webhooks/webhooks-page';
 import { UserApprovalsPage } from '@/pages/user-approvals/user-approvals-page';
 import { UsersPage } from '@/pages/users/users-page';
+import { EquipControlLayout } from '@/pages/equipamentos/equipcontrol-layout';
+import { EquipamentosBaixadosPage } from '@/pages/equipamentos/equipamentos-baixados-page';
+import { EquipamentosEstoquePage } from '@/pages/equipamentos/equipamentos-estoque-page';
+import { EquipamentosGestaoPage } from '@/pages/equipamentos/equipamentos-gestao-page';
+import { EquipamentosHistoricoPage } from '@/pages/equipamentos/equipamentos-historico-page';
+import { EquipamentosMaisPage } from '@/pages/equipamentos/equipamentos-mais-page';
+import { FornecedorFormPage } from '@/pages/equipamentos/catalog/fornecedor-form-page';
+import { FornecedoresPage } from '@/pages/equipamentos/catalog/fornecedores-page';
+import { ObraFormPage } from '@/pages/equipamentos/catalog/obra-form-page';
+import { ObrasPage } from '@/pages/equipamentos/catalog/obras-page';
+import { TipoFormPage } from '@/pages/equipamentos/catalog/tipo-form-page';
+import { TiposPage } from '@/pages/equipamentos/catalog/tipos-page';
+import { EquipamentosManutencaoPage } from '@/pages/equipamentos/equipamentos-manutencao-page';
+import { EquipamentosMovimentacoesPage } from '@/pages/equipamentos/equipamentos-movimentacoes-page';
 import { useAuthStore } from '@/stores/auth.store';
 import { buildTenantLoginPath, resolveTenantSlugForLogin } from '@/lib/tenant-login-path';
 import { Navigate, Route, Routes, useParams } from 'react-router';
@@ -269,6 +283,28 @@ export function AppRoutingSetup() {
         <Route path="/webhooks" element={<WebhooksPage />} />
         <Route path="/webhooks/new" element={<WebhookFormPage key="webhook-new" />} />
         <Route path="/webhooks/:id" element={<WebhookFormPage key="webhook-edit" />} />
+        <Route path="/equipamentos" element={<EquipControlLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="estoque" element={<EquipamentosEstoquePage />} />
+          <Route path="movimentacoes" element={<EquipamentosMovimentacoesPage />} />
+          <Route path="utilizacao" element={<Navigate to="/equipamentos/movimentacoes" replace />} />
+          <Route path="manutencao" element={<EquipamentosManutencaoPage />} />
+          <Route path="manutencoes" element={<Navigate to="/equipamentos/manutencao" replace />} />
+          <Route path="mais" element={<EquipamentosMaisPage />} />
+          <Route path="dashboard" element={<EquipamentosGestaoPage />} />
+          <Route path="gestao" element={<Navigate to="/equipamentos/dashboard" replace />} />
+          <Route path="historico" element={<EquipamentosHistoricoPage />} />
+          <Route path="baixados" element={<EquipamentosBaixadosPage />} />
+          <Route path="obras" element={<ObrasPage />} />
+          <Route path="obras/new" element={<ObraFormPage key="obra-new" />} />
+          <Route path="obras/:id" element={<ObraFormPage key="obra-edit" />} />
+          <Route path="fornecedores" element={<FornecedoresPage />} />
+          <Route path="fornecedores/new" element={<FornecedorFormPage key="fornecedor-new" />} />
+          <Route path="fornecedores/:id" element={<FornecedorFormPage key="fornecedor-edit" />} />
+          <Route path="tipos" element={<TiposPage />} />
+          <Route path="tipos/new" element={<TipoFormPage key="tipo-new" />} />
+          <Route path="tipos/:id" element={<TipoFormPage key="tipo-edit" />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

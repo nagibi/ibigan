@@ -18,11 +18,14 @@ export const GRID_URL_KEYS = {
   sortDir: 'dir',
 } as const;
 
+export const GRID_CONTEXT_FILTER_URL_KEY = 'filtro';
+
 export const ROLES_USER_URL_KEYS = ['user_id', 'user_name', 'roles'] as const;
 
 const RESERVED_URL_KEYS = new Set<string>([
   ...Object.values(GRID_URL_KEYS),
   ...ROLES_USER_URL_KEYS,
+  GRID_CONTEXT_FILTER_URL_KEY,
 ]);
 
 export interface GridUrlState {
@@ -74,6 +77,7 @@ export function buildGridUrlSearchParams(state: {
   sortDir?: SortDirection;
   filters?: Record<string, string>;
   userFilter?: RolesUserFilter | null;
+  contextFilter?: string | null;
 }): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -110,6 +114,10 @@ export function buildGridUrlSearchParams(state: {
     if (state.userFilter.roleNames.length > 0) {
       params.set('roles', state.userFilter.roleNames.join(','));
     }
+  }
+
+  if (state.contextFilter?.trim()) {
+    params.set(GRID_CONTEXT_FILTER_URL_KEY, state.contextFilter.trim());
   }
 
   return params;

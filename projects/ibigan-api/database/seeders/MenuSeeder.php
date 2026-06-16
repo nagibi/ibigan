@@ -6,11 +6,20 @@ namespace Database\Seeders;
 
 use App\Models\Menu;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 class MenuSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! tenancy()->initialized) {
+            throw new RuntimeException(
+                'MenuSeeder deve ser executado no contexto de um tenant. '
+                .'Use: php artisan tenants:seed --class=MenuSeeder',
+            );
+        }
+
         Menu::query()->forceDelete();
 
         // ── Dashboard ─────────────────────────────────────────────
@@ -25,13 +34,132 @@ class MenuSeeder extends Seeder
             'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
         ]);
 
+        $equipcontrol = Menu::create([
+            'title' => 'Equipamentos',
+            'slug' => 'equipcontrol',
+            'icon' => 'HardHat',
+            'path' => '/equipamentos',
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
+        ]);
+
+        $equipcontrolOperacao = Menu::create([
+            'title' => 'Operação',
+            'slug' => 'equipcontrol-operacao',
+            'icon' => null,
+            'path' => null,
+            'parent_id' => $equipcontrol->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Dashboard',
+            'slug' => 'equipcontrol-gestao',
+            'icon' => 'LayoutDashboard',
+            'path' => '/equipamentos/dashboard',
+            'parent_id' => $equipcontrolOperacao->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Estoque',
+            'slug' => 'equipcontrol-estoque',
+            'icon' => 'Package',
+            'path' => '/equipamentos/estoque',
+            'parent_id' => $equipcontrolOperacao->id,
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Manutenções',
+            'slug' => 'equipcontrol-manutencao',
+            'icon' => 'Wrench',
+            'path' => '/equipamentos/manutencao',
+            'parent_id' => $equipcontrolOperacao->id,
+            'order' => 2,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Movimentações',
+            'slug' => 'equipcontrol-movimentacoes',
+            'icon' => 'ArrowLeftRight',
+            'path' => '/equipamentos/movimentacoes',
+            'parent_id' => $equipcontrolOperacao->id,
+            'order' => 3,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
+        ]);
+
+        $equipcontrolCadastros = Menu::create([
+            'title' => 'Cadastros',
+            'slug' => 'equipcontrol-cadastros',
+            'icon' => null,
+            'path' => null,
+            'parent_id' => $equipcontrol->id,
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Tipos',
+            'slug' => 'equipcontrol-tipos',
+            'icon' => 'Shapes',
+            'path' => '/equipamentos/tipos',
+            'parent_id' => $equipcontrolCadastros->id,
+            'order' => 0,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Fornecedores',
+            'slug' => 'equipcontrol-fornecedores',
+            'icon' => 'Truck',
+            'path' => '/equipamentos/fornecedores',
+            'parent_id' => $equipcontrolCadastros->id,
+            'order' => 1,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'super-admin'],
+        ]);
+
+        Menu::create([
+            'title' => 'Obras',
+            'slug' => 'equipcontrol-obras',
+            'icon' => 'Building2',
+            'path' => '/equipamentos/obras',
+            'parent_id' => $equipcontrolCadastros->id,
+            'order' => 2,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'manager', 'super-admin'],
+        ]);
+
         // ── Gestão ────────────────────────────────────────────────
         $gestao = Menu::create([
             'title' => 'Gestão',
             'slug' => 'gestao',
             'icon' => null,
             'path' => null,
-            'order' => 1,
+            'order' => 2,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
@@ -103,7 +231,7 @@ class MenuSeeder extends Seeder
             'slug' => 'relatorios-grupo',
             'icon' => null,
             'path' => null,
-            'order' => 2,
+            'order' => 3,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'manager', 'viewer', 'operator', 'super-admin'],
@@ -139,7 +267,7 @@ class MenuSeeder extends Seeder
             'slug' => 'administracao',
             'icon' => null,
             'path' => null,
-            'order' => 3,
+            'order' => 4,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -334,6 +462,16 @@ class MenuSeeder extends Seeder
 
         $translationKeys = [
             'dashboard' => 'menu.dashboard',
+            'equipcontrol' => 'menu.equipcontrol',
+            'equipcontrol-operacao' => 'menu.equipcontrol.operation',
+            'equipcontrol-gestao' => 'menu.equipcontrol.management',
+            'equipcontrol-estoque' => 'menu.equipcontrol.stock',
+            'equipcontrol-manutencao' => 'menu.equipcontrol.maintenance',
+            'equipcontrol-movimentacoes' => 'menu.equipcontrol.movements',
+            'equipcontrol-cadastros' => 'menu.equipcontrol.catalogs',
+            'equipcontrol-tipos' => 'menu.equipcontrol.types',
+            'equipcontrol-fornecedores' => 'menu.equipcontrol.suppliers',
+            'equipcontrol-obras' => 'menu.equipcontrol.projects',
             'gestao' => 'menu.management',
             'usuarios' => 'menu.users',
             'aprovacoes' => 'menu.user_approvals',
@@ -360,6 +498,14 @@ class MenuSeeder extends Seeder
             'mailpit' => 'menu.mailpit',
             'configuracoes' => 'menu.settings',
         ];
+
+        if (! Schema::hasColumn('menus', 'translation_key')) {
+            $this->command?->warn(
+                'Coluna menus.translation_key ausente. Rode: php artisan tenants:migrate',
+            );
+
+            return;
+        }
 
         foreach ($translationKeys as $slug => $translationKey) {
             Menu::query()->where('slug', $slug)->update(['translation_key' => $translationKey]);

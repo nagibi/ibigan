@@ -85,6 +85,10 @@ final class RateLimitServiceProvider extends ServiceProvider
 
         // API geral: 60 por tenant por minuto (ou por IP se não tiver tenant)
         RateLimiter::for('api', function (Request $request): Limit {
+            if (app()->environment('local')) {
+                return Limit::none();
+            }
+
             $key = $request->header('X-Tenant-ID')
                 ? 'tenant:'.$request->header('X-Tenant-ID')
                 : 'ip:'.$request->ip();

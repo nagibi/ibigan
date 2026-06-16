@@ -1,7 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 
-export type GridColumnFilterType = 'text' | 'select' | 'date' | 'dateRange' | 'multi';
+export type GridColumnFilterType =
+  | 'text'
+  | 'select'
+  | 'date'
+  | 'dateRange'
+  | 'numberRange'
+  | 'multi';
 
 export function dateRangeFilterFromKey(key: string) {
   return `${key}_from`;
@@ -13,7 +19,9 @@ export function dateRangeFilterToKey(key: string) {
 
 export type GridColumnFilterInputMode = 'text' | 'numeric';
 
-export type GridColumnFilterMask = 'cpf' | 'phone' | 'cnpj';
+export type GridColumnFilterMask = 'cpf' | 'phone' | 'cnpj' | 'currency';
+
+export type GridColumnNumberRangeFormat = 'currency';
 
 export interface GridColumnFilterOption {
   label: string;
@@ -27,6 +35,7 @@ export interface GridColumnFilterDef {
   options?: GridColumnFilterOption[];
   inputMode?: GridColumnFilterInputMode;
   mask?: GridColumnFilterMask;
+  numberRangeFormat?: GridColumnNumberRangeFormat;
 }
 
 export function useGridFilters(
@@ -105,7 +114,7 @@ export function useGridFilters(
 
   const clearColumnFilter = useCallback(
     (filter: GridColumnFilterDef) => {
-      if (filter.type === 'dateRange') {
+      if (filter.type === 'dateRange' || filter.type === 'numberRange') {
         clearDateRangeFilter(filter.filterKey);
         return;
       }
@@ -117,7 +126,7 @@ export function useGridFilters(
 
   const isColumnFilterActive = useCallback(
     (filter: GridColumnFilterDef) => {
-      if (filter.type === 'dateRange') {
+      if (filter.type === 'dateRange' || filter.type === 'numberRange') {
         const from = filters[dateRangeFilterFromKey(filter.filterKey)]?.trim() ?? '';
         const to = filters[dateRangeFilterToKey(filter.filterKey)]?.trim() ?? '';
         return Boolean(from || to);

@@ -1,33 +1,31 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { useAuthStore } from '@/stores/auth.store';
+import { useCentralAuthStore } from '@/stores/central-auth.store';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
-import { MessageTemplateBodyEditor } from '@/components/message-templates/message-template-body-editor';
-import { MessageTemplateEmailPreview } from '@/components/message-templates/message-template-email-preview';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import { formatFormPageTitle } from '@/lib/format-form-page-title';
 import { isComplexEmailHtml } from '@/lib/is-complex-email-html';
 import { isHtmlContentEmpty } from '@/lib/is-html-content-empty';
 import { resolveFormSavePath } from '@/lib/resolve-form-save-path';
-import { messageTemplatesService } from '@/services/message-templates.service';
-import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
-import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useFormKeyboard } from '@/hooks/use-form-keyboard';
 import { useFormPage } from '@/hooks/use-form-page';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
-import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
-import { FormToolbar } from '@/components/grid/form-toolbar';
-import { PageBody } from '@/components/common/page-body';
-import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
-import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
-import { FormPanel } from '@/components/grid/form-panel';
-import { FormRecordIdField } from '@/components/grid/form-record-identifier';
-import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import { usePlatformCatalogMode } from '@/hooks/use-platform-catalog-mode';
+import { messageTemplatesService } from '@/services/message-templates.service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,14 +39,30 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuthStore } from '@/stores/auth.store';
-import { useCentralAuthStore } from '@/stores/central-auth.store';
+import { PageBody } from '@/components/common/page-body';
+import {
+  FormFieldGrid,
+  FormFieldGridItem,
+} from '@/components/grid/form-field-grid';
+import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { FormPanel } from '@/components/grid/form-panel';
+import { FormRecordIdField } from '@/components/grid/form-record-identifier';
+import { FormToolbar } from '@/components/grid/form-toolbar';
+import {
+  buildInactiveAlert,
+  mergeToolbarAlerts,
+} from '@/components/grid/toolbar-alert';
+import { MessageTemplateBodyEditor } from '@/components/message-templates/message-template-body-editor';
+import { MessageTemplateEmailPreview } from '@/components/message-templates/message-template-email-preview';
+import { PlatformCatalogBadge } from '@/components/platform/platform-catalog-badge';
 
 const schema = z.object({
   name: z.string().min(1, 'Nome é obrigatório.'),
   slug: z.string().min(1, 'Slug é obrigatório.'),
   subject: z.string().min(1, 'Assunto é obrigatório.'),
-  body: z.string().refine((value) => !isHtmlContentEmpty(value), 'Corpo é obrigatório.'),
+  body: z
+    .string()
+    .refine((value) => !isHtmlContentEmpty(value), 'Corpo é obrigatório.'),
   merge_tags: z.array(z.string()).nullable(),
 });
 
@@ -84,8 +98,16 @@ export function MessageTemplateFormPage() {
     };
   }, [centralUser, isPlatformCatalog, tenantUser]);
 
-  const { data: templateData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id],
+  const {
+    data: templateData,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      isPlatformCatalog ? 'platform-message-template' : 'message-template',
+      id,
+    ],
     queryFn: () => templatesService.show(Number(id)),
     enabled: isEditing,
   });
@@ -101,26 +123,35 @@ export function MessageTemplateFormPage() {
     newPath: `${listPath}/new`,
     entityKey: 'message_template',
     notify: apiNotify,
-    onDelete: isEditing && !isPlatformCatalog
-      ? async () => {
-          if (!('destroy' in templatesService)) return;
-          await templatesService.destroy(Number(id));
-          queryClient.invalidateQueries({ queryKey: ['message-templates'] });
-        }
-      : undefined,
+    onDelete:
+      isEditing && !isPlatformCatalog
+        ? async () => {
+            if (!('destroy' in templatesService)) return;
+            await templatesService.destroy(Number(id));
+            queryClient.invalidateQueries({ queryKey: ['message-templates'] });
+          }
+        : undefined,
     onToggleActive: isEditing
       ? async (active) => {
           await templatesService.toggleActive(Number(id), active);
-          queryClient.invalidateQueries({ queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id] });
+          queryClient.invalidateQueries({
+            queryKey: [
+              isPlatformCatalog
+                ? 'platform-message-template'
+                : 'message-template',
+              id,
+            ],
+          });
           queryClient.invalidateQueries({ queryKey: ['message-templates'] });
         }
       : undefined,
-    onDuplicate: isEditing && 'duplicate' in templatesService
-      ? async () => {
-          const res = await templatesService.duplicate(Number(id));
-          navigate(catalogPaths.getEditPath(res.data.result.id));
-        }
-      : undefined,
+    onDuplicate:
+      isEditing && 'duplicate' in templatesService
+        ? async () => {
+            const res = await templatesService.duplicate(Number(id));
+            navigate(catalogPaths.getEditPath(res.data.result.id));
+          }
+        : undefined,
   });
 
   const form = useForm<FormData>({
@@ -174,12 +205,21 @@ export function MessageTemplateFormPage() {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['message-templates'] });
       if (isEditing) {
-        queryClient.invalidateQueries({ queryKey: [isPlatformCatalog ? 'platform-message-template' : 'message-template', id] });
+        queryClient.invalidateQueries({
+          queryKey: [
+            isPlatformCatalog
+              ? 'platform-message-template'
+              : 'message-template',
+            id,
+          ],
+        });
       }
       apiNotify.showSuccess(
         isPlatformCatalog
           ? 'Template de plataforma atualizado e sincronizado nos tenants.'
-          : (isEditing ? 'Template atualizado!' : 'Template criado!'),
+          : isEditing
+            ? 'Template atualizado!'
+            : 'Template criado!',
       );
       if (!isEditing && formPage.saveMode === 'new') {
         form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
@@ -237,15 +277,17 @@ export function MessageTemplateFormPage() {
     isFetching: isEditing && isFetching,
     refetch: isEditing ? () => refetch() : undefined,
     onReset: !isEditing
-      ? () => form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false })
+      ? () =>
+          form.reset(DEFAULT_VALUES, { keepDirty: false, keepErrors: false })
       : undefined,
   });
 
   const pageAlert = useMemo(
-    () => mergeToolbarAlerts(
-      formAlert,
-      isEditing && !isActive ? buildInactiveAlert('message_template') : null,
-    ),
+    () =>
+      mergeToolbarAlerts(
+        formAlert,
+        isEditing && !isActive ? buildInactiveAlert('message_template') : null,
+      ),
     [formAlert, isActive, isEditing],
   );
 
@@ -262,20 +304,25 @@ export function MessageTemplateFormPage() {
     const formatted = tag.startsWith('{{') ? tag : `{{${tag}}}`;
     const current = form.getValues('merge_tags') ?? [];
     if (!current.includes(formatted)) {
-      form.setValue('merge_tags', [...current, formatted], { shouldDirty: true });
+      form.setValue('merge_tags', [...current, formatted], {
+        shouldDirty: true,
+      });
     }
     setTagInput('');
   }
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    try {
-      const response = await messageTemplatesService.uploadImage(file);
-      return response.data.result.url;
-    } catch (error) {
-      apiNotify.showError('Erro ao enviar imagem.', error);
-      throw error;
-    }
-  }, [apiNotify]);
+  const handleImageUpload = useCallback(
+    async (file: File) => {
+      try {
+        const response = await messageTemplatesService.uploadImage(file);
+        return response.data.result.url;
+      } catch (error) {
+        apiNotify.showError('Erro ao enviar imagem.', error);
+        throw error;
+      }
+    },
+    [apiNotify],
+  );
 
   function removeTag(tag: string) {
     const current = form.getValues('merge_tags') ?? [];
@@ -286,7 +333,8 @@ export function MessageTemplateFormPage() {
     );
   }
 
-  const slugDisabled = isEditing && Boolean(template?.is_system || isPlatformCatalog);
+  const slugDisabled =
+    isEditing && Boolean(template?.is_system || isPlatformCatalog);
 
   usePageToolbar({
     title: pageTitle,
@@ -308,12 +356,21 @@ export function MessageTemplateFormPage() {
         onClear={isReadOnly ? undefined : () => form.reset()}
         onRefresh={formRefresh.onRefresh}
         isRefreshing={formRefresh.isRefreshing}
-        onToggleActive={isEditing && template
-          ? () => formPage.handleToggleActive(isActive)
-          : undefined
+        onToggleActive={
+          isEditing && template
+            ? () => formPage.handleToggleActive(isActive)
+            : undefined
         }
-        onDelete={isEditing && template && !template.is_system && !isPlatformCatalog ? formPage.handleDelete : undefined}
-        onDuplicate={isEditing && 'duplicate' in templatesService ? formPage.handleDuplicate : undefined}
+        onDelete={
+          isEditing && template && !template.is_system && !isPlatformCatalog
+            ? formPage.handleDelete
+            : undefined
+        }
+        onDuplicate={
+          isEditing && 'duplicate' in templatesService
+            ? formPage.handleDuplicate
+            : undefined
+        }
         entityLabel="template"
         recordLabel={template?.name}
       />
@@ -349,7 +406,8 @@ export function MessageTemplateFormPage() {
                 <PlatformCatalogBadge />
                 {isReadOnly ? (
                   <p className="text-sm text-muted-foreground">
-                    Este template é gerenciado pela plataforma. Duplique para personalizar.
+                    Este template é gerenciado pela plataforma. Duplique para
+                    personalizar.
                   </p>
                 ) : null}
               </div>
@@ -361,31 +419,61 @@ export function MessageTemplateFormPage() {
                 </FormFieldGridItem>
               )}
               <FormFieldGridItem>
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Nome</FormLabel>
-                    <FormControl><Input placeholder="Boas-vindas" disabled={isReadOnly} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Nome</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Boas-vindas"
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </FormFieldGridItem>
               <FormFieldGridItem>
-                <FormField control={form.control} name="slug" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Slug</FormLabel>
-                    <FormControl><Input placeholder="boas-vindas" disabled={slugDisabled} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Slug</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="boas-vindas"
+                          disabled={slugDisabled}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </FormFieldGridItem>
               <FormFieldGridItem span={isEditing ? 1 : 2}>
-                <FormField control={form.control} name="subject" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Assunto</FormLabel>
-                    <FormControl><Input placeholder="Bem-vindo, {{nome}}!" disabled={isReadOnly} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Assunto</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Bem-vindo, {{nome}}!"
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </FormFieldGridItem>
             </FormFieldGrid>
           </FormPanel>
@@ -393,40 +481,70 @@ export function MessageTemplateFormPage() {
           <FormPanel title="Corpo da mensagem">
             <FormFieldGrid>
               <FormFieldGridItem span={4}>
-                <FormField control={form.control} name="body" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Conteúdo</FormLabel>
-                    <Tabs value={bodyTab} onValueChange={(value) => setBodyTab(value as 'editor' | 'preview')}>
-                      <TabsList variant="line" className="mb-3 w-full justify-start">
-                        <TabsTrigger value="editor">Editor</TabsTrigger>
-                        <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="editor" className="mt-0" forceMount hidden={bodyTab !== 'editor'}>
-                        <MessageTemplateBodyEditor
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          placeholder="Olá {{nome}}, bem-vindo à {{empresa}}!"
-                          onImageUpload={isReadOnly ? undefined : handleImageUpload}
-                          disabled={isReadOnly}
-                          isSystemTemplate={Boolean(template?.is_system || isPlatformCatalog)}
-                        />
-                      </TabsContent>
-                      <TabsContent value="preview" className="mt-0" forceMount hidden={bodyTab !== 'preview'}>
-                        <MessageTemplateEmailPreview
-                          subject={watchedSubject}
-                          body={watchedBody}
-                          mergeTags={watchedMergeTags}
-                          user={previewUser}
-                        />
-                      </TabsContent>
-                    </Tabs>
-                    <FormDescription>
-                      Templates de e-mail com layout completo devem ser editados em Código HTML. Use Pré-visualização para ver cores, botões e layout finais.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="body"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Conteúdo</FormLabel>
+                      <Tabs
+                        value={bodyTab}
+                        onValueChange={(value) =>
+                          setBodyTab(value as 'editor' | 'preview')
+                        }
+                      >
+                        <TabsList
+                          variant="line"
+                          className="mb-3 w-full justify-start"
+                        >
+                          <TabsTrigger value="editor">Editor</TabsTrigger>
+                          <TabsTrigger value="preview">
+                            Pré-visualização
+                          </TabsTrigger>
+                        </TabsList>
+                        <TabsContent
+                          value="editor"
+                          className="mt-0"
+                          forceMount
+                          hidden={bodyTab !== 'editor'}
+                        >
+                          <MessageTemplateBodyEditor
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            placeholder="Olá {{nome}}, bem-vindo à {{empresa}}!"
+                            onImageUpload={
+                              isReadOnly ? undefined : handleImageUpload
+                            }
+                            disabled={isReadOnly}
+                            isSystemTemplate={Boolean(
+                              template?.is_system || isPlatformCatalog,
+                            )}
+                          />
+                        </TabsContent>
+                        <TabsContent
+                          value="preview"
+                          className="mt-0"
+                          forceMount
+                          hidden={bodyTab !== 'preview'}
+                        >
+                          <MessageTemplateEmailPreview
+                            subject={watchedSubject}
+                            body={watchedBody}
+                            mergeTags={watchedMergeTags}
+                            user={previewUser}
+                          />
+                        </TabsContent>
+                      </Tabs>
+                      <FormDescription>
+                        Templates de e-mail com layout completo devem ser
+                        editados em Código HTML. Use Pré-visualização para ver
+                        cores, botões e layout finais.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </FormFieldGridItem>
               <FormFieldGridItem span={4}>
                 <div className="space-y-2">
@@ -444,13 +562,22 @@ export function MessageTemplateFormPage() {
                         }
                       }}
                     />
-                    <Button type="button" variant="outline" onClick={addTag} disabled={isReadOnly}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addTag}
+                      disabled={isReadOnly}
+                    >
                       <Plus className="size-4" />
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-1 min-h-[32px]">
                     {(form.watch('merge_tags') ?? []).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="font-mono gap-1">
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="font-mono gap-1"
+                      >
                         {tag}
                         {!isReadOnly ? (
                           <button type="button" onClick={() => removeTag(tag)}>

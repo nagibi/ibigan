@@ -13,7 +13,6 @@ import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
@@ -23,7 +22,7 @@ import {
 } from '@/hooks/use-grid-filters';
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
-import { formatCpf, formatPhone } from '@/lib/brazilian-masks';
+import { formatGridMaskedCell } from '@/lib/grid-masked-field';
 import { formatUserGender, getUserGenderOptions } from '@/lib/user-gender';
 import { parseGridUrlState } from '@/lib/grid-url-state';
 import { buildRolesUrlWithUserFilter } from '@/lib/roles-user-filter';
@@ -429,7 +428,7 @@ export function UsersPage() {
         sortKey: 'cpf',
         filter: { type: 'text', filterKey: 'cpf', placeholder: t('users.column.cpf'), mask: 'cpf' },
         className: 'min-w-[130px] text-sm whitespace-nowrap',
-        render: (user) => formatCpf(user.cpf) || '—',
+        render: (user) => formatGridMaskedCell(user.cpf, 'cpf'),
       },
       {
         id: 'phone',
@@ -438,7 +437,7 @@ export function UsersPage() {
         sortKey: 'phone',
         filter: { type: 'text', filterKey: 'phone', placeholder: t('users.column.phone'), mask: 'phone' },
         className: 'min-w-[130px] text-sm whitespace-nowrap',
-        render: (user) => formatPhone(user.phone) || '—',
+        render: (user) => formatGridMaskedCell(user.phone, 'phone'),
       },
       {
         id: 'birth_date',
@@ -540,12 +539,6 @@ export function UsersPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'usuarios',
-    columns: gridColumns.visibleColumns,
-    rows: displayUsers,
-  });
-
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -629,8 +622,6 @@ export function UsersPage() {
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -645,8 +636,6 @@ export function UsersPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
-      handleExport,
-      isExporting,
     ],
   );
 
@@ -676,8 +665,6 @@ export function UsersPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={load}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

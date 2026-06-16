@@ -186,7 +186,8 @@ it('nega criação com canal inválido', function (): void {
         'channels' => ['fax'],
     ]), campaignHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['channels.0']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'channels.0');
 });
 
 it('nega criação sem recipients', function (): void {
@@ -196,7 +197,8 @@ it('nega criação sem recipients', function (): void {
         'recipients' => [],
     ]), campaignHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['recipients']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'recipients');
 });
 
 // --- Show ---

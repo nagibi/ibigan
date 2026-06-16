@@ -114,7 +114,8 @@ it('nega convite com role inválida', function (): void {
         'role' => 'super-hacker',
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['role']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'role');
 });
 
 it('nega convite sem email', function (): void {
@@ -124,7 +125,8 @@ it('nega convite sem email', function (): void {
         'role' => 'viewer',
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['email']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'email');
 });
 
 // --- Destroy ---

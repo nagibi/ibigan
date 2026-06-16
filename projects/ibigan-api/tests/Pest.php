@@ -32,6 +32,20 @@ function cleanupTenantDatabaseFiles(string ...$tenantIds): void
 pest()->extend(TestCase::class)
     ->in('Feature');
 
+/**
+ * @param  \Illuminate\Testing\TestResponse  $response
+ * @param  string  ...$fields
+ */
+function expectApiValidationErrors($response, string ...$fields): void
+{
+    $response->assertUnprocessable()
+        ->assertJsonPath('message_code', 'validation.failed');
+
+    $errorFields = collect($response->json('errors'))->pluck('field')->all();
+
+    expect($errorFields)->toContain(...$fields);
+}
+
 uses()
     ->afterEach(function (): void {
         if (tenancy()->initialized) {

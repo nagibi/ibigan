@@ -16,6 +16,7 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
+import { formatBrl } from '@/lib/brazilian-masks';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
 import {
   buildReportExecuteDefaults,
@@ -69,7 +70,10 @@ function formatCell(value: unknown, fmt: string): string {
     try { return format(new Date(String(value)), 'dd/MM/yyyy', { locale: ptBR }); }
     catch { return String(value); }
   }
-  if (fmt === 'currency') return `R$ ${Number(value).toFixed(2)}`;
+  if (fmt === 'currency') {
+    const amount = Number(value);
+    return Number.isNaN(amount) ? String(value) : formatBrl(amount);
+  }
   if (fmt === 'boolean') return value ? 'Sim' : 'Não';
   return String(value);
 }

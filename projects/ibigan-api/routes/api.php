@@ -257,4 +257,6 @@ Route::prefix('v1')
         Route::get('reports/{report}/executions/{execution}/result', [ReportController::class, 'result']);
         Route::get('reports/{report}/executions/{execution}/status', [ReportController::class, 'executionStatus']);
         Route::apiResource('reports', ReportController::class);
+
+        require __DIR__.'/equipcontrol.php';
     });

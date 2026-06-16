@@ -121,7 +121,7 @@ export function PageContentHeader({
     <>
       <PageBreadcrumbs menu={menu} />
       {title ? (
-        <h1 className="font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
+        <h1 className="flex w-full items-baseline justify-between gap-3 font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
           {title}
         </h1>
       ) : null}

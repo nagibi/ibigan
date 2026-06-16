@@ -20,6 +20,7 @@ beforeEach(function (): void {
         'id' => $tenantId,
         'slug' => $tenantId,
         'name' => 'Test Corp',
+        'timezone' => config('app.default_timezone'),
     ]);
 
     $this->tenant->run(function (): void {
@@ -77,9 +78,13 @@ it('nega forgot-password com tenant inexistente', function (): void {
 });
 
 it('nega forgot-password sem campos obrigatórios', function (): void {
-    $this->postJson('/api/v1/auth/forgot-password', [])
+    $response = $this->postJson('/api/v1/auth/forgot-password', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['email', 'tenant_id']);
+        ->assertJsonPath('message_code', 'validation.failed');
+
+    $fields = collect($response->json('errors'))->pluck('field')->all();
+
+    expect($fields)->toContain('email', 'tenant_id');
 });
 
 // --- Reset Password ---
@@ -132,13 +137,18 @@ it('nega reset com senha fraca', function (): void {
         'password' => '123',
         'password_confirmation' => '123',
     ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['password']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'password');
 });
 
 it('nega reset sem campos obrigatórios', function (): void {
-    $this->postJson('/api/v1/auth/reset-password', [])
+    $response = $this->postJson('/api/v1/auth/reset-password', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['email', 'token', 'tenant_id', 'password']);
+        ->assertJsonPath('message_code', 'validation.failed');
+
+    $fields = collect($response->json('errors'))->pluck('field')->all();
+
+    expect($fields)->toContain('email', 'token', 'tenant_id', 'password');
 });
 
 it('invalida tokens anteriores após reset', function (): void {

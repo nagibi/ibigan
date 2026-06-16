@@ -21,7 +21,7 @@ import {
   dateRangeFilterToKey,
   useGridFilters,
 } from '@/hooks/use-grid-filters';
-import { formatCnpj } from '@/lib/brazilian-masks';
+import { formatGridMaskedCell } from '@/lib/grid-masked-field';
 import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
 import { adminTenantsService, type AdminTenant } from '@/services/admin-tenants.service';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
@@ -392,9 +392,9 @@ export function AdminTenantsPage() {
         label: 'CNPJ',
         sortable: true,
         sortKey: 'cnpj',
-        filter: { type: 'text', filterKey: 'cnpj', placeholder: 'CNPJ' },
+        filter: { type: 'text', filterKey: 'cnpj', placeholder: 'CNPJ', mask: 'cnpj' },
         className: 'min-w-[160px] text-sm text-muted-foreground whitespace-nowrap',
-        render: (tenant) => (tenant.cnpj ? formatCnpj(tenant.cnpj) : '—'),
+        render: (tenant) => formatGridMaskedCell(tenant.cnpj, 'cnpj'),
       },
       {
         id: 'slug',

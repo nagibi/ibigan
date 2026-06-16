@@ -3,6 +3,7 @@ import {
   BarChart2,
   Building2,
   FileBarChart,
+  HardHat,
   LayoutDashboard,
   Mail,
   Megaphone,
@@ -21,6 +22,11 @@ export const MENU_SIDEBAR: MenuConfig = [
     title: 'Dashboard',
     icon: LayoutDashboard,
     path: '/dashboard',
+  },
+  {
+    title: 'Equipamentos',
+    icon: HardHat,
+    path: '/equipamentos',
   },
   {
     heading: 'GESTÃO',

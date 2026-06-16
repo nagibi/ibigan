@@ -15,6 +15,7 @@ interface SyncGridUrlInput {
   sortDir?: SortDirection;
   debouncedFilters?: Record<string, string>;
   userFilter?: RolesUserFilter | null;
+  contextFilter?: string | null;
   syncPagination?: boolean;
   syncSort?: boolean;
   syncColumnFilters?: boolean;
@@ -28,6 +29,7 @@ export function useSyncGridUrl({
   sortDir,
   debouncedFilters,
   userFilter,
+  contextFilter,
   syncPagination = true,
   syncSort = true,
   syncColumnFilters = true,
@@ -43,6 +45,7 @@ export function useSyncGridUrl({
       sortDir: syncSort ? sortDir : 'asc',
       filters: syncColumnFilters ? debouncedFilters : undefined,
       userFilter,
+      contextFilter,
     });
 
     if (gridUrlSearchParamsAreEqual(searchParams, next)) return;
@@ -61,5 +64,6 @@ export function useSyncGridUrl({
     syncPagination,
     syncSort,
     userFilter,
+    contextFilter,
   ]);
 }

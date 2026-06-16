@@ -2,7 +2,9 @@ import { forwardRef, type ComponentProps } from 'react';
 import { applyMask, digitsOnly } from '@/lib/brazilian-masks';
 import { Input } from '@/components/ui/input';
 
-type MaskType = 'phone' | 'cpf' | 'cnpj';
+const MAX_CURRENCY_DIGITS = 13;
+
+type MaskType = 'phone' | 'cpf' | 'cnpj' | 'currency';
 
 interface MaskedInputProps extends Omit<ComponentProps<typeof Input>, 'onChange' | 'value'> {
   mask: MaskType;
@@ -22,6 +24,12 @@ export const MaskedInput = forwardRef<HTMLInputElement, MaskedInputProps>(
         value={displayValue}
         onChange={(event) => {
           const raw = event.target.value;
+          if (mask === 'currency') {
+            const digits = digitsOnly(raw).slice(0, MAX_CURRENCY_DIGITS);
+            onChange?.(storeDigits ? digits : applyMask(raw, mask));
+            return;
+          }
+
           onChange?.(storeDigits ? digitsOnly(raw) : applyMask(raw, mask));
         }}
       />

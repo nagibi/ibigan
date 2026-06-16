@@ -96,7 +96,8 @@ it('nega criação com evento inválido', function (): void {
         'events' => ['evento.inventado'],
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['events.0']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'events.0');
 });
 
 it('nega criação com URL inválida', function (): void {
@@ -107,7 +108,8 @@ it('nega criação com URL inválida', function (): void {
         'events' => ['user.created'],
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['url']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'url');
 });
 
 it('nega criação para viewer', function (): void {

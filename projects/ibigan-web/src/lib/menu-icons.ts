@@ -103,6 +103,10 @@ lookup.byPath.set('/admin/reports', Icons.BarChart2);
 lookup.byTitle.set('Modelos de Relatório', Icons.BarChart2);
 lookup.bySlug.set('templates-relatorio', Icons.BarChart2);
 lookup.byPath.set('/reports/executions', Icons.FileBarChart);
+lookup.byPath.set('/equipamentos', Icons.HardHat);
+lookup.byTitle.set('Equipamentos', Icons.HardHat);
+lookup.byTitle.set('EquipControl', Icons.HardHat);
+lookup.bySlug.set('equipcontrol', Icons.HardHat);
 
 function resolveFromLucideName(name: string): LucideIcon | null {
   const candidates = [

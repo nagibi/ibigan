@@ -2,6 +2,63 @@ export function digitsOnly(value: string): string {
   return value.replace(/\D/g, '');
 }
 
+const MAX_CURRENCY_DIGITS = 13;
+
+export function formatBrl(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+function parseCurrencyValue(value: string | number | null | undefined): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = Number(value.replace(',', '.').trim());
+    return normalized;
+  }
+
+  return Number.NaN;
+}
+
+export function numberToCurrencyDigits(value: string | number | null | undefined): string {
+  const numericValue = parseCurrencyValue(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) return '';
+  return String(Math.round(numericValue * 100));
+}
+
+export function currencyDigitsToNumber(digits: string): number {
+  const normalized = digitsOnly(digits);
+  if (!normalized) return NaN;
+  return Number(normalized) / 100;
+}
+
+export function formatCurrencyInput(value?: string | number | null): string {
+  const digits =
+    typeof value === 'number'
+      ? numberToCurrencyDigits(value)
+      : digitsOnly(value ?? '').slice(0, MAX_CURRENCY_DIGITS);
+
+  if (!digits) return '';
+
+  return formatBrl(Number(digits) / 100);
+}
+
+export function numericStringToCurrencyDigits(value: string): string {
+  const parsed = Number(value.replace(',', '.'));
+  if (!value.trim() || Number.isNaN(parsed)) return '';
+  return numberToCurrencyDigits(parsed);
+}
+
+export function currencyDigitsToNumericString(digits: string): string {
+  const amount = currencyDigitsToNumber(digits);
+  if (Number.isNaN(amount)) return '';
+  return String(amount);
+}
+
 export function formatPhone(value?: string | null): string {
   const digits = digitsOnly(value ?? '');
   if (!digits) return '';
@@ -48,7 +105,7 @@ export function formatCnpj(value?: string | null): string {
 
 export function applyMask(
   value: string,
-  mask: 'phone' | 'cpf' | 'cnpj',
+  mask: 'phone' | 'cpf' | 'cnpj' | 'currency',
 ): string {
   switch (mask) {
     case 'phone':
@@ -57,5 +114,7 @@ export function applyMask(
       return formatCpf(value);
     case 'cnpj':
       return formatCnpj(value);
+    case 'currency':
+      return formatCurrencyInput(value);
   }
 }

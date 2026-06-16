@@ -37,7 +37,7 @@ final class TenantSettingsController extends Controller
         abort_unless($request->user()->can('configuracao-gerenciar'), Response::HTTP_FORBIDDEN);
 
         $tenant = $this->currentTenant();
-        $tenant->update(collect($request->validated())->except(['locale'])->all());
+        $tenant->update($request->validated());
 
         return response()->json([
             'status' => 1,

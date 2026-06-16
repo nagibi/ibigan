@@ -192,15 +192,19 @@ export function FormToolbar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDeleting, onDelete]);
 
-  const hasSave = Boolean(onSaveAndList || onSaveAndNew || onSaveAndEdit);
+  const hasSaveActions = Boolean(onSaveAndList || onSaveAndNew || onSaveAndEdit);
+  const showEditSave = isEditing && hasSaveActions;
+  const showCreateToolbar = !isEditing && hasSaveActions;
   const primarySaveAction = onSaveAndList ?? onSaveAndNew ?? onSaveAndEdit;
   const primarySaveLabel = primarySaveLabelProp ?? t('form.save');
   const PrimarySaveIcon = PrimarySaveIconProp ?? Save;
   const saveDisabled = isSubmitting || !primarySaveAction || primarySaveDisabled || (isEditing && !isDirty);
   const hasSaveDropdown = Boolean(
-    (onSaveAndNew && primarySaveAction !== onSaveAndNew)
-    || (onSaveAndEdit && primarySaveAction !== onSaveAndEdit)
-    || (onSaveAndList && primarySaveAction !== onSaveAndList),
+    hasSaveActions && (
+      (onSaveAndNew && primarySaveAction !== onSaveAndNew)
+      || (onSaveAndEdit && primarySaveAction !== onSaveAndEdit)
+      || (onSaveAndList && primarySaveAction !== onSaveAndList)
+    ),
   );
   const hasLifecycle = isEditing && (onToggleActive || onDelete || onDuplicate);
   const hasAudit = isEditing && (createdBy || updatedBy || createdAt || updatedAt);
@@ -227,80 +231,104 @@ export function FormToolbar({
     />
   ) : null;
 
+  const clearButton = onClear ? (
+    <FormButton
+      label={t('common.clear')}
+      tooltip={t('form.tooltip.clear')}
+      icon={Undo2}
+      onClick={onClear}
+      disabled={!isDirty}
+    />
+  ) : null;
+
+  const primarySaveButton = (
+    <ToolbarTooltip content={primarySaveTooltip}>
+      <Button
+        type="button"
+        variant={primarySaveVariant}
+        size="sm"
+        disabled={saveDisabled}
+        onClick={primarySaveAction}
+        className={cn('h-8 shrink-0 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
+      >
+        {isSubmitting
+          ? <LoaderCircle className="size-3.5 animate-spin" />
+          : <PrimarySaveIcon className="size-3.5" />
+        }
+        {primarySaveLabel}
+      </Button>
+    </ToolbarTooltip>
+  );
+
+  const saveDropdown = hasSaveDropdown ? (
+    <DropdownMenu>
+      <ToolbarTooltip content={t('form.tooltip.save_options')}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant={primarySaveVariant}
+            size="sm"
+            mode="icon"
+            disabled={saveDisabled}
+            aria-label={t('form.tooltip.save_options')}
+            className={cn(
+              'h-8 shrink-0 rounded-l-none border-l',
+              isMobile ? 'size-8' : 'px-1.5',
+              primarySaveVariant === 'destructive'
+                ? 'border-destructive-foreground/20'
+                : 'border-primary-foreground/20',
+            )}
+          >
+            <ChevronDown className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+      </ToolbarTooltip>
+      <DropdownMenuContent align="start">
+        {onSaveAndNew && primarySaveAction !== onSaveAndNew && (
+          <DropdownMenuItem
+            disabled={saveDisabled}
+            onClick={onSaveAndNew}
+          >
+            <Plus className="size-4 mr-2" /> {t('form.save_and_new')}
+          </DropdownMenuItem>
+        )}
+        {onSaveAndEdit && primarySaveAction !== onSaveAndEdit && (
+          <DropdownMenuItem
+            disabled={saveDisabled}
+            onClick={onSaveAndEdit}
+          >
+            <Pencil className="size-4 mr-2" /> {t('form.save_and_edit')}
+          </DropdownMenuItem>
+        )}
+        {onSaveAndList && primarySaveAction !== onSaveAndList && (
+          <DropdownMenuItem
+            disabled={saveDisabled}
+            onClick={onSaveAndList}
+          >
+            <Save className="size-4 mr-2" /> {t('form.save_and_list')}
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
   return (
     <>
       <GridToolbarRoot>
-        {hasSave && (
+        {showCreateToolbar && (
+          <GridToolbarGroup>
+            {primarySaveButton}
+            {saveDropdown}
+            {backButton}
+            {clearButton}
+          </GridToolbarGroup>
+        )}
+
+        {showEditSave && (
           <>
             <GridToolbarGroup>
-              <ToolbarTooltip content={primarySaveTooltip}>
-                <Button
-                  type="button"
-                  variant={primarySaveVariant}
-                  size="sm"
-                  disabled={saveDisabled}
-                  onClick={primarySaveAction}
-                  className={cn('h-8 shrink-0 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
-                >
-                  {isSubmitting
-                    ? <LoaderCircle className="size-3.5 animate-spin" />
-                    : <PrimarySaveIcon className="size-3.5" />
-                  }
-                  {primarySaveLabel}
-                </Button>
-              </ToolbarTooltip>
-
-              {hasSaveDropdown && (
-                <DropdownMenu>
-                  <ToolbarTooltip content={t('form.tooltip.save_options')}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant={primarySaveVariant}
-                        size="sm"
-                        mode="icon"
-                        disabled={saveDisabled}
-                        aria-label={t('form.tooltip.save_options')}
-                        className={cn(
-                          'h-8 shrink-0 rounded-l-none border-l',
-                          isMobile ? 'size-8' : 'px-1.5',
-                          primarySaveVariant === 'destructive'
-                            ? 'border-destructive-foreground/20'
-                            : 'border-primary-foreground/20',
-                        )}
-                      >
-                        <ChevronDown className="size-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </ToolbarTooltip>
-                  <DropdownMenuContent align="start">
-                    {onSaveAndNew && primarySaveAction !== onSaveAndNew && (
-                      <DropdownMenuItem
-                        disabled={saveDisabled}
-                        onClick={onSaveAndNew}
-                      >
-                        <Plus className="size-4 mr-2" /> {t('form.save_and_new')}
-                      </DropdownMenuItem>
-                    )}
-                    {onSaveAndEdit && primarySaveAction !== onSaveAndEdit && (
-                      <DropdownMenuItem
-                        disabled={saveDisabled}
-                        onClick={onSaveAndEdit}
-                      >
-                        <Pencil className="size-4 mr-2" /> {t('form.save_and_edit')}
-                      </DropdownMenuItem>
-                    )}
-                    {onSaveAndList && primarySaveAction !== onSaveAndList && (
-                      <DropdownMenuItem
-                        disabled={saveDisabled}
-                        onClick={onSaveAndList}
-                      >
-                        <Save className="size-4 mr-2" /> {t('form.save_and_list')}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              {primarySaveButton}
+              {saveDropdown}
 
               {backButton}
             </GridToolbarGroup>
@@ -315,21 +343,13 @@ export function FormToolbar({
               />
             )}
 
-            {onClear && (
-              <FormButton
-                label={t('common.clear')}
-                tooltip={t('form.tooltip.clear')}
-                icon={Undo2}
-                onClick={onClear}
-                disabled={!isDirty}
-              />
-            )}
+            {onClear && clearButton}
 
             {refreshButton}
           </>
         )}
 
-        {!hasSave && hasNavigation && (
+        {isEditing && !showEditSave && hasNavigation && (
           <GridToolbarGroup>
             {backButton}
             {refreshButton}

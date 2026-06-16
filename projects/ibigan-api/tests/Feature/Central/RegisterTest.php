@@ -65,9 +65,13 @@ it('usuário criado recebe role admin', function (): void {
 });
 
 it('nega register sem campos obrigatórios', function (): void {
-    $this->postJson('/api/v1/auth/register', [])
+    $response = $this->postJson('/api/v1/auth/register', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['company_name', 'name', 'email', 'password']);
+        ->assertJsonPath('message_code', 'validation.failed');
+
+    $fields = collect($response->json('errors'))->pluck('field')->all();
+
+    expect($fields)->toContain('company_name', 'name', 'email', 'password');
 });
 
 it('nega register com senha fraca', function (): void {
@@ -78,7 +82,8 @@ it('nega register com senha fraca', function (): void {
         'password' => '123',
         'password_confirmation' => '123',
     ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['password']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'password');
 });
 
 it('nega register sem confirmação de senha', function (): void {
@@ -88,7 +93,8 @@ it('nega register sem confirmação de senha', function (): void {
         'email' => 'admin@empresa.com',
         'password' => 'senha123',
     ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['password']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'password');
 });
 
 it('token retornado é válido para autenticar', function (): void {

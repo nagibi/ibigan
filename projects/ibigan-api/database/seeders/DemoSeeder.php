@@ -236,6 +236,7 @@ class DemoSeeder extends Seeder
                 $this->seedNotificationPreferences($tenantUsers);
                 $this->seedCustomizeMenus();
                 $this->seedRecentActivity($superAdmin);
+                $this->call(EquipamentoSeeder::class);
 
                 $this->command->info("  ✓ Tenant {$tenantData['id']} populado com sucesso");
             });

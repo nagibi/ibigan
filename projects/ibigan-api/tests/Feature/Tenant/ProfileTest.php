@@ -93,7 +93,8 @@ it('nega atualização com email já em uso', function (): void {
         'email' => 'outro@test.com',
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['email']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'email');
 });
 
 it('permite atualizar mantendo o mesmo email', function (): void {
@@ -130,7 +131,8 @@ it('nega atualização de senha com senha atual incorreta', function (): void {
         'password_confirmation' => 'novaSenha123',
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['current_password']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'current_password');
 });
 
 it('nega atualização de senha fraca', function (): void {
@@ -142,7 +144,8 @@ it('nega atualização de senha fraca', function (): void {
         'password_confirmation' => '123',
     ], ['X-Tenant-ID' => $this->tenant->id])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['password']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'password');
 });
 
 // --- Avatar ---
@@ -174,7 +177,8 @@ it('nega upload de avatar sem arquivo', function (): void {
         'Accept' => 'application/json',
     ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['avatar']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'avatar');
 });
 
 it('deleta avatar do perfil', function (): void {

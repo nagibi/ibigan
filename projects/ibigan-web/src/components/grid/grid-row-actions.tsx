@@ -98,7 +98,7 @@ export function GridRowActions({ actions }: GridRowActionsProps) {
               action.onClick();
             }}
           >
-            <action.icon className="size-4" />
+            {action.icon ? <action.icon className="size-4" /> : null}
             {action.label}
           </DropdownMenuItem>
         ))}

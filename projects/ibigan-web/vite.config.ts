@@ -19,7 +19,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  build: {
+  optimizeDeps: {
+    include: ['html5-qrcode'],
+  },
     chunkSizeWarningLimit: 3000,
   },
 });

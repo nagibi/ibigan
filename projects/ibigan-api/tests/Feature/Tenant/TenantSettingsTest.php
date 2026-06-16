@@ -123,11 +123,12 @@ it('nega atualização para viewer', function (): void {
 it('nega timezone inválida', function (): void {
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->putJson('/api/v1/tenant/settings', [
-        'timezone' => 'America/CidadeInventada',
-    ], ['X-Tenant-ID' => $this->tenant->id])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['timezone']);
+    expectApiValidationErrors(
+        $this->putJson('/api/v1/tenant/settings', [
+            'timezone' => 'America/CidadeInventada',
+        ], ['X-Tenant-ID' => $this->tenant->id]),
+        'timezone'
+    );
 });
 
 it('admin atualiza configurações de segurança do tenant', function (): void {
@@ -149,11 +150,12 @@ it('admin atualiza configurações de segurança do tenant', function (): void {
 it('nega locale inválido', function (): void {
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
-    $this->putJson('/api/v1/tenant/settings', [
-        'locale' => 'klingon',
-    ], ['X-Tenant-ID' => $this->tenant->id])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['locale']);
+    expectApiValidationErrors(
+        $this->putJson('/api/v1/tenant/settings', [
+            'locale' => 'klingon',
+        ], ['X-Tenant-ID' => $this->tenant->id]),
+        'locale'
+    );
 });
 
 // --- Logo ---

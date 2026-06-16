@@ -117,7 +117,8 @@ it('rejeita query com INSERT', function (): void {
         'parameters' => [],
     ], reportHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['query']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'query');
 });
 
 it('rejeita query que não começa com SELECT', function (): void {

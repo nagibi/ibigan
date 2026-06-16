@@ -214,7 +214,8 @@ it('nega criação com badge maior que 50 caracteres', function (): void {
         'badge' => str_repeat('a', 51),
     ]), menuHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['badge']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'badge');
 });
 
 it('nega criação para viewer', function (): void {
@@ -231,7 +232,8 @@ it('nega criação com slug duplicado', function (): void {
 
     $this->postJson('/api/v1/menus', menuPayload(), menuHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['slug']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'slug');
 });
 
 it('cria menu filho com parent_id válido', function (): void {

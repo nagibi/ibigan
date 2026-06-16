@@ -110,4 +110,22 @@ export const usersService = {
 
   toggleActive: (id: number, isActive: boolean) =>
     api.patch<{ result: User }>(`/v1/users/${id}/toggle-active`, { is_active: isActive }),
+
+  listAllActive: async (search?: string): Promise<User[]> => {
+    const perPage = 100;
+    const firstPage = await usersService.list(1, perPage, search);
+    const { data: initialUsers, meta } = firstPage.data.result;
+
+    if (meta.last_page <= 1) {
+      return initialUsers.filter(isUserActive);
+    }
+
+    const remainingPages = await Promise.all(
+      Array.from({ length: meta.last_page - 1 }, (_, index) =>
+        usersService.list(index + 2, perPage, search).then((response) => response.data.result.data),
+      ),
+    );
+
+    return [...initialUsers, ...remainingPages.flat()].filter(isUserActive);
+  },
 };

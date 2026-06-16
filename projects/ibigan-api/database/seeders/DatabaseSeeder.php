@@ -38,6 +38,8 @@ class DatabaseSeeder extends Seeder
 
             $platformAdmins = $this->seedPlatformTenantSuperAdmins('acme', 'acme');
 
+            $this->call(EquipamentoSeeder::class);
+
             $catalogSyncUser = $platformAdmins[0] ?? null;
 
             if ($catalogSyncUser !== null) {

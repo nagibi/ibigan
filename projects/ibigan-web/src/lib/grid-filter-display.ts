@@ -1,4 +1,5 @@
 import type { GridColumnFilterDef } from '@/hooks/use-grid-filters';
+import { applyMask } from '@/lib/brazilian-masks';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 
 export function formatSelectFilterDisplayValue(
@@ -20,6 +21,10 @@ export function getColumnFilterDisplayValue(
 
   if (filter.type === 'multi') {
     return parseMultiFilterValue(value).join(', ');
+  }
+
+  if (filter.mask) {
+    return applyMask(value, filter.mask);
   }
 
   return value;

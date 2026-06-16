@@ -117,6 +117,7 @@ class TenancyServiceProvider extends ServiceProvider
         // Limpa cache do Spatie Permission ao inicializar/encerrar tenant
         Event::listen(Events\TenancyInitialized::class, function (Events\TenancyInitialized $event) {
             app(PermissionRegistrar::class)->forgetCachedPermissions();
+            app()->forgetInstance('auth.password');
             $this->configureTenantPublicDiskUrl($event->tenancy->tenant);
 
             $this->reregisterActivityLogObservers();
@@ -124,6 +125,7 @@ class TenancyServiceProvider extends ServiceProvider
 
         Event::listen(Events\TenancyEnded::class, function () {
             app(PermissionRegistrar::class)->forgetCachedPermissions();
+            app()->forgetInstance('auth.password');
             $this->revertPublicDiskUrl();
         });
     }

@@ -1,0 +1,1097 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { FieldMessage } from '@/components/ui/field-message';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Textarea } from '@/components/ui/textarea';
+import { mapApiErrorsToRecord } from '@/lib/apply-api-form-errors';
+import { getApiErrorMessage } from '@/lib/get-api-error-message';
+import { HISTORICO_EVENTO_LABELS } from '@/lib/equipamento-labels';
+import { numberToCurrencyDigits } from '@/lib/brazilian-masks';
+import {
+  buildEquipamentoFormValues,
+  equipamentoFormSchema,
+  type EquipamentoFormValues,
+} from '@/lib/equipamento-form-schema';
+import { todayIsoDate } from '@/lib/equipamento-utils';
+import { mapZodFieldErrors } from '@/lib/zod-validators';
+import { MaskedInput } from '@/components/ui/masked-input';
+import { showAppToast } from '@/lib/show-app-toast';
+import { equipamentosService } from '@/services/equipamentos.service';
+import type { Equipamento, EquipamentoHistoricoItem } from '@/types/equipamento';
+import { EquipamentoThumbnail } from '@/pages/equipamentos/components/equipamento-thumbnail';
+import {
+  buildEquipamentoStoreFormData,
+  buildEquipamentoUpdateFormData,
+  EquipamentoFotoField,
+} from '@/pages/equipamentos/components/equipamento-foto-field';
+import {
+  EquipamentoUserSelect,
+  getUserMatricula,
+} from '@/pages/equipamentos/components/equipamento-user-select';
+import { EquipamentoDialogShell } from '@/pages/equipamentos/components/equipamento-dialog-shell';
+import { cn } from '@/lib/utils';
+
+type ModalBaseProps = {
+  equipamento: Equipamento | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+function useEquipamentoFieldErrors() {
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const clear = useCallback(() => setFieldErrors({}), []);
+
+  const clearField = useCallback((field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const applyApi = useCallback((error: unknown) => {
+    const mapped = mapApiErrorsToRecord(error);
+    if (!mapped) return false;
+    setFieldErrors(mapped);
+    return true;
+  }, []);
+
+  return { fieldErrors, clear, clearField, applyApi, setFieldErrors };
+}
+
+function fieldErrorClass(hasError: boolean) {
+  return cn(hasError && 'border-destructive');
+}
+
+function useInvalidateEquipamentos() {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['equipamentos'] });
+    queryClient.invalidateQueries({ queryKey: ['equipamentos-dashboard'] });
+  };
+}
+
+export function EmprestarModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const [obraId, setObraId] = useState('');
+  const [colaboradorUserId, setColaboradorUserId] = useState('');
+  const [colaboradorNome, setColaboradorNome] = useState('');
+  const [colaboradorMatricula, setColaboradorMatricula] = useState('');
+  const [encarregadoUserId, setEncarregadoUserId] = useState('');
+  const [encarregadoNome, setEncarregadoNome] = useState('');
+  const [prazoDias, setPrazoDias] = useState('15');
+
+  const { data: obras = [], isLoading: loadingObras } = useQuery({
+    queryKey: ['equipamentos-lookups', 'obras'],
+    queryFn: () => equipamentosService.lookupObras(),
+    enabled: open,
+  });
+
+  const obraOptions = obras.map((obra) => ({
+    value: String(obra.id),
+    label: `${obra.codigo ? `${obra.codigo} — ` : ''}${obra.nome}`,
+    keywords: obra.codigo ?? undefined,
+  }));
+
+  useEffect(() => {
+    if (!open) return;
+    setObraId('');
+    setColaboradorUserId('');
+    setColaboradorNome('');
+    setColaboradorMatricula('');
+    setEncarregadoUserId('');
+    setEncarregadoNome('');
+    setPrazoDias('15');
+  }, [open, equipamento?.id]);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      equipamentosService.emprestar(equipamento!.id, {
+        obra_id: Number(obraId),
+        colaborador_nome: colaboradorNome,
+        colaborador_matricula: colaboradorMatricula,
+        encarregado_nome: encarregadoNome,
+        data_retirada: todayIsoDate(),
+        prazo_dias: Number(prazoDias),
+      }),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Equipamento emprestado com sucesso.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao emprestar equipamento.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Emprestar {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                mutation.isPending ||
+                !obraId ||
+                !colaboradorUserId ||
+                !encarregadoUserId
+              }
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Confirmar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>Obra destino</Label>
+            <SearchableSelect
+              value={obraId}
+              onValueChange={setObraId}
+              options={obraOptions}
+              placeholder="Selecione a obra"
+              searchPlaceholder="Buscar obra..."
+              loading={loadingObras}
+              disabled={loadingObras}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Colaborador</Label>
+            <EquipamentoUserSelect
+              value={colaboradorUserId}
+              enabled={open}
+              placeholder="Selecione o colaborador"
+              onSelect={(user) => {
+                setColaboradorUserId(String(user.id));
+                setColaboradorNome(user.name);
+                setColaboradorMatricula(getUserMatricula(user));
+              }}
+            />
+            {colaboradorMatricula ? (
+              <p className="text-xs text-muted-foreground">Matrícula: {colaboradorMatricula}</p>
+            ) : null}
+          </div>
+          <div className="grid gap-2">
+            <Label>Encarregado / líder</Label>
+            <EquipamentoUserSelect
+              value={encarregadoUserId}
+              enabled={open}
+              placeholder="Selecione o encarregado"
+              onSelect={(user) => {
+                setEncarregadoUserId(String(user.id));
+                setEncarregadoNome(user.name);
+              }}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Prazo (dias)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={prazoDias}
+              onChange={(e) => setPrazoDias(e.target.value)}
+            />
+          </div>
+        </div>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+export function ManutencaoModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const [responsabilidade, setResponsabilidade] = useState<'fortes' | 'equipamento'>('equipamento');
+  const [motivo, setMotivo] = useState('');
+  const [responsavel, setResponsavel] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setResponsabilidade('equipamento');
+    setMotivo('');
+    setResponsavel('');
+  }, [open, equipamento?.id]);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      equipamentosService.enviarManutencao(equipamento!.id, {
+        responsabilidade,
+        motivo,
+        responsavel_manutencao: responsavel,
+        data_entrada: todayIsoDate(),
+      }),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Equipamento enviado para manutenção.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao enviar para manutenção.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Manutenção — {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={mutation.isPending || !motivo.trim() || !responsavel.trim()}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Enviar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>Responsabilidade</Label>
+            <SearchableSelect
+              value={responsabilidade}
+              onValueChange={(value) => setResponsabilidade(value as 'fortes' | 'equipamento')}
+              options={[
+                { value: 'equipamento', label: 'Equipamento (fornecedor)' },
+                { value: 'fortes', label: 'Fortes' },
+              ]}
+              placeholder="Selecione a responsabilidade"
+              searchPlaceholder="Buscar..."
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Motivo</Label>
+            <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Responsável pela manutenção</Label>
+            <Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+          </div>
+        </div>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+export function BaixaModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const [tipo, setTipo] = useState<'devolucao' | 'perda'>('devolucao');
+  const [motivo, setMotivo] = useState('');
+  const [responsavel, setResponsavel] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setTipo('devolucao');
+    setMotivo('');
+    setResponsavel('');
+  }, [open, equipamento?.id]);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      equipamentosService.baixar(equipamento!.id, {
+        tipo,
+        data_baixa: todayIsoDate(),
+        ...(tipo === 'perda'
+          ? { motivo, responsavel_perda: responsavel }
+          : { observacoes: motivo || undefined }),
+      }),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Baixa registrada com sucesso.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao registrar baixa.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Baixar {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                mutation.isPending || (tipo === 'perda' && (!motivo.trim() || !responsavel.trim()))
+              }
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Confirmar baixa'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>Tipo de baixa</Label>
+            <SearchableSelect
+              value={tipo}
+              onValueChange={(value) => setTipo(value as 'devolucao' | 'perda')}
+              options={[
+                { value: 'devolucao', label: 'Devolução ao fornecedor' },
+                { value: 'perda', label: 'Perda / extravio' },
+              ]}
+              placeholder="Selecione o tipo"
+              searchPlaceholder="Buscar..."
+            />
+          </div>
+          {tipo === 'perda' ? (
+            <>
+              <div className="grid gap-2">
+                <Label>Motivo</Label>
+                <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Responsável pela perda</Label>
+                <Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+              </div>
+            </>
+          ) : (
+            <div className="grid gap-2">
+              <Label>Observações (opcional)</Label>
+              <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} />
+            </div>
+          )}
+        </div>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+export function DevolverModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const emprestimoId = equipamento?.emprestimo_ativo?.id;
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      equipamentosService.devolverEmprestimo(emprestimoId!, {
+        data_devolucao: todayIsoDate(),
+      }),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Devolução registrada com sucesso.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao registrar devolução.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Devolver {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={mutation.isPending || !emprestimoId} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Confirmar devolução'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Confirma a devolução do equipamento em{' '}
+          {todayIsoDate().split('-').reverse().join('/')}?
+        </p>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+export function RenovarModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const emprestimoId = equipamento?.emprestimo_ativo?.id;
+  const [prazoAdicional, setPrazoAdicional] = useState('7');
+  const [observacao, setObservacao] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setPrazoAdicional('7');
+    setObservacao('');
+  }, [open, equipamento?.id]);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      equipamentosService.renovarEmprestimo(emprestimoId!, {
+        prazo_adicional_dias: Number(prazoAdicional),
+        data_renovacao: todayIsoDate(),
+        observacao: observacao || undefined,
+      }),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Empréstimo renovado com sucesso.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao renovar empréstimo.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Renovar empréstimo — {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={mutation.isPending || !emprestimoId || Number(prazoAdicional) < 1}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Renovar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>Prazo adicional (dias)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={prazoAdicional}
+              onChange={(e) => setPrazoAdicional(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Observação (opcional)</Label>
+            <Textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={2} />
+          </div>
+        </div>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+export function FinalizarManutencaoModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const manutencaoId = equipamento?.manutencao_ativa?.id;
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      equipamentosService.finalizarManutencao(manutencaoId!, {
+        data_saida: todayIsoDate(),
+      }),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Manutenção finalizada.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao finalizar manutenção.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Finalizar manutenção — {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={mutation.isPending || !manutencaoId} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Finalizar'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          O equipamento voltará para o estoque após a finalização.
+        </p>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+export function HistoricoModal({
+  equipamento,
+  open,
+  onOpenChange,
+}: ModalBaseProps) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['equipamentos-historico', equipamento?.id],
+    queryFn: () => equipamentosService.historico(equipamento!.id, { per_page: 50 }),
+    enabled: open && Boolean(equipamento?.id),
+  });
+
+  const items = data?.data ?? [];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        className="max-w-lg"
+        header={
+          <div className="flex items-center gap-3">
+            {equipamento ? (
+              <EquipamentoThumbnail equipamento={equipamento} size="sm" previewEnabled />
+            ) : null}
+            <DialogTitle>Histórico — {equipamento?.patrimonio}</DialogTitle>
+          </div>
+        }
+      >
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : items.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">Nenhum registro.</p>
+        ) : (
+          <ol className="relative space-y-0 ps-2">
+            {items.map((item, index) => (
+              <HistoricoTimelineItem
+                key={item.id}
+                item={item}
+                isLast={index === items.length - 1}
+              />
+            ))}
+          </ol>
+        )}
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+const HISTORICO_EVENTO_COLORS: Record<string, string> = {
+  emprestado: 'bg-blue-500',
+  devolvido: 'bg-emerald-500',
+  renovado: 'bg-indigo-500',
+  manutencao_iniciada: 'bg-amber-500',
+  manutencao_finalizada: 'bg-emerald-500',
+  cadastrado: 'bg-primary',
+  baixado: 'bg-zinc-500',
+  perdido: 'bg-red-500',
+};
+
+function HistoricoTimelineItem({
+  item,
+  isLast,
+}: {
+  item: EquipamentoHistoricoItem;
+  isLast: boolean;
+}) {
+  const label = HISTORICO_EVENTO_LABELS[item.evento] ?? item.evento.replace(/_/g, ' ');
+  const date = item.created_at ? new Date(item.created_at) : null;
+  const dotColor = HISTORICO_EVENTO_COLORS[item.evento] ?? 'bg-muted-foreground';
+
+  return (
+    <li className="relative flex gap-3 pb-5">
+      {!isLast ? (
+        <span className="absolute start-[0.4rem] top-3 bottom-0 w-px bg-border" aria-hidden />
+      ) : null}
+      <span
+        className={cn('relative z-10 mt-1 size-3 shrink-0 rounded-full ring-4 ring-background', dotColor)}
+        aria-hidden
+      />
+      <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-semibold text-foreground">{label}</p>
+          <time className="shrink-0 text-xs font-medium text-muted-foreground">
+            {date
+              ? date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+              : ''}
+          </time>
+        </div>
+        {item.registrado_por?.name ? (
+          <p className="mt-1 text-xs text-muted-foreground">Por {item.registrado_por.name}</p>
+        ) : null}
+        {item.observacao ? (
+          <p className="mt-1 text-xs text-muted-foreground">{item.observacao}</p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+export function CadastroEquipamentoModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const invalidate = useInvalidateEquipamentos();
+  const [patrimonio, setPatrimonio] = useState('');
+  const [tipoId, setTipoId] = useState('');
+  const [fornecedorId, setFornecedorId] = useState('');
+  const [obraId, setObraId] = useState('');
+  const [valorMensal, setValorMensal] = useState('');
+  const [isCritico, setIsCritico] = useState(false);
+  const [foto, setFoto] = useState<File | null>(null);
+  const { fieldErrors, clear, clearField, applyApi, setFieldErrors } = useEquipamentoFieldErrors();
+
+  const { data: tipos = [] } = useQuery({
+    queryKey: ['equipamentos-lookups', 'tipos'],
+    queryFn: () => equipamentosService.lookupTipos(),
+    enabled: open,
+  });
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ['equipamentos-lookups', 'fornecedores'],
+    queryFn: () => equipamentosService.lookupFornecedores(),
+    enabled: open,
+  });
+  const { data: obras = [] } = useQuery({
+    queryKey: ['equipamentos-lookups', 'obras'],
+    queryFn: () => equipamentosService.lookupObras(),
+    enabled: open,
+  });
+
+  const tipoOptions = tipos.map((tipo) => ({
+    value: String(tipo.id),
+    label: tipo.nome,
+  }));
+  const fornecedorOptions = fornecedores.map((item) => ({
+    value: String(item.id),
+    label: item.nome,
+  }));
+  const obraOptions = obras.map((obra) => ({
+    value: String(obra.id),
+    label: `${obra.codigo ? `${obra.codigo} — ` : ''}${obra.nome}`,
+    keywords: obra.codigo ?? undefined,
+  }));
+
+  useEffect(() => {
+    if (!open) return;
+    setPatrimonio('');
+    setTipoId('');
+    setFornecedorId('');
+    setObraId('');
+    setValorMensal('');
+    setIsCritico(false);
+    setFoto(null);
+    clear();
+  }, [open, clear]);
+
+  const mutation = useMutation({
+    mutationFn: (values: EquipamentoFormValues) =>
+      equipamentosService.store(
+        buildEquipamentoStoreFormData({
+          patrimonio: values.patrimonio,
+          tipo_id: values.tipo_id,
+          fornecedor_id: values.fornecedor_id,
+          obra_id: values.obra_id,
+          valor_mensal: values.valor_mensal,
+          data_entrada: todayIsoDate(),
+          is_critico: values.is_critico,
+          foto,
+        }),
+      ),
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Equipamento cadastrado.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      if (applyApi(error)) return;
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao cadastrar equipamento.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    const result = equipamentoFormSchema.safeParse(
+      buildEquipamentoFormValues({
+        patrimonio,
+        tipoId,
+        fornecedorId,
+        obraId,
+        valorMensalDigits: valorMensal,
+        isCritico,
+      }),
+    );
+
+    if (!result.success) {
+      setFieldErrors(mapZodFieldErrors(result.error));
+      return;
+    }
+
+    clear();
+    mutation.mutate(result.data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Novo equipamento</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={mutation.isPending} onClick={handleSubmit}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Cadastrar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <EquipamentoFotoField
+            patrimonio={patrimonio || 'Novo'}
+            tipoNome={tipos.find((item) => String(item.id) === tipoId)?.nome}
+            value={foto}
+            onChange={(file) => {
+              clearField('foto');
+              setFoto(file);
+            }}
+          />
+          <FieldMessage message={fieldErrors.foto} />
+          <div className="grid gap-2">
+            <Label required>Patrimônio</Label>
+            <Input
+              value={patrimonio}
+              onChange={(e) => {
+                clearField('patrimonio');
+                setPatrimonio(e.target.value);
+              }}
+              className={fieldErrorClass(Boolean(fieldErrors.patrimonio))}
+            />
+            <FieldMessage message={fieldErrors.patrimonio} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Tipo</Label>
+            <SearchableSelect
+              value={tipoId}
+              onValueChange={(value) => {
+                clearField('tipo_id');
+                setTipoId(value);
+              }}
+              options={tipoOptions}
+              placeholder="Selecione"
+              searchPlaceholder="Buscar tipo..."
+              className={fieldErrorClass(Boolean(fieldErrors.tipo_id))}
+            />
+            <FieldMessage message={fieldErrors.tipo_id} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Fornecedor</Label>
+            <SearchableSelect
+              value={fornecedorId}
+              onValueChange={(value) => {
+                clearField('fornecedor_id');
+                setFornecedorId(value);
+              }}
+              options={fornecedorOptions}
+              placeholder="Selecione"
+              searchPlaceholder="Buscar fornecedor..."
+              className={fieldErrorClass(Boolean(fieldErrors.fornecedor_id))}
+            />
+            <FieldMessage message={fieldErrors.fornecedor_id} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Obra</Label>
+            <SearchableSelect
+              value={obraId}
+              onValueChange={(value) => {
+                clearField('obra_id');
+                setObraId(value);
+              }}
+              options={obraOptions}
+              placeholder="Selecione"
+              searchPlaceholder="Buscar obra..."
+              className={fieldErrorClass(Boolean(fieldErrors.obra_id))}
+            />
+            <FieldMessage message={fieldErrors.obra_id} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Valor mensal</Label>
+            <MaskedInput
+              mask="currency"
+              placeholder="R$ 0,00"
+              value={valorMensal}
+              onChange={(value) => {
+                clearField('valor_mensal');
+                setValorMensal(value);
+              }}
+              className={fieldErrorClass(Boolean(fieldErrors.valor_mensal))}
+            />
+            <FieldMessage message={fieldErrors.valor_mensal} />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isCritico}
+              onChange={(e) => setIsCritico(e.target.checked)}
+              className="size-4 rounded border-input"
+            />
+            Equipamento crítico
+          </label>
+        </div>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}
+
+
+export function EditarEquipamentoModal({ equipamento, open, onOpenChange }: ModalBaseProps) {
+  const invalidate = useInvalidateEquipamentos();
+  const [patrimonio, setPatrimonio] = useState('');
+  const [tipoId, setTipoId] = useState('');
+  const [fornecedorId, setFornecedorId] = useState('');
+  const [obraId, setObraId] = useState('');
+  const [valorMensal, setValorMensal] = useState('');
+  const [isCritico, setIsCritico] = useState(false);
+  const [foto, setFoto] = useState<File | null>(null);
+  const { fieldErrors, clear, clearField, applyApi, setFieldErrors } = useEquipamentoFieldErrors();
+
+  const { data: tipos = [] } = useQuery({
+    queryKey: ['equipamentos-lookups', 'tipos'],
+    queryFn: () => equipamentosService.lookupTipos(),
+    enabled: open,
+  });
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ['equipamentos-lookups', 'fornecedores'],
+    queryFn: () => equipamentosService.lookupFornecedores(),
+    enabled: open,
+  });
+  const { data: obras = [] } = useQuery({
+    queryKey: ['equipamentos-lookups', 'obras'],
+    queryFn: () => equipamentosService.lookupObras(),
+    enabled: open,
+  });
+
+  const tipoOptions = tipos.map((tipo) => ({
+    value: String(tipo.id),
+    label: tipo.nome,
+  }));
+  const fornecedorOptions = fornecedores.map((item) => ({
+    value: String(item.id),
+    label: item.nome,
+  }));
+  const obraOptions = obras.map((obra) => ({
+    value: String(obra.id),
+    label: `${obra.codigo ? `${obra.codigo} — ` : ''}${obra.nome}`,
+    keywords: obra.codigo ?? undefined,
+  }));
+
+  useEffect(() => {
+    if (!open || !equipamento) return;
+
+    setPatrimonio(equipamento.patrimonio);
+    setTipoId(String(equipamento.tipo_id));
+    setFornecedorId(String(equipamento.fornecedor_id));
+    setObraId(String(equipamento.obra_id));
+    setValorMensal(numberToCurrencyDigits(equipamento.valor_mensal));
+    setIsCritico(equipamento.is_critico);
+    setFoto(null);
+    clear();
+  }, [open, equipamento, clear]);
+
+  const mutation = useMutation({
+    mutationFn: (values: EquipamentoFormValues) => {
+      const payload = {
+        patrimonio: values.patrimonio,
+        tipo_id: values.tipo_id,
+        fornecedor_id: values.fornecedor_id,
+        obra_id: values.obra_id,
+        valor_mensal: values.valor_mensal,
+        is_critico: values.is_critico,
+        foto,
+      };
+
+      if (foto) {
+        return equipamentosService.update(
+          equipamento!.id,
+          buildEquipamentoUpdateFormData(payload),
+        );
+      }
+
+      return equipamentosService.update(equipamento!.id, payload);
+    },
+    onSuccess: () => {
+      invalidate();
+      showAppToast({ title: 'Equipamento atualizado.' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      if (applyApi(error)) return;
+      showAppToast({
+        title: getApiErrorMessage(error, 'Erro ao atualizar equipamento.'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!equipamento) return;
+
+    const result = equipamentoFormSchema.safeParse(
+      buildEquipamentoFormValues({
+        patrimonio,
+        tipoId,
+        fornecedorId,
+        obraId,
+        valorMensalDigits: valorMensal,
+        isCritico,
+      }),
+    );
+
+    if (!result.success) {
+      setFieldErrors(mapZodFieldErrors(result.error));
+      return;
+    }
+
+    clear();
+    mutation.mutate(result.data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EquipamentoDialogShell
+        header={<DialogTitle>Editar {equipamento?.patrimonio}</DialogTitle>}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={mutation.isPending || !equipamento} onClick={handleSubmit}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Salvar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          {equipamento ? (
+            <EquipamentoFotoField
+              patrimonio={equipamento.patrimonio}
+              tipoNome={equipamento.tipo?.nome}
+              currentFotoUrl={equipamento.foto_url}
+              value={foto}
+              onChange={(file) => {
+                clearField('foto');
+                setFoto(file);
+              }}
+            />
+          ) : null}
+          <FieldMessage message={fieldErrors.foto} />
+          <div className="grid gap-2">
+            <Label required>Patrimônio</Label>
+            <Input
+              value={patrimonio}
+              onChange={(e) => {
+                clearField('patrimonio');
+                setPatrimonio(e.target.value);
+              }}
+              className={fieldErrorClass(Boolean(fieldErrors.patrimonio))}
+            />
+            <FieldMessage message={fieldErrors.patrimonio} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Tipo</Label>
+            <SearchableSelect
+              value={tipoId}
+              onValueChange={(value) => {
+                clearField('tipo_id');
+                setTipoId(value);
+              }}
+              options={tipoOptions}
+              placeholder="Selecione"
+              searchPlaceholder="Buscar tipo..."
+              className={fieldErrorClass(Boolean(fieldErrors.tipo_id))}
+            />
+            <FieldMessage message={fieldErrors.tipo_id} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Fornecedor</Label>
+            <SearchableSelect
+              value={fornecedorId}
+              onValueChange={(value) => {
+                clearField('fornecedor_id');
+                setFornecedorId(value);
+              }}
+              options={fornecedorOptions}
+              placeholder="Selecione"
+              searchPlaceholder="Buscar fornecedor..."
+              className={fieldErrorClass(Boolean(fieldErrors.fornecedor_id))}
+            />
+            <FieldMessage message={fieldErrors.fornecedor_id} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Obra</Label>
+            <SearchableSelect
+              value={obraId}
+              onValueChange={(value) => {
+                clearField('obra_id');
+                setObraId(value);
+              }}
+              options={obraOptions}
+              placeholder="Selecione"
+              searchPlaceholder="Buscar obra..."
+              className={fieldErrorClass(Boolean(fieldErrors.obra_id))}
+            />
+            <FieldMessage message={fieldErrors.obra_id} />
+          </div>
+          <div className="grid gap-2">
+            <Label required>Valor mensal</Label>
+            <MaskedInput
+              mask="currency"
+              placeholder="R$ 0,00"
+              value={valorMensal}
+              onChange={(value) => {
+                clearField('valor_mensal');
+                setValorMensal(value);
+              }}
+              className={fieldErrorClass(Boolean(fieldErrors.valor_mensal))}
+            />
+            <FieldMessage message={fieldErrors.valor_mensal} />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isCritico}
+              onChange={(e) => setIsCritico(e.target.checked)}
+              className="size-4 rounded border-input"
+            />
+            Equipamento crítico
+          </label>
+        </div>
+      </EquipamentoDialogShell>
+    </Dialog>
+  );
+}

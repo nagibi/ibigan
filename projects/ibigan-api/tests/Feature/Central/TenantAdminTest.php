@@ -179,7 +179,8 @@ it('nega criação de tenant sem nome', function (): void {
 
     $this->postJson('/api/central/v1/admin/tenants', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['name']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'name');
 });
 
 it('nega criação de tenant para admin comum', function (): void {

@@ -5,6 +5,7 @@ import type { GridColumnFilterDef } from '@/hooks/use-grid-filters';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridDateFilter } from '@/components/grid/grid-date-filter';
 import { GridDateRangeFilter } from '@/components/grid/grid-date-range-filter';
+import { GridNumberRangeFilter } from '@/components/grid/grid-number-range-filter';
 import { GridMultiValueFilter } from '@/components/grid/grid-multi-value-filter';
 import { GridSelectMultiFilter } from '@/components/grid/grid-select-multi-filter';
 import { MaskedInput } from '@/components/ui/masked-input';
@@ -29,7 +30,7 @@ function isFilterActive(
   dateRangeFrom: string,
   dateRangeTo: string,
 ) {
-  if (filter.type === 'dateRange') {
+  if (filter.type === 'dateRange' || filter.type === 'numberRange') {
     return Boolean(dateRangeFrom.trim() || dateRangeTo.trim());
   }
 
@@ -92,6 +93,18 @@ export function GridColumnFilter({
         fullWidth={layout === 'stacked'}
       />
     );
+  } else if (filter.type === 'numberRange') {
+    control = (
+      <GridNumberRangeFilter
+        from={dateRangeFrom}
+        to={dateRangeTo}
+        onChange={(from, to) => onDateRangeChange?.(from, to)}
+        placeholderFrom={filter.placeholder ?? 'Mín'}
+        placeholderTo="Máx"
+        fullWidth={layout === 'stacked'}
+        variant={filter.numberRangeFormat === 'currency' ? 'currency' : 'default'}
+      />
+    );
   } else if (filter.type === 'date') {
     control = (
       <GridDateFilter
@@ -106,7 +119,7 @@ export function GridColumnFilter({
         mask={filter.mask}
         value={value}
         onChange={onChange}
-        placeholder={t('grid.search_placeholder')}
+        placeholder={filter.placeholder ?? t('grid.search_placeholder')}
         variant="sm"
         className={inputClassName}
       />
