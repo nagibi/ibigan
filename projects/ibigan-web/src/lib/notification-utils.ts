@@ -47,6 +47,42 @@ export function getReportDownloadMeta(notification: AppNotification) {
   };
 }
 
+function parseNumericId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+    return Number(value);
+  }
+
+  return null;
+}
+
+/** ID numérico do banco (distinto do UUID usado nas rotas da API). */
+export function getNotificationRecordId(notification: AppNotification): number | string {
+  const candidates = [
+    notification.record_id,
+    notification.data.record_id,
+    notification.data.notification_id,
+    notification.data.id,
+  ];
+
+  for (const candidate of candidates) {
+    const numericId = parseNumericId(candidate);
+    if (numericId != null) {
+      return numericId;
+    }
+  }
+
+  const routeId = parseNumericId(notification.id);
+  if (routeId != null) {
+    return routeId;
+  }
+
+  return notification.id;
+}
+
 export function getNotificationEventSlug(notification: AppNotification): string | null {
   const slug = notification.data.event_slug ?? notification.data.event;
   return slug ? String(slug) : null;

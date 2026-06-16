@@ -10,7 +10,6 @@ import { useGridPageActions } from '@/hooks/use-grid-page-actions';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
@@ -291,11 +290,6 @@ export function CentralUsersPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'super-admins',
-    columns: gridColumns.visibleColumns,
-    rows: displayUsers,
-  });
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
@@ -340,8 +334,6 @@ export function CentralUsersPage() {
         onEdit={handleEditSelected}
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -354,8 +346,6 @@ export function CentralUsersPage() {
       grid.isTogglingActive,
       grid.singleSelection,
       handleEditSelected,
-      handleExport,
-      isExporting,
     ],
   );
 
@@ -376,8 +366,6 @@ export function CentralUsersPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={() => void loadRef.current()}
             isRefreshing={isLoading || isFetching}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

@@ -13,7 +13,6 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
@@ -393,11 +392,6 @@ export function CampaignsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'campanhas',
-    columns: gridColumns.visibleColumns,
-    rows: displayCampaigns,
-  });
 
   const gridActions = useGridPageActions({
     resetColumns: gridColumns.resetColumns,
@@ -452,8 +446,6 @@ export function CampaignsPage() {
         onNew={() => navigate('/campaigns/new')}
         onEdit={handleEditSelected}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={hasDeletableSelection}
         singleSelection={selectedDraftId !== null}
       />
@@ -462,8 +454,6 @@ export function CampaignsPage() {
       navigate,
       handleEditSelected,
       handleDeleteSelected,
-      handleExport,
-      isExporting,
       hasDeletableSelection,
       selectedDraftId,
     ],
@@ -486,8 +476,6 @@ export function CampaignsPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={load}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

@@ -11,7 +11,6 @@ import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import {
   formatPermissionAction,
@@ -249,14 +248,6 @@ export function PermissionsPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const exportPermissions = infiniteScrollEnabled ? cardListPermissions : filteredPermissions;
-
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'permissoes',
-    columns: gridColumns.visibleColumns,
-    rows: exportPermissions,
-  });
-
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -309,8 +300,6 @@ export function PermissionsPage() {
         onNew={() => navigate('/permissions/new')}
         onEdit={handleEditSelected}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={grid.hasSelection}
         singleSelection={grid.singleSelection}
       />
@@ -321,8 +310,6 @@ export function PermissionsPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
-      handleExport,
-      isExporting,
       navigate,
     ],
   );
@@ -344,8 +331,6 @@ export function PermissionsPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
             isRefreshing={isLoading || isFetching}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

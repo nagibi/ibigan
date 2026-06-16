@@ -13,7 +13,6 @@ import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridColumnLabels } from '@/hooks/use-grid-column-labels';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridToasts } from '@/hooks/use-grid-toasts';
 import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
@@ -540,11 +539,6 @@ export function UsersPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'usuarios',
-    columns: gridColumns.visibleColumns,
-    rows: displayUsers,
-  });
 
   const activeFilters = useMemo(() => {
     const items = [];
@@ -629,8 +623,6 @@ export function UsersPage() {
         onActivate={() => void grid.activateSelected()}
         onDeactivate={() => void grid.deactivateSelected()}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={grid.hasSelection && !grid.isTogglingActive}
         singleSelection={grid.singleSelection && !grid.isTogglingActive}
         isTogglingActive={grid.isTogglingActive}
@@ -645,8 +637,6 @@ export function UsersPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
-      handleExport,
-      isExporting,
     ],
   );
 
@@ -676,8 +666,6 @@ export function UsersPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={load}
             isRefreshing={loading}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

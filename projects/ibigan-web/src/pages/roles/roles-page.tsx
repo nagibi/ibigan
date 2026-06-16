@@ -14,7 +14,6 @@ import { useGrid } from '@/hooks/use-grid';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridExport } from '@/hooks/use-grid-export';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { parseGridUrlState } from '@/lib/grid-url-state';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
@@ -307,14 +306,6 @@ export function RolesPage() {
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
 
-  const exportRoles = infiniteScrollEnabled ? cardListRoles : filteredRoles;
-
-  const { handleExport, isExporting } = useGridExport({
-    filename: 'funcoes',
-    columns: gridColumns.visibleColumns,
-    rows: exportRoles,
-  });
-
   const activeFilters = useMemo(() => {
     const items = [];
 
@@ -384,8 +375,6 @@ export function RolesPage() {
         onNew={() => navigate('/roles/new')}
         onEdit={handleEditSelected}
         onDelete={handleDeleteSelected}
-        onExport={handleExport}
-        isExporting={isExporting}
         hasSelection={deletableSelectedIds.length > 0}
         singleSelection={grid.singleSelection}
       />
@@ -396,8 +385,6 @@ export function RolesPage() {
       grid.singleSelection,
       handleDeleteSelected,
       handleEditSelected,
-      handleExport,
-      isExporting,
       navigate,
     ],
   );
@@ -419,8 +406,6 @@ export function RolesPage() {
             onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
             isRefreshing={isLoading || isFetching}
-            onExport={handleExport}
-            isExporting={isExporting}
             search={grid.search}
             onSearch={grid.setSearch}
             filters={{

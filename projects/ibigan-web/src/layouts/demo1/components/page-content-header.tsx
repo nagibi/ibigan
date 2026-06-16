@@ -89,6 +89,7 @@ export function PageContentHeader({
 
   const title = config?.title ?? menuItem?.title;
   const description = config?.description;
+  const headerActions = config?.headerActions;
   const headerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,24 +112,29 @@ export function PageContentHeader({
       resizeObserver.disconnect();
       scrollRoot.style.removeProperty('--page-content-header-height');
     };
-  }, [description, title]);
+  }, [description, headerActions, title]);
 
   const containerClassName = 'max-xl:shrink-0 max-xl:flex-none max-xl:pb-3 max-xl:pt-2 xl:pb-4 xl:pt-3';
 
   const content = !title && !description ? (
     <PageBreadcrumbs menu={menu} />
   ) : (
-    <>
-      <PageBreadcrumbs menu={menu} />
-      {title ? (
-        <h1 className="font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
-          {title}
-        </h1>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <PageBreadcrumbs menu={menu} />
+        {title ? (
+          <h1 className="font-medium text-base text-mono max-xl:leading-snug lg:text-lg">
+            {title}
+          </h1>
+        ) : null}
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground max-lg:hidden">{description}</p>
+        ) : null}
+      </div>
+      {headerActions ? (
+        <div className="shrink-0 pt-0.5">{headerActions}</div>
       ) : null}
-      {description ? (
-        <p className="mt-1 text-xs text-muted-foreground max-lg:hidden">{description}</p>
-      ) : null}
-    </>
+    </div>
   );
 
   return (
