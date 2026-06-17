@@ -52,10 +52,17 @@ else
 fi
 
 echo "==> Frontend (SPA)"
-SPA_INDEX="$ROOT_DIR/projects/ibigan-web/dist/index.html"
+SPA_DIST="$ROOT_DIR/projects/ibigan-web/dist"
+SPA_INDEX="$SPA_DIST/index.html"
 if [[ ! -f "$SPA_INDEX" ]]; then
   echo "ERRO: $SPA_INDEX não existe. Rode o build do frontend antes do deploy:" >&2
   echo "  cd projects/ibigan-web && npm ci && npm run build" >&2
+  exit 1
+fi
+chmod -R a+rX "$SPA_DIST"
+
+if ! grep -q 'ibigan-web/dist:/var/www/spa' "$ROOT_DIR/docker-compose.prod.yml"; then
+  echo "ERRO: docker-compose.prod.yml sem volume ./projects/ibigan-web/dist:/var/www/spa" >&2
   exit 1
 fi
 
@@ -70,20 +77,25 @@ echo "==> Composer (produção)"
 echo "==> Containers"
 "${DC[@]}" up -d --build --remove-orphans
 
-echo "==> Aguardando serviços..."
-sleep 15
+echo "==> Containers"
+"${DC[@]}" up -d --build --remove-orphans
 
-echo "==> Nginx (validar e recarregar config)"
+echo "==> Nginx (recriar — monta SPA + production.conf)"
+"${DC[@]}" up -d --force-recreate nginx
+
+echo "==> Aguardando serviços..."
+sleep 5
+
+echo "==> Nginx (validar config)"
 "${DC[@]}" exec -T nginx nginx -t
-"${DC[@]}" exec -T nginx nginx -s reload
 
 NGINX_TEST_BIND="${NGINX_HTTP_BIND:-127.0.0.1}"
 NGINX_TEST_PORT="${NGINX_HTTP_PORT:-80}"
 echo "==> Smoke test nginx (http://${NGINX_TEST_BIND}:${NGINX_TEST_PORT})"
 if ! "${DC[@]}" exec -T nginx test -f /var/www/spa/index.html; then
   echo "ERRO: /var/www/spa/index.html não existe no container nginx." >&2
-  echo "      Atualize docker-compose.prod.yml (volume dist → /var/www/spa) e recrie:" >&2
-  echo "      ${DC[*]} up -d --force-recreate nginx" >&2
+  echo "      Volumes montados:" >&2
+  docker inspect "$("${DC[@]}" ps -q nginx)" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' >&2 || true
   exit 1
 fi
 if ! curl -sf -o /dev/null -H "Host: ${CENTRAL_DOMAIN}" "http://${NGINX_TEST_BIND}:${NGINX_TEST_PORT}/"; then
