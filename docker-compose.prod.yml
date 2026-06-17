@@ -152,7 +152,7 @@ services:
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     ports:
-      - "8082:8080"
+      - "127.0.0.1:${REVERB_HOST_PORT:-8082}:8080"
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
