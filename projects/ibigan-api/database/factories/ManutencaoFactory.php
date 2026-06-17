@@ -23,7 +23,8 @@ class ManutencaoFactory extends Factory
             'emprestimo_id' => null,
             'responsabilidade' => 'equipamento',
             'motivo' => fake()->sentence(),
-            'responsavel_manutencao' => fake()->company(),
+            'responsavel_user_id' => User::factory(),
+            'responsavel_manutencao' => null,
             'observacoes_tecnicas' => null,
             'foto_path' => PicsumImage::url(),
             'valor_mensal_snapshot' => 1500,
@@ -32,6 +33,19 @@ class ManutencaoFactory extends Factory
             'data_saida' => null,
             'registrado_por' => User::factory(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Manutencao $manutencao): void {
+            if ($manutencao->responsavel_user_id && ! $manutencao->responsavel_manutencao) {
+                $manutencao->update([
+                    'responsavel_manutencao' => User::query()
+                        ->whereKey($manutencao->responsavel_user_id)
+                        ->value('name'),
+                ]);
+            }
+        });
     }
 
     public function finalizada(): static

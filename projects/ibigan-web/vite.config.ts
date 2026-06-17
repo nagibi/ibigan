@@ -22,6 +22,11 @@ export default defineConfig({
   optimizeDeps: {
     include: ['html5-qrcode'],
   },
-    chunkSizeWarningLimit: 3000,
+  chunkSizeWarningLimit: 3000,
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 });

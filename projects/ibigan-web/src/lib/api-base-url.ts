@@ -1,8 +1,14 @@
+import { isTenantSubdomainHost, resolveTenantSlugFromHostname } from '@/lib/tenant-host';
+
 /**
- * Base URL da API. Em dev com subdomínios (*.localhost), use `/api` relativo
- * para que o Host da requisição coincida com o host da página.
+ * Base URL da API. Em subdomínios de tenant, use `/api` relativo para que o Host
+ * da requisição coincida com o host da página (resolução automática do tenant).
  */
 export function resolveApiBaseUrl(): string {
+  if (typeof window !== 'undefined' && isTenantSubdomainHost()) {
+    return '/api';
+  }
+
   const configured = import.meta.env.VITE_API_URL?.trim();
 
   if (configured) {

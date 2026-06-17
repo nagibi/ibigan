@@ -1,8 +1,8 @@
 import {
-  ArrowLeftRight,
   Building2,
   LayoutDashboard,
   Package,
+  Repeat2,
   Shapes,
   Truck,
   Wrench,
@@ -18,8 +18,8 @@ export type EquipcontrolNavItem = {
 export const EQUIPCONTROL_DESKTOP_NAV_ITEMS: EquipcontrolNavItem[] = [
   { to: '/equipamentos/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/equipamentos/estoque', label: 'Estoque', icon: Package },
+  { to: '/equipamentos/movimentacoes', label: 'Movimentações', icon: Repeat2 },
   { to: '/equipamentos/manutencao', label: 'Manutenções', icon: Wrench },
-  { to: '/equipamentos/movimentacoes', label: 'Movimentações', icon: ArrowLeftRight },
 ];
 
 /** Cadastros (Tipos, Fornecedores, Obras) ficam no hub Mais no mobile. */

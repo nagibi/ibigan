@@ -13,7 +13,7 @@ import { parseGridUrlState } from '@/lib/grid-url-state';
 import { GRID_VIEW_ICON } from '@/lib/grid-view-action';
 import { getInitials } from '@/lib/helpers';
 import { buildRolesUrlWithUserFilter } from '@/lib/roles-user-filter';
-import { TOGGLE_ACTIVE_LABELS } from '@/lib/toggle-active-alert';
+import { useEntityToggleLabels } from '@/lib/entity-i18n';
 import { formatUserGender, getUserGenderOptions } from '@/lib/user-gender';
 import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
 import { useGrid } from '@/hooks/use-grid';
@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+import { GridStatusSwitch } from '@/components/grid/grid-status-switch';
 import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
 import { UserCard } from '@/components/cards/user-card';
 import { PageBody } from '@/components/common/page-body';
@@ -58,7 +58,6 @@ import { GridBadge } from '@/components/grid/grid-badge';
 import { GridCardsView, GridListView } from '@/components/grid/grid-cards-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
-import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import {
   GridPagination,
   type GridPaginationMeta,
@@ -123,6 +122,7 @@ export function UsersPage() {
   const { hasPermission } = useAuthStore();
   const canViewRoles = hasPermission('permissao-visualizar');
   const { showToggleActive, showError, showSuccess } = useApiToolbarAlert();
+  const userToggleLabels = useEntityToggleLabels('user');
   const { viewMode, setViewMode } = useViewMode(VIEW_PREFERENCE_KEYS.users);
 
   const grid = useGrid({
@@ -134,7 +134,7 @@ export function UsersPage() {
     onActivate: async (ids) => {
       try {
         await Promise.all(ids.map((id) => usersService.toggleActive(id, true)));
-        showToggleActive(true, TOGGLE_ACTIVE_LABELS.user, ids.length);
+        showToggleActive(true, userToggleLabels, ids.length);
         await loadRef.current();
       } catch (error) {
         showError(t('users.error.activate'), error);
@@ -146,7 +146,7 @@ export function UsersPage() {
         await Promise.all(
           ids.map((id) => usersService.toggleActive(id, false)),
         );
-        showToggleActive(false, TOGGLE_ACTIVE_LABELS.user, ids.length);
+        showToggleActive(false, userToggleLabels, ids.length);
         await loadRef.current();
       } catch (error) {
         showError(t('users.error.deactivate'), error);
@@ -333,7 +333,7 @@ export function UsersPage() {
     try {
       setRowStatusId(user.id);
       await usersService.toggleActive(user.id, active);
-      showToggleActive(active, TOGGLE_ACTIVE_LABELS.user);
+      showToggleActive(active, userToggleLabels);
       void load();
     } catch (error) {
       showError(t('users.error.update_status'), error);
@@ -393,7 +393,7 @@ export function UsersPage() {
         className: 'w-[80px]',
         exportValue: (user) => (isUserActive(user) ? 'Ativo' : 'Inativo'),
         render: (user) => (
-          <Switch
+          <GridStatusSwitch
             checked={isUserActive(user)}
             disabled={rowStatusId === user.id}
             onCheckedChange={(checked) =>
@@ -841,7 +841,12 @@ export function UsersPage() {
               }
               onRowDoubleClick={(user) => handleEditUser(user.id)}
               renderItem={(user) => (
-                <UserCard user={user} actions={getUserRowActions(user)} />
+                <UserCard
+                  user={user}
+                  actions={getUserRowActions(user)}
+                  statusUpdating={rowStatusId === user.id}
+                  onActiveChange={(active) => void handleRowStatusChange(user, active)}
+                />
               )}
             />
           }
@@ -857,7 +862,12 @@ export function UsersPage() {
               }
               onRowDoubleClick={(user) => handleEditUser(user.id)}
               renderCard={(user) => (
-                <UserCard user={user} actions={getUserRowActions(user)} />
+                <UserCard
+                  user={user}
+                  actions={getUserRowActions(user)}
+                  statusUpdating={rowStatusId === user.id}
+                  onActiveChange={(active) => void handleRowStatusChange(user, active)}
+                />
               )}
             />
           }

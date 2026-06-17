@@ -10,27 +10,29 @@ import { GridFilterBadge } from '@/components/grid/grid-badge';
 import { GridColumnFilter } from '@/components/grid/grid-column-filter';
 import { ClearFiltersButton, type GridActiveFilter } from '@/components/grid/grid-filters-control';
 
-export interface GridColumnFiltersConfig<T = unknown> {
-  columns: GridColumnDef<T>[];
+export type GridColumnFilterColumn = Pick<GridColumnDef<unknown>, 'id' | 'label' | 'filter'>;
+
+export interface GridColumnFiltersConfig {
+  columns: GridColumnFilterColumn[];
   values: Record<string, string>;
   onFilterChange: (filterKey: string, value: string) => void;
   onDateRangeChange: (filterKey: string, from: string, to: string) => void;
   onFilterClear: (filter: GridColumnFilterDef) => void;
 }
 
-interface GridColumnFiltersPanelProps<T> {
-  columnFilters: GridColumnFiltersConfig<T>;
+interface GridColumnFiltersPanelProps {
+  columnFilters: GridColumnFiltersConfig;
   appliedFilters?: GridActiveFilter[];
   onClearAll?: () => void;
   showAppliedClearAll?: boolean;
 }
 
-export function GridColumnFiltersPanel<T>({
+export function GridColumnFiltersPanel({
   columnFilters,
   appliedFilters = [],
   onClearAll,
   showAppliedClearAll = true,
-}: GridColumnFiltersPanelProps<T>) {
+}: GridColumnFiltersPanelProps) {
   const { t } = useTranslation();
 
   const filterableColumns = useMemo(

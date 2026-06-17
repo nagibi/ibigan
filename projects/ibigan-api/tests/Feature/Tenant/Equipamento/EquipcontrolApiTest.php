@@ -20,7 +20,8 @@ use Laravel\Sanctum\Sanctum;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    $tenantId = 'tenant-'.uniqid();
+    $tenantId = 'tenant-' . uniqid();
+    /** @var TestCase&object{tenant: Tenant, user: User} $this */
     $this->tenant = Tenant::create([
         'id' => $tenantId,
         'slug' => $tenantId,
@@ -28,7 +29,7 @@ beforeEach(function (): void {
         'is_active' => true,
     ]);
 
-    $this->tenant->run(fn () => $this->seed(RolePermissionSeeder::class));
+    $this->tenant->run(fn() => $this->seed(RolePermissionSeeder::class));
 
     $this->user = $this->tenant->run(function (): User {
         $user = User::factory()->create();
@@ -62,7 +63,7 @@ function seedEquipamentoBasico(): array
 // ─── Cadastros base ───────────────────────────────────────────────────────────
 
 it('lista obras autenticado', function (): void {
-    $this->tenant->run(fn () => Obra::factory()->count(2)->create());
+    $this->tenant->run(fn() => Obra::factory()->count(2)->create());
 
     $this->getJson('/api/v1/obras', equipHeaders($this->tenant->id))
         ->assertOk()
@@ -79,11 +80,11 @@ it('cria obra via api', function (): void {
         ->assertCreated()
         ->assertJsonPath('result.codigo', '651');
 
-    $this->tenant->run(fn () => expect(Obra::query()->where('codigo', '651')->exists())->toBeTrue());
+    $this->tenant->run(fn() => expect(Obra::query()->where('codigo', '651')->exists())->toBeTrue());
 });
 
 it('retorna lookup de obras', function (): void {
-    $this->tenant->run(fn () => Obra::factory()->create(['codigo' => '700', 'is_ativa' => true]));
+    $this->tenant->run(fn() => Obra::factory()->create(['codigo' => '700', 'is_ativa' => true]));
 
     $this->getJson('/api/v1/lookups/obras', equipHeaders($this->tenant->id))
         ->assertOk()
@@ -127,7 +128,7 @@ it('gerencia grupos e tipos de equipamento', function (): void {
         ->assertOk()
         ->assertJsonPath('result.0.nome', 'BOMBA MANGOTE');
 
-    $this->getJson('/api/v1/lookups/tipos?grupo_id='.$grupo['id'], equipHeaders($this->tenant->id))
+    $this->getJson('/api/v1/lookups/tipos?grupo_id=' . $grupo['id'], equipHeaders($this->tenant->id))
         ->assertOk()
         ->assertJsonPath('result.0.nome', 'BOMBA MANGOTE 3"');
 });
@@ -135,7 +136,7 @@ it('gerencia grupos e tipos de equipamento', function (): void {
 // ─── Equipamentos ─────────────────────────────────────────────────────────────
 
 it('cria equipamento e registra historico de cadastro', function (): void {
-    $dados = $this->tenant->run(fn () => seedEquipamentoBasico());
+    $dados = $this->tenant->run(fn() => seedEquipamentoBasico());
 
     $response = $this->postJson('/api/v1/equipamentos', [
         'patrimonio' => '8715',
@@ -263,7 +264,7 @@ it('lista equipamentos filtrando por dias parados usando historico', function ()
 });
 
 it('lista equipamentos filtrando por faixa de dias parados', function (): void {
-    $parado15 = $this->tenant->run(fn () => Equipamento::factory()->create([
+    $parado15 = $this->tenant->run(fn() => Equipamento::factory()->create([
         'patrimonio' => 'P-PARADO-15',
         'data_entrada' => now()->subDays(15)->toDateString(),
     ]));
@@ -289,12 +290,12 @@ it('lista equipamentos filtrando por faixa de dias parados', function (): void {
 });
 
 it('lista equipamentos filtrando por faixa exata de dias parados', function (): void {
-    $parado12 = $this->tenant->run(fn () => Equipamento::factory()->create([
+    $parado12 = $this->tenant->run(fn() => Equipamento::factory()->create([
         'patrimonio' => 'P-PARADO-12',
         'data_entrada' => now()->subDays(12)->toDateString(),
     ]));
 
-    $this->tenant->run(fn () => Equipamento::factory()->create([
+    $this->tenant->run(fn() => Equipamento::factory()->create([
         'patrimonio' => 'P-PARADO-11',
         'data_entrada' => now()->subDays(11)->toDateString(),
     ]));
@@ -330,7 +331,7 @@ it('nega alteracao de patrimonio com historico de movimentacao', function (): vo
 });
 
 it('ativa e inativa equipamento via api', function (): void {
-    $equipamento = $this->tenant->run(fn () => Equipamento::factory()->create());
+    $equipamento = $this->tenant->run(fn() => Equipamento::factory()->create());
 
     $this->patchJson("/api/v1/equipamentos/{$equipamento->id}/toggle-active", [
         'is_active' => false,
@@ -392,8 +393,8 @@ it('nega remocao de equipamento com emprestimo ativo', function (): void {
 // ─── Ciclo de vida ────────────────────────────────────────────────────────────
 
 it('empresta equipamento em estoque', function (): void {
-    $equipamento = $this->tenant->run(fn () => Equipamento::factory()->create());
-    $obraDestino = $this->tenant->run(fn () => Obra::factory()->create(['codigo' => '652']));
+    $equipamento = $this->tenant->run(fn() => Equipamento::factory()->create());
+    $obraDestino = $this->tenant->run(fn() => Obra::factory()->create(['codigo' => '652']));
 
     $this->postJson("/api/v1/equipamentos/{$equipamento->id}/emprestar", [
         'obra_id' => $obraDestino->id,
@@ -431,7 +432,7 @@ it('devolve emprestimo ativo', function (): void {
         ->assertOk()
         ->assertJsonPath('data.is_ativo', false);
 
-    $this->tenant->run(fn () => expect($emprestimo->fresh()->data_devolucao)->not->toBeNull());
+    $this->tenant->run(fn() => expect($emprestimo->fresh()->data_devolucao)->not->toBeNull());
 });
 
 it('renova emprestimo ativo', function (): void {
@@ -453,16 +454,17 @@ it('renova emprestimo ativo', function (): void {
 });
 
 it('envia equipamento para manutencao e finaliza', function (): void {
-    $equipamento = $this->tenant->run(fn () => Equipamento::factory()->create());
+    $equipamento = $this->tenant->run(fn() => Equipamento::factory()->create());
 
     $manutencao = $this->postJson("/api/v1/equipamentos/{$equipamento->id}/manutencao", [
         'responsabilidade' => 'equipamento',
         'motivo' => 'Não liga',
-        'responsavel_manutencao' => 'Técnica ABC',
+        'responsavel_user_id' => $this->user->id,
         'data_entrada' => now()->toDateString(),
     ], equipHeaders($this->tenant->id))
         ->assertCreated()
-        ->assertJsonPath('result.responsabilidade', 'equipamento');
+        ->assertJsonPath('result.responsabilidade', 'equipamento')
+        ->assertJsonPath('result.responsavel_user_id', $this->user->id);
 
     $manutencaoId = $manutencao->json('result.id');
 
@@ -474,7 +476,7 @@ it('envia equipamento para manutencao e finaliza', function (): void {
 });
 
 it('baixa equipamento em estoque', function (): void {
-    $equipamento = $this->tenant->run(fn () => Equipamento::factory()->create());
+    $equipamento = $this->tenant->run(fn() => Equipamento::factory()->create());
 
     $this->postJson("/api/v1/equipamentos/{$equipamento->id}/baixar", [
         'tipo' => 'devolucao',
@@ -483,7 +485,7 @@ it('baixa equipamento em estoque', function (): void {
         ->assertCreated()
         ->assertJsonPath('result.tipo', 'devolucao');
 
-    $this->tenant->run(fn () => expect(Baixa::query()->where('equipamento_id', $equipamento->id)->exists())->toBeTrue());
+    $this->tenant->run(fn() => expect(Baixa::query()->where('equipamento_id', $equipamento->id)->exists())->toBeTrue());
 });
 
 it('nega baixa com emprestimo ativo', function (): void {
@@ -560,7 +562,7 @@ it('lista manutencoes e baixas', function (): void {
 // ─── Dashboard e medição ──────────────────────────────────────────────────────
 
 it('retorna resumo do dashboard de equipamentos', function (): void {
-    $this->tenant->run(fn () => Equipamento::factory()->count(2)->create());
+    $this->tenant->run(fn() => Equipamento::factory()->count(2)->create());
 
     $this->getJson('/api/v1/dashboard/resumo', equipHeaders($this->tenant->id))
         ->assertOk()
@@ -695,7 +697,7 @@ it('retorna graficos do dashboard de equipamentos', function (): void {
 });
 
 it('calcula medicao do periodo', function (): void {
-    $this->tenant->run(fn () => Equipamento::factory()->create([
+    $this->tenant->run(fn() => Equipamento::factory()->create([
         'data_entrada' => now()->subDays(60)->toDateString(),
         'valor_mensal' => 3000,
     ]));
@@ -714,7 +716,7 @@ it('calcula medicao do periodo', function (): void {
 });
 
 it('agrupa medicao por fornecedor', function (): void {
-    $this->tenant->run(fn () => Equipamento::factory()->create([
+    $this->tenant->run(fn() => Equipamento::factory()->create([
         'data_entrada' => now()->subDays(10)->toDateString(),
     ]));
 
@@ -728,7 +730,7 @@ it('agrupa medicao por fornecedor', function (): void {
 });
 
 it('exporta medicao em excel', function (): void {
-    $this->tenant->run(fn () => Equipamento::factory()->create([
+    $this->tenant->run(fn() => Equipamento::factory()->create([
         'data_entrada' => now()->subDays(10)->toDateString(),
     ]));
 

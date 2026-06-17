@@ -125,6 +125,7 @@ final class TenantAdminController extends Controller
             'timezone' => ['nullable', 'string'],
             'locale' => ['nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
+            'require_admin_approval' => ['sometimes', 'boolean'],
         ]);
 
         $slug = Str::slug($validated['name']);
@@ -138,6 +139,7 @@ final class TenantAdminController extends Controller
             'timezone' => $validated['timezone'] ?? 'UTC',
             'locale' => $validated['locale'] ?? 'pt_BR',
             'is_active' => $validated['is_active'] ?? true,
+            'require_admin_approval' => $validated['require_admin_approval'] ?? false,
         ]);
 
         $tenant->run(fn() => (new RolePermissionSeeder)->run());
@@ -161,6 +163,7 @@ final class TenantAdminController extends Controller
             'timezone' => ['sometimes', 'string'],
             'locale' => ['sometimes', 'string'],
             'is_active' => ['sometimes', 'boolean'],
+            'require_admin_approval' => ['sometimes', 'boolean'],
         ]);
 
         if (array_key_exists('cnpj', $validated)) {
@@ -305,6 +308,7 @@ final class TenantAdminController extends Controller
             'timezone' => $tenant->timezone,
             'locale' => $tenant->locale,
             'is_active' => (bool) $tenant->is_active,
+            'require_admin_approval' => $tenant->require_admin_approval,
             'users_count' => (int) ($tenant->users_count ?? 0),
             'created_at' => $tenant->created_at?->toIso8601String(),
             'updated_at' => $tenant->updated_at?->toIso8601String(),

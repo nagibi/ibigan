@@ -24,6 +24,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import type { DashboardRecomendacao } from '@/types/equipamento';
+import { formatEquipamentoCurrency } from '@/lib/equipamento-utils';
+import { cn } from '@/lib/utils';
+import { equipamentosService } from '@/services/equipamentos.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -34,10 +38,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { formatEquipamentoCurrency } from '@/lib/equipamento-utils';
-import { cn } from '@/lib/utils';
-import { equipamentosService } from '@/services/equipamentos.service';
-import type { DashboardRecomendacao } from '@/types/equipamento';
 
 const CHART_COLORS = {
   blue: '#378ADD',
@@ -68,9 +68,17 @@ const RECOMENDACAO_ICON = {
   chart: BarChart3,
 } as const;
 
-function ChartBox({ children, className }: { children: React.ReactNode; className?: string }) {
+function ChartBox({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={cn('min-w-0 w-full max-w-full overflow-hidden', className)}>{children}</div>
+    <div className={cn('min-w-0 w-full max-w-full overflow-hidden', className)}>
+      {children}
+    </div>
   );
 }
 
@@ -89,12 +97,16 @@ function ChartTooltip({
 
   return (
     <div className="rounded-md border border-border bg-popover px-2.5 py-2 text-xs shadow-md">
-      {label ? <p className="mb-1 font-medium text-muted-foreground">{label}</p> : null}
+      {label ? (
+        <p className="mb-1 font-medium text-muted-foreground">{label}</p>
+      ) : null}
       {payload.map((item) => (
         <p key={item.name} style={{ color: item.color }}>
           {item.name}:{' '}
           <span className="font-medium">
-            {valueFormatter ? valueFormatter(item.value, item.name) : item.value}
+            {valueFormatter
+              ? valueFormatter(item.value, item.name)
+              : item.value}
           </span>
         </p>
       ))}
@@ -115,7 +127,8 @@ function RecomendacaoCard({ item }: { item: DashboardRecomendacao }) {
         <p className="text-xs text-muted-foreground">{item.descricao}</p>
         {item.economia_mensal != null && item.economia_mensal > 0 ? (
           <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            Economia potencial: {formatEquipamentoCurrency(item.economia_mensal)}/mês
+            Economia potencial:{' '}
+            {formatEquipamentoCurrency(item.economia_mensal)}/mês
           </p>
         ) : null}
       </div>
@@ -123,7 +136,11 @@ function RecomendacaoCard({ item }: { item: DashboardRecomendacao }) {
   );
 }
 
-function formatObraLabel(item: { codigo?: string | null; nome?: string | null; obra_id: number }) {
+function formatObraLabel(item: {
+  codigo?: string | null;
+  nome?: string | null;
+  obra_id: number;
+}) {
   if (item.codigo && item.nome) return `${item.codigo} · ${item.nome}`;
   return item.nome ?? item.codigo ?? `Obra #${item.obra_id}`;
 }
@@ -147,10 +164,16 @@ function TrendHint({
     <p
       className={cn(
         'flex items-center gap-1 text-[11px] font-medium',
-        improved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400',
+        improved
+          ? 'text-emerald-700 dark:text-emerald-400'
+          : 'text-amber-700 dark:text-amber-400',
       )}
     >
-      {improved ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+      {improved ? (
+        <TrendingUp className="size-3" />
+      ) : (
+        <TrendingDown className="size-3" />
+      )}
       {formatter(current)} vs {formatter(previous)} no mês anterior
     </p>
   );
@@ -168,7 +191,8 @@ export function EquipamentoDashboardFinanceiro() {
   });
 
   const isLoading = loadingFinanceiro || loadingGraficos;
-  const recomendacoes = graficos?.recomendacoes ?? financeiro?.recomendacoes ?? [];
+  const recomendacoes =
+    graficos?.recomendacoes ?? financeiro?.recomendacoes ?? [];
 
   const utilizacao = graficos?.evolucao_utilizacao ?? [];
   const ociosidade = graficos?.evolucao_ociosidade ?? [];
@@ -203,7 +227,9 @@ export function EquipamentoDashboardFinanceiro() {
   const kpis = [
     {
       label: 'Custo mensal total',
-      value: financeiro ? formatEquipamentoCurrency(financeiro.custo_mensal_total) : '—',
+      value: financeiro
+        ? formatEquipamentoCurrency(financeiro.custo_mensal_total)
+        : '—',
       hint: 'Frota ativa (sem baixados)',
       icon: DollarSign,
     },
@@ -217,14 +243,18 @@ export function EquipamentoDashboardFinanceiro() {
     },
     {
       label: 'Economia potencial',
-      value: financeiro ? formatEquipamentoCurrency(financeiro.economia_potencial_mensal) : '—',
+      value: financeiro
+        ? formatEquipamentoCurrency(financeiro.economia_potencial_mensal)
+        : '—',
       hint: 'Devolução ou realocação de ociosos',
       icon: TrendingDown,
       tone: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       label: 'Média por colaborador',
-      value: financeiro ? String(financeiro.colaboradores.media_emprestimos_ativos) : '—',
+      value: financeiro
+        ? String(financeiro.colaboradores.media_emprestimos_ativos)
+        : '—',
       hint: 'Empréstimos ativos por pessoa',
       icon: Users,
     },
@@ -232,13 +262,6 @@ export function EquipamentoDashboardFinanceiro() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-sm font-semibold text-foreground">Dashboard executivo</h2>
-        <p className="text-xs text-muted-foreground">
-          Tendências, distribuição do parque e recomendações de decisão
-        </p>
-      </div>
-
       <Card className="border-amber-200/60 bg-amber-50/30 dark:border-amber-900/40 dark:bg-amber-950/20">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -275,8 +298,17 @@ export function EquipamentoDashboardFinanceiro() {
                     <kpi.icon className="size-3.5 shrink-0" />
                     <span>{kpi.label}</span>
                   </div>
-                  <p className={cn('text-xl font-semibold tabular-nums', kpi.tone)}>{kpi.value}</p>
-                  <p className="text-[11px] leading-snug text-muted-foreground">{kpi.hint}</p>
+                  <p
+                    className={cn(
+                      'text-xl font-semibold tabular-nums',
+                      kpi.tone,
+                    )}
+                  >
+                    {kpi.value}
+                  </p>
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    {kpi.hint}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -298,9 +330,21 @@ export function EquipamentoDashboardFinanceiro() {
             ) : (
               <ChartBox className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={utilizacao} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <LineChart
+                    data={utilizacao}
+                    margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="rgba(128,128,128,0.15)"
+                    />
+                    <XAxis
+                      dataKey="mes"
+                      tick={{ fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <YAxis
                       tick={{ fontSize: 10 }}
                       tickLine={false}
@@ -345,22 +389,38 @@ export function EquipamentoDashboardFinanceiro() {
             ) : (
               <ChartBox className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={ociosidade} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <LineChart
+                    data={ociosidade}
+                    margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="rgba(128,128,128,0.15)"
+                    />
+                    <XAxis
+                      dataKey="mes"
+                      tick={{ fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <YAxis
                       tick={{ fontSize: 10 }}
                       tickLine={false}
                       axisLine={false}
                       width={56}
                       tickFormatter={(value) =>
-                        value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+                        value >= 1000
+                          ? `${Math.round(value / 1000)}k`
+                          : String(value)
                       }
                     />
                     <Tooltip
                       content={
                         <ChartTooltip
-                          valueFormatter={(value) => formatEquipamentoCurrency(value)}
+                          valueFormatter={(value) =>
+                            formatEquipamentoCurrency(value)
+                          }
                         />
                       }
                     />
@@ -396,29 +456,64 @@ export function EquipamentoDashboardFinanceiro() {
                   barCategoryGap="18%"
                   margin={{ top: 4, right: 4, left: -8, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
-                  <XAxis dataKey="mes" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="rgba(128,128,128,0.15)"
+                  />
+                  <XAxis
+                    dataKey="mes"
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <YAxis
                     tick={{ fontSize: 10 }}
                     tickLine={false}
                     axisLine={false}
                     width={56}
                     tickFormatter={(value) =>
-                      value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+                      value >= 1000
+                        ? `${Math.round(value / 1000)}k`
+                        : String(value)
                     }
                   />
                   <Tooltip
                     content={
                       <ChartTooltip
-                        valueFormatter={(value) => formatEquipamentoCurrency(value)}
+                        valueFormatter={(value) =>
+                          formatEquipamentoCurrency(value)
+                        }
                       />
                     }
                   />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Bar dataKey="em_uso" name="Em uso" stackId="a" fill={CHART_COLORS.blue} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="ocioso" name="Ocioso" stackId="a" fill={CHART_COLORS.red} />
-                  <Bar dataKey="manutencao" name="Manutenção" stackId="a" fill={CHART_COLORS.amber} />
-                  <Bar dataKey="estoque" name="Estoque" stackId="a" fill={CHART_COLORS.gray} radius={[3, 3, 0, 0]} />
+                  <Bar
+                    dataKey="em_uso"
+                    name="Em uso"
+                    stackId="a"
+                    fill={CHART_COLORS.blue}
+                    radius={[0, 0, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="ocioso"
+                    name="Ocioso"
+                    stackId="a"
+                    fill={CHART_COLORS.red}
+                  />
+                  <Bar
+                    dataKey="manutencao"
+                    name="Manutenção"
+                    stackId="a"
+                    fill={CHART_COLORS.amber}
+                  />
+                  <Bar
+                    dataKey="estoque"
+                    name="Estoque"
+                    stackId="a"
+                    fill={CHART_COLORS.gray}
+                    radius={[3, 3, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </ChartBox>
@@ -439,7 +534,17 @@ export function EquipamentoDashboardFinanceiro() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={statusData.length ? statusData : [{ name: 'Sem dados', value: 1, color: CHART_COLORS.gray }]}
+                      data={
+                        statusData.length
+                          ? statusData
+                          : [
+                              {
+                                name: 'Sem dados',
+                                value: 1,
+                                color: CHART_COLORS.gray,
+                              },
+                            ]
+                      }
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
@@ -448,8 +553,16 @@ export function EquipamentoDashboardFinanceiro() {
                       outerRadius={78}
                       paddingAngle={3}
                     >
-                      {(statusData.length ? statusData : [{ color: CHART_COLORS.gray }]).map((entry, index) => (
-                        <Cell key={index} fill={'color' in entry ? entry.color : CHART_COLORS.gray} />
+                      {(statusData.length
+                        ? statusData
+                        : [{ color: CHART_COLORS.gray }]
+                      ).map((entry, index) => (
+                        <Cell
+                          key={index}
+                          fill={
+                            'color' in entry ? entry.color : CHART_COLORS.gray
+                          }
+                        />
                       ))}
                     </Pie>
                     <Tooltip content={<ChartTooltip />} />
@@ -463,7 +576,9 @@ export function EquipamentoDashboardFinanceiro() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Situação dos empréstimos</CardTitle>
+            <CardTitle className="text-base">
+              Situação dos empréstimos
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loadingGraficos ? (
@@ -476,7 +591,13 @@ export function EquipamentoDashboardFinanceiro() {
                       data={
                         emprestimosData.length
                           ? emprestimosData
-                          : [{ name: 'Sem empréstimos', value: 1, color: CHART_COLORS.gray }]
+                          : [
+                              {
+                                name: 'Sem empréstimos',
+                                value: 1,
+                                color: CHART_COLORS.gray,
+                              },
+                            ]
                       }
                       dataKey="value"
                       nameKey="name"
@@ -486,11 +607,17 @@ export function EquipamentoDashboardFinanceiro() {
                       outerRadius={78}
                       paddingAngle={3}
                     >
-                      {(emprestimosData.length ? emprestimosData : [{ color: CHART_COLORS.gray }]).map(
-                        (entry, index) => (
-                          <Cell key={index} fill={'color' in entry ? entry.color : CHART_COLORS.gray} />
-                        ),
-                      )}
+                      {(emprestimosData.length
+                        ? emprestimosData
+                        : [{ color: CHART_COLORS.gray }]
+                      ).map((entry, index) => (
+                        <Cell
+                          key={index}
+                          fill={
+                            'color' in entry ? entry.color : CHART_COLORS.gray
+                          }
+                        />
+                      ))}
                     </Pie>
                     <Tooltip content={<ChartTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 10 }} />
@@ -511,7 +638,9 @@ export function EquipamentoDashboardFinanceiro() {
             {loadingGraficos ? (
               <Skeleton className="h-64 w-full" />
             ) : obrasData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum empréstimo ativo.</p>
+              <p className="text-sm text-muted-foreground">
+                Nenhum empréstimo ativo.
+              </p>
             ) : (
               <ChartBox className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -521,14 +650,20 @@ export function EquipamentoDashboardFinanceiro() {
                     margin={{ top: 0, right: 12, left: 4, bottom: 0 }}
                     barSize={14}
                   >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(128,128,128,0.15)" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={false}
+                      stroke="rgba(128,128,128,0.15)"
+                    />
                     <XAxis
                       type="number"
                       tick={{ fontSize: 10 }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(value) =>
-                        value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+                        value >= 1000
+                          ? `${Math.round(value / 1000)}k`
+                          : String(value)
                       }
                     />
                     <YAxis
@@ -543,12 +678,19 @@ export function EquipamentoDashboardFinanceiro() {
                       content={
                         <ChartTooltip
                           valueFormatter={(value, name) =>
-                            name === 'valor' ? formatEquipamentoCurrency(value) : String(value)
+                            name === 'valor'
+                              ? formatEquipamentoCurrency(value)
+                              : String(value)
                           }
                         />
                       }
                     />
-                    <Bar dataKey="valor" name="Custo mensal" fill={CHART_COLORS.blue} radius={[0, 4, 4, 0]} />
+                    <Bar
+                      dataKey="valor"
+                      name="Custo mensal"
+                      fill={CHART_COLORS.blue}
+                      radius={[0, 4, 4, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartBox>
@@ -564,7 +706,9 @@ export function EquipamentoDashboardFinanceiro() {
             {loadingGraficos ? (
               <Skeleton className="h-64 w-full" />
             ) : gruposData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum equipamento na frota.</p>
+              <p className="text-sm text-muted-foreground">
+                Nenhum equipamento na frota.
+              </p>
             ) : (
               <ChartBox className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -573,7 +717,11 @@ export function EquipamentoDashboardFinanceiro() {
                     margin={{ top: 4, right: 4, left: -8, bottom: 0 }}
                     barCategoryGap="20%"
                   >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="rgba(128,128,128,0.15)"
+                    />
                     <XAxis
                       dataKey="grupo"
                       tick={{ fontSize: 9 }}
@@ -590,17 +738,26 @@ export function EquipamentoDashboardFinanceiro() {
                       axisLine={false}
                       width={56}
                       tickFormatter={(value) =>
-                        value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+                        value >= 1000
+                          ? `${Math.round(value / 1000)}k`
+                          : String(value)
                       }
                     />
                     <Tooltip
                       content={
                         <ChartTooltip
-                          valueFormatter={(value) => formatEquipamentoCurrency(value)}
+                          valueFormatter={(value) =>
+                            formatEquipamentoCurrency(value)
+                          }
                         />
                       }
                     />
-                    <Bar dataKey="valor_mensal" name="Custo mensal" fill={CHART_COLORS.violet} radius={[3, 3, 0, 0]} />
+                    <Bar
+                      dataKey="valor_mensal"
+                      name="Custo mensal"
+                      fill={CHART_COLORS.violet}
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartBox>
@@ -624,17 +781,38 @@ export function EquipamentoDashboardFinanceiro() {
                     data={graficos?.manutencao.evolucao_custos ?? []}
                     margin={{ top: 4, right: 4, left: -8, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={48} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="rgba(128,128,128,0.15)"
+                    />
+                    <XAxis
+                      dataKey="mes"
+                      tick={{ fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={48}
+                    />
                     <Tooltip
                       content={
                         <ChartTooltip
-                          valueFormatter={(value) => formatEquipamentoCurrency(value)}
+                          valueFormatter={(value) =>
+                            formatEquipamentoCurrency(value)
+                          }
                         />
                       }
                     />
-                    <Bar dataKey="valor_mensal" name="Custo" fill={CHART_COLORS.amber} radius={[3, 3, 0, 0]} />
+                    <Bar
+                      dataKey="valor_mensal"
+                      name="Custo"
+                      fill={CHART_COLORS.amber}
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartBox>
@@ -658,7 +836,9 @@ export function EquipamentoDashboardFinanceiro() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Equipamentos parados</p>
+                  <p className="text-xs text-muted-foreground">
+                    Equipamentos parados
+                  </p>
                   <p className="text-2xl font-semibold tabular-nums">
                     {graficos?.manutencao.equipamentos_parados ?? 0}
                   </p>
@@ -666,7 +846,9 @@ export function EquipamentoDashboardFinanceiro() {
                 <div>
                   <p className="text-xs text-muted-foreground">Custo mensal</p>
                   <p className="text-2xl font-semibold tabular-nums">
-                    {formatEquipamentoCurrency(graficos?.manutencao.custo_mensal ?? 0)}
+                    {formatEquipamentoCurrency(
+                      graficos?.manutencao.custo_mensal ?? 0,
+                    )}
                   </p>
                 </div>
               </>
@@ -677,13 +859,17 @@ export function EquipamentoDashboardFinanceiro() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Colaboradores — heatmap operacional</CardTitle>
+          <CardTitle className="text-base">
+            Colaboradores — heatmap operacional
+          </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {loadingGraficos ? (
             <Skeleton className="h-40 w-full" />
           ) : (graficos?.colaboradores_heatmap ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum empréstimo ativo.</p>
+            <p className="text-sm text-muted-foreground">
+              Nenhum empréstimo ativo.
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -706,7 +892,8 @@ export function EquipamentoDashboardFinanceiro() {
                     <TableCell
                       className={cn(
                         'text-right tabular-nums',
-                        (item.total_renovacoes ?? 0) >= 3 && 'font-semibold text-amber-700 dark:text-amber-400',
+                        (item.total_renovacoes ?? 0) >= 3 &&
+                          'font-semibold text-amber-700 dark:text-amber-400',
                       )}
                     >
                       {item.total_renovacoes ?? 0}
@@ -714,7 +901,8 @@ export function EquipamentoDashboardFinanceiro() {
                     <TableCell
                       className={cn(
                         'text-right tabular-nums',
-                        (item.total_emprestimos_ativos ?? 0) >= 3 && 'font-semibold text-red-700 dark:text-red-400',
+                        (item.total_emprestimos_ativos ?? 0) >= 3 &&
+                          'font-semibold text-red-700 dark:text-red-400',
                       )}
                     >
                       {item.total_emprestimos_ativos ?? 0}

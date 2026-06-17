@@ -28,7 +28,7 @@ export function OrganizationCard({
     <div className="flex h-full min-w-0 w-full max-w-full flex-col gap-3 p-4">
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{tenant.name ?? tenant.slug}</p>
+          <p className="truncate">{tenant.name ?? tenant.slug}</p>
           <p className="truncate text-sm text-muted-foreground">{tenant.slug}</p>
         </div>
         <GridBadge tone={tenant.is_active ? 'success' : 'destructive'} className="shrink-0">

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
 import { FieldMessage } from '@/components/ui/field-message';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { mapApiErrorsToRecord } from '@/lib/apply-api-form-errors';
@@ -30,13 +31,28 @@ import { EquipamentoThumbnail } from '@/pages/equipamentos/components/equipament
 import {
   buildEquipamentoStoreFormData,
   buildEquipamentoUpdateFormData,
-  EquipamentoFotoField,
+  EquipamentoFotosField,
+  getDefaultEquipamentoPrincipal,
+  getEquipamentoExistingFotos,
+  hasPrincipalChanged,
+  resolvePrincipalPayload,
+  type EquipamentoFotoPrincipal,
 } from '@/pages/equipamentos/components/equipamento-foto-field';
+import { orderFotosWithPrincipalFirst } from '@/lib/equipamento-utils';
 import {
   EquipamentoUserSelect,
   getUserMatricula,
 } from '@/pages/equipamentos/components/equipamento-user-select';
 import { EquipamentoDialogShell } from '@/pages/equipamentos/components/equipamento-dialog-shell';
+import { SheetPanelTitle } from '@/components/common/panel-title';
+import {
+  SidePanelSheet,
+  SidePanelSheetActions,
+  SidePanelSheetBody,
+  SidePanelSheetContent,
+  SidePanelSheetFooter,
+  SidePanelSheetHeader,
+} from '@/components/ui/side-panel-sheet';
 import { cn } from '@/lib/utils';
 
 type ModalBaseProps = {
@@ -220,13 +236,13 @@ export function ManutencaoModal({ equipamento, open, onOpenChange }: ModalBasePr
   const invalidate = useInvalidateEquipamentos();
   const [responsabilidade, setResponsabilidade] = useState<'fortes' | 'equipamento'>('equipamento');
   const [motivo, setMotivo] = useState('');
-  const [responsavel, setResponsavel] = useState('');
+  const [responsavelUserId, setResponsavelUserId] = useState('');
 
   useEffect(() => {
     if (!open) return;
     setResponsabilidade('equipamento');
     setMotivo('');
-    setResponsavel('');
+    setResponsavelUserId('');
   }, [open, equipamento?.id]);
 
   const mutation = useMutation({
@@ -234,7 +250,7 @@ export function ManutencaoModal({ equipamento, open, onOpenChange }: ModalBasePr
       equipamentosService.enviarManutencao(equipamento!.id, {
         responsabilidade,
         motivo,
-        responsavel_manutencao: responsavel,
+        responsavel_user_id: Number(responsavelUserId),
         data_entrada: todayIsoDate(),
       }),
     onSuccess: () => {
@@ -260,7 +276,7 @@ export function ManutencaoModal({ equipamento, open, onOpenChange }: ModalBasePr
               Cancelar
             </Button>
             <Button
-              disabled={mutation.isPending || !motivo.trim() || !responsavel.trim()}
+              disabled={mutation.isPending || !motivo.trim() || !responsavelUserId}
               onClick={() => mutation.mutate()}
             >
               {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Enviar'}
@@ -288,7 +304,11 @@ export function ManutencaoModal({ equipamento, open, onOpenChange }: ModalBasePr
           </div>
           <div className="grid gap-2">
             <Label>Responsável pela manutenção</Label>
-            <Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+            <EquipamentoUserSelect
+              value={responsavelUserId}
+              placeholder="Selecione o usuário"
+              onSelect={(user) => setResponsavelUserId(String(user.id))}
+            />
           </div>
         </div>
       </EquipamentoDialogShell>
@@ -529,7 +549,7 @@ export function FinalizarManutencaoModal({ equipamento, open, onOpenChange }: Mo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <EquipamentoDialogShell
-        header={<DialogTitle>Finalizar manutenção — {equipamento?.patrimonio}</DialogTitle>}
+        header={<DialogTitle>Finalizar — {equipamento?.patrimonio}</DialogTitle>}
         footer={
           <>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -554,7 +574,7 @@ export function HistoricoModal({
   open,
   onOpenChange,
 }: ModalBaseProps) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['equipamentos-historico', equipamento?.id],
     queryFn: () => equipamentosService.historico(equipamento!.id, { per_page: 50 }),
     enabled: open && Boolean(equipamento?.id),
@@ -563,37 +583,54 @@ export function HistoricoModal({
   const items = data?.data ?? [];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <EquipamentoDialogShell
-        className="max-w-lg"
-        header={
-          <div className="flex items-center gap-3">
+    <SidePanelSheet open={open} onOpenChange={onOpenChange}>
+      <SidePanelSheetContent width={520}>
+        <SidePanelSheetHeader className="border-b px-5 py-4">
+          <div className="flex items-center gap-3 pe-8">
             {equipamento ? (
               <EquipamentoThumbnail equipamento={equipamento} size="sm" previewEnabled />
             ) : null}
-            <DialogTitle>Histórico — {equipamento?.patrimonio}</DialogTitle>
+            <SheetPanelTitle icon={History}>
+              Histórico — {equipamento?.patrimonio ?? 'Equipamento'}
+            </SheetPanelTitle>
           </div>
-        }
-      >
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : items.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">Nenhum registro.</p>
-        ) : (
-          <ol className="relative space-y-0 ps-2">
-            {items.map((item, index) => (
-              <HistoricoTimelineItem
-                key={item.id}
-                item={item}
-                isLast={index === items.length - 1}
-              />
-            ))}
-          </ol>
-        )}
-      </EquipamentoDialogShell>
-    </Dialog>
+        </SidePanelSheetHeader>
+
+        <SidePanelSheetBody>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <History className="mb-2 size-10 opacity-30" />
+              <p className="text-sm">Nenhum registro.</p>
+            </div>
+          ) : (
+            <ol className="relative space-y-0 ps-2">
+              {items.map((item, index) => (
+                <HistoricoTimelineItem
+                  key={item.id}
+                  item={item}
+                  isLast={index === items.length - 1}
+                />
+              ))}
+            </ol>
+          )}
+        </SidePanelSheetBody>
+
+        <SidePanelSheetFooter>
+          <SidePanelSheetActions>
+            <Button variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+              {isFetching ? 'Atualizando...' : 'Atualizar'}
+            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+          </SidePanelSheetActions>
+        </SidePanelSheetFooter>
+      </SidePanelSheetContent>
+    </SidePanelSheet>
   );
 }
 
@@ -662,7 +699,8 @@ export function CadastroEquipamentoModal({
   const [obraId, setObraId] = useState('');
   const [valorMensal, setValorMensal] = useState('');
   const [isCritico, setIsCritico] = useState(false);
-  const [foto, setFoto] = useState<File | null>(null);
+  const [newFotos, setNewFotos] = useState<File[]>([]);
+  const [principal, setPrincipal] = useState<EquipamentoFotoPrincipal | null>(null);
   const { fieldErrors, clear, clearField, applyApi, setFieldErrors } = useEquipamentoFieldErrors();
 
   const { data: tipos = [] } = useQuery({
@@ -703,13 +741,23 @@ export function CadastroEquipamentoModal({
     setObraId('');
     setValorMensal('');
     setIsCritico(false);
-    setFoto(null);
+    setNewFotos([]);
+    setPrincipal(null);
     clear();
   }, [open, clear]);
 
   const mutation = useMutation({
-    mutationFn: (values: EquipamentoFormValues) =>
-      equipamentosService.store(
+    mutationFn: (values: EquipamentoFormValues) => {
+      const orderedFotos =
+        principal?.type === 'new'
+          ? orderFotosWithPrincipalFirst(newFotos, principal.index)
+          : newFotos;
+      const principalForSubmit =
+        principal?.type === 'new' && orderedFotos.length > 0
+          ? ({ type: 'new', index: 0 } as const)
+          : principal;
+
+      return equipamentosService.store(
         buildEquipamentoStoreFormData({
           patrimonio: values.patrimonio,
           tipo_id: values.tipo_id,
@@ -718,9 +766,11 @@ export function CadastroEquipamentoModal({
           valor_mensal: values.valor_mensal,
           data_entrada: todayIsoDate(),
           is_critico: values.is_critico,
-          foto,
+          fotos: orderedFotos,
+          principal: principalForSubmit,
         }),
-      ),
+      );
+    },
     onSuccess: () => {
       invalidate();
       showAppToast({ title: 'Equipamento cadastrado.' });
@@ -772,13 +822,19 @@ export function CadastroEquipamentoModal({
         }
       >
         <div className="grid gap-4">
-          <EquipamentoFotoField
+          <EquipamentoFotosField
             patrimonio={patrimonio || 'Novo'}
             tipoNome={tipos.find((item) => String(item.id) === tipoId)?.nome}
-            value={foto}
-            onChange={(file) => {
+            newFotos={newFotos}
+            principal={principal}
+            onPrincipalChange={setPrincipal}
+            onNewFotosChange={(files) => {
               clearField('foto');
-              setFoto(file);
+              setNewFotos(files);
+            }}
+            onRemoveNew={(index) => {
+              clearField('foto');
+              setNewFotos((current) => current.filter((_, itemIndex) => itemIndex !== index));
             }}
           />
           <FieldMessage message={fieldErrors.foto} />
@@ -853,15 +909,16 @@ export function CadastroEquipamentoModal({
             />
             <FieldMessage message={fieldErrors.valor_mensal} />
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+          <div className="flex items-center justify-between gap-4">
+            <Label htmlFor="cadastro-equipamento-critico" className="font-normal">
+              Equipamento crítico
+            </Label>
+            <Switch
+              id="cadastro-equipamento-critico"
               checked={isCritico}
-              onChange={(e) => setIsCritico(e.target.checked)}
-              className="size-4 rounded border-input"
+              onCheckedChange={setIsCritico}
             />
-            Equipamento crítico
-          </label>
+          </div>
         </div>
       </EquipamentoDialogShell>
     </Dialog>
@@ -877,7 +934,10 @@ export function EditarEquipamentoModal({ equipamento, open, onOpenChange }: Moda
   const [obraId, setObraId] = useState('');
   const [valorMensal, setValorMensal] = useState('');
   const [isCritico, setIsCritico] = useState(false);
-  const [foto, setFoto] = useState<File | null>(null);
+  const [newFotos, setNewFotos] = useState<File[]>([]);
+  const [removedFotoIds, setRemovedFotoIds] = useState<number[]>([]);
+  const [principal, setPrincipal] = useState<EquipamentoFotoPrincipal | null>(null);
+  const [initialPrincipal, setInitialPrincipal] = useState<EquipamentoFotoPrincipal | null>(null);
   const { fieldErrors, clear, clearField, applyApi, setFieldErrors } = useEquipamentoFieldErrors();
 
   const { data: tipos = [] } = useQuery({
@@ -919,12 +979,24 @@ export function EditarEquipamentoModal({ equipamento, open, onOpenChange }: Moda
     setObraId(String(equipamento.obra_id));
     setValorMensal(numberToCurrencyDigits(equipamento.valor_mensal));
     setIsCritico(equipamento.is_critico);
-    setFoto(null);
+    setNewFotos([]);
+    setRemovedFotoIds([]);
+    const defaultPrincipal = getDefaultEquipamentoPrincipal(getEquipamentoExistingFotos(equipamento));
+    setPrincipal(defaultPrincipal);
+    setInitialPrincipal(defaultPrincipal);
     clear();
   }, [open, equipamento, clear]);
 
   const mutation = useMutation({
     mutationFn: (values: EquipamentoFormValues) => {
+      const orderedFotos =
+        principal?.type === 'new'
+          ? orderFotosWithPrincipalFirst(newFotos, principal.index)
+          : newFotos;
+      const principalForSubmit =
+        principal?.type === 'new' && orderedFotos.length > 0
+          ? ({ type: 'new', index: 0 } as const)
+          : principal;
       const payload = {
         patrimonio: values.patrimonio,
         tipo_id: values.tipo_id,
@@ -932,17 +1004,32 @@ export function EditarEquipamentoModal({ equipamento, open, onOpenChange }: Moda
         obra_id: values.obra_id,
         valor_mensal: values.valor_mensal,
         is_critico: values.is_critico,
-        foto,
+        fotos: orderedFotos,
+        fotos_remover: removedFotoIds,
+        principal: principalForSubmit,
       };
+      const principalChanged = hasPrincipalChanged(principal, initialPrincipal);
+      const needsMultipart =
+        orderedFotos.length > 0
+        || removedFotoIds.length > 0
+        || principalForSubmit?.type === 'new';
 
-      if (foto) {
+      if (needsMultipart) {
         return equipamentosService.update(
           equipamento!.id,
           buildEquipamentoUpdateFormData(payload),
         );
       }
 
-      return equipamentosService.update(equipamento!.id, payload);
+      return equipamentosService.update(equipamento!.id, {
+        patrimonio: values.patrimonio,
+        tipo_id: values.tipo_id,
+        fornecedor_id: values.fornecedor_id,
+        obra_id: values.obra_id,
+        valor_mensal: values.valor_mensal,
+        is_critico: values.is_critico,
+        ...(principalChanged ? resolvePrincipalPayload(principal) : {}),
+      });
     },
     onSuccess: () => {
       invalidate();
@@ -998,14 +1085,30 @@ export function EditarEquipamentoModal({ equipamento, open, onOpenChange }: Moda
       >
         <div className="grid gap-4">
           {equipamento ? (
-            <EquipamentoFotoField
+            <EquipamentoFotosField
               patrimonio={equipamento.patrimonio}
               tipoNome={equipamento.tipo?.nome}
-              currentFotoUrl={equipamento.foto_url}
-              value={foto}
-              onChange={(file) => {
+              existingFotos={getEquipamentoExistingFotos(equipamento)}
+              removedFotoIds={removedFotoIds}
+              newFotos={newFotos}
+              principal={principal}
+              onPrincipalChange={setPrincipal}
+              onNewFotosChange={(files) => {
                 clearField('foto');
-                setFoto(file);
+                setNewFotos(files);
+              }}
+              onRemoveExisting={(fotoId) => {
+                if (fotoId <= 0) {
+                  return;
+                }
+                clearField('foto');
+                setRemovedFotoIds((current) =>
+                  current.includes(fotoId) ? current : [...current, fotoId],
+                );
+              }}
+              onRemoveNew={(index) => {
+                clearField('foto');
+                setNewFotos((current) => current.filter((_, itemIndex) => itemIndex !== index));
               }}
             />
           ) : null}
@@ -1081,15 +1184,16 @@ export function EditarEquipamentoModal({ equipamento, open, onOpenChange }: Moda
             />
             <FieldMessage message={fieldErrors.valor_mensal} />
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+          <div className="flex items-center justify-between gap-4">
+            <Label htmlFor="editar-equipamento-critico" className="font-normal">
+              Equipamento crítico
+            </Label>
+            <Switch
+              id="editar-equipamento-critico"
               checked={isCritico}
-              onChange={(e) => setIsCritico(e.target.checked)}
-              className="size-4 rounded border-input"
+              onCheckedChange={setIsCritico}
             />
-            Equipamento crítico
-          </label>
+          </div>
         </div>
       </EquipamentoDialogShell>
     </Dialog>

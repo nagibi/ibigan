@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { GridCardActions } from '@/components/grid/grid-card-actions';
 import type { GridRowAction } from '@/components/grid/grid-row-actions';
+import { isGridStatusColumn } from '@/components/grid/grid-status-switch';
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import { resolveGridColumnLabel } from '@/lib/grid-column-presets';
 
@@ -30,8 +31,13 @@ export function GridColumnCard<T>({
   actions?: GridRowAction[];
 }) {
   const resolvedTitleId = titleColumnId ?? resolveGridCardTitleColumnId(columns);
+  const statusColumn = columns.find((column) => isGridStatusColumn(column.id));
   const contentColumns = columns.filter(
-    (column) => !CARD_SKIP_COLUMNS.has(column.id) && column.id !== 'actions' && column.id !== resolvedTitleId,
+    (column) =>
+      !CARD_SKIP_COLUMNS.has(column.id)
+      && column.id !== 'actions'
+      && column.id !== resolvedTitleId
+      && !isGridStatusColumn(column.id),
   );
   const actionsColumn = columns.find((column) => column.id === 'actions');
   const titleColumn = columns.find((column) => column.id === resolvedTitleId);
@@ -39,8 +45,26 @@ export function GridColumnCard<T>({
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 max-xl:gap-4">
-      {titleContent ? (
-        <div className="min-w-0 leading-snug [&_*]:truncate">{titleContent as ReactNode}</div>
+      {titleContent || statusColumn ? (
+        <div className="flex min-w-0 items-start gap-3">
+          {titleContent ? (
+            <div className="min-w-0 flex-1 leading-snug font-normal [&_*]:font-normal [&_*]:truncate">
+              {titleContent as ReactNode}
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          {statusColumn ? (
+            <div
+              className="shrink-0"
+              data-grid-no-row-select
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {statusColumn.render(row)}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {contentColumns.length > 0 ? (
@@ -50,7 +74,7 @@ export function GridColumnCard<T>({
               <dt className="text-xs text-muted-foreground">
                 {resolveGridColumnLabel(column.id, column.label)}
               </dt>
-              <dd className="text-sm break-words">{column.render(row)}</dd>
+              <dd className="break-words text-sm font-normal [&_*]:font-normal">{column.render(row)}</dd>
             </div>
           ))}
         </dl>

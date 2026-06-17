@@ -38,7 +38,7 @@ final class ManutencaoController extends Controller
 
     public function show(Manutencao $manutencao): JsonResponse
     {
-        $manutencao->load(['equipamento.tipo', 'emprestimo', 'registradoPor:id,name']);
+        $manutencao->load(['equipamento.tipo', 'emprestimo', 'registradoPor:id,name', 'responsavelUser:id,name,email']);
 
         return ApiResponse::success($this->serialize($manutencao, detailed: true));
     }
@@ -46,7 +46,7 @@ final class ManutencaoController extends Controller
     public function store(StoreManutencaoRequest $request, Equipamento $equipamento): JsonResponse
     {
         $manutencao = $this->statusService->enviarParaManutencao($equipamento, $request->validated());
-        $manutencao->load(['equipamento', 'emprestimo']);
+        $manutencao->load(['equipamento', 'emprestimo', 'responsavelUser:id,name,email']);
 
         return ApiResponse::success($this->serialize($manutencao), 'MSG000424', httpStatus: Response::HTTP_CREATED);
     }
@@ -79,7 +79,15 @@ final class ManutencaoController extends Controller
             'emprestimo_id' => $manutencao->emprestimo_id,
             'responsabilidade' => $manutencao->responsabilidade,
             'motivo' => $manutencao->motivo,
-            'responsavel_manutencao' => $manutencao->responsavel_manutencao,
+            'responsavel_user_id' => $manutencao->responsavel_user_id,
+            'responsavel_manutencao' => $manutencao->responsavel_manutencao ?? $manutencao->responsavelUser?->name,
+            'responsavel_user' => $manutencao->relationLoaded('responsavelUser') && $manutencao->responsavelUser
+                ? [
+                    'id' => $manutencao->responsavelUser->id,
+                    'name' => $manutencao->responsavelUser->name,
+                    'email' => $manutencao->responsavelUser->email,
+                ]
+                : null,
             'valor_mensal_snapshot' => $manutencao->valor_mensal_snapshot,
             'desconto_medicao' => $manutencao->desconto_medicao,
             'data_entrada' => $manutencao->data_entrada->toDateString(),

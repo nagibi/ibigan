@@ -82,10 +82,10 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Manutenções',
-            'slug' => 'equipcontrol-manutencao',
-            'icon' => 'Wrench',
-            'path' => '/equipamentos/manutencao',
+            'title' => 'Movimentações',
+            'slug' => 'equipcontrol-movimentacoes',
+            'icon' => 'Repeat2',
+            'path' => '/equipamentos/movimentacoes',
             'parent_id' => $equipcontrolOperacao->id,
             'order' => 2,
             'is_active' => true,
@@ -94,10 +94,10 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
-            'title' => 'Movimentações',
-            'slug' => 'equipcontrol-movimentacoes',
-            'icon' => 'ArrowLeftRight',
-            'path' => '/equipamentos/movimentacoes',
+            'title' => 'Manutenções',
+            'slug' => 'equipcontrol-manutencao',
+            'icon' => 'Wrench',
+            'path' => '/equipamentos/manutencao',
             'parent_id' => $equipcontrolOperacao->id,
             'order' => 3,
             'is_active' => true,

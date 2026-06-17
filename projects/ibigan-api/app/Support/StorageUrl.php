@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
 final class StorageUrl
@@ -33,7 +34,10 @@ final class StorageUrl
             return self::normalizeTenancyAssetUrl($path);
         }
 
-        return Storage::disk('public')->url($path);
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+
+        return $disk->url($path);
     }
 
     private static function normalizeTenancyAssetUrl(string $url): string

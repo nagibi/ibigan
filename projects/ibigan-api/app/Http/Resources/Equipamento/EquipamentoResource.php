@@ -44,6 +44,21 @@ final class EquipamentoResource extends JsonResource
             'valor_diario' => $this->valor_diario,
             'foto_path' => $this->foto_path,
             'foto_url' => StorageUrl::equipamentoFoto($this->foto_path, $this->patrimonio),
+            'fotos' => $this->whenLoaded('fotos', function () {
+                $sorted = $this->fotos->sortBy([
+                    ['ordem', 'asc'],
+                    ['id', 'asc'],
+                ])->values();
+                $principalId = $sorted->first()?->id;
+
+                return $sorted->map(fn ($foto) => [
+                    'id' => $foto->id,
+                    'path' => $foto->path,
+                    'url' => StorageUrl::equipamentoFoto($foto->path, $this->patrimonio),
+                    'ordem' => $foto->ordem,
+                    'is_principal' => $foto->id === $principalId,
+                ])->all();
+            }),
             'is_critico' => $this->is_critico,
             'is_active' => $this->is_active,
             'data_entrada' => $this->data_entrada->toDateString(),
@@ -83,6 +98,17 @@ final class EquipamentoResource extends JsonResource
                     'id' => $this->manutencaoAtiva->id,
                     'motivo' => $this->manutencaoAtiva->motivo,
                     'responsabilidade' => $this->manutencaoAtiva->responsabilidade,
+                    'responsavel_user_id' => $this->manutencaoAtiva->responsavel_user_id,
+                    'responsavel_manutencao' => $this->manutencaoAtiva->responsavel_manutencao
+                        ?? $this->manutencaoAtiva->responsavelUser?->name,
+                    'responsavel_user' => $this->manutencaoAtiva->relationLoaded('responsavelUser')
+                        && $this->manutencaoAtiva->responsavelUser
+                        ? [
+                            'id' => $this->manutencaoAtiva->responsavelUser->id,
+                            'name' => $this->manutencaoAtiva->responsavelUser->name,
+                            'email' => $this->manutencaoAtiva->responsavelUser->email,
+                        ]
+                        : null,
                     'data_entrada' => $this->manutencaoAtiva->data_entrada->toDateString(),
                 ];
             }),

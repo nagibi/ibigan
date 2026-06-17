@@ -49,6 +49,7 @@ export interface Manutencao {
   equipamento?: { id: number; patrimonio: string } | null;
   responsabilidade: 'fortes' | 'equipamento';
   motivo: string;
+  responsavel_user_id?: number;
   responsavel_manutencao?: string;
   data_entrada: string;
   data_saida?: string | null;
@@ -93,6 +94,18 @@ export interface EquipamentosListParams {
   updated_by?: string;
   emprestimo_alerta?: 'normais' | 'proximos' | 'vencidos';
   manutencao_filtro?: 'hoje' | 'atrasados' | 'criticos';
+  colaborador?: string;
+  encarregado?: string;
+  data_retirada_from?: string;
+  data_retirada_to?: string;
+  dias_em_uso_min?: number;
+  dias_em_uso_max?: number;
+  motivo?: string;
+  responsabilidade?: 'fortes' | 'equipamento';
+  manutencao_data_entrada_from?: string;
+  manutencao_data_entrada_to?: string;
+  dias_em_manutencao_min?: number;
+  dias_em_manutencao_max?: number;
   sort?: string;
   direction?: 'asc' | 'desc';
   page?: number;

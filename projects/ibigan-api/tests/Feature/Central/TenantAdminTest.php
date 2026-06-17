@@ -207,6 +207,18 @@ it('atualiza tenant para super-admin', function (): void {
     expect(Tenant::find('beta')->name)->toBe('Beta Atualizada');
 });
 
+it('atualiza require_admin_approval do tenant para super-admin', function (): void {
+    actingAsSuperAdmin($this->superUser);
+
+    $this->putJson('/api/central/v1/admin/tenants/beta', [
+        'require_admin_approval' => true,
+    ])
+        ->assertOk()
+        ->assertJsonPath('result.require_admin_approval', true);
+
+    expect(Tenant::find('beta')->require_admin_approval)->toBeTrue();
+});
+
 it('nega atualização de tenant para admin comum', function (): void {
     actingAsAdmin($this->adminUser);
 

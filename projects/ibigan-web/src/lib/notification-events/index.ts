@@ -2,7 +2,7 @@
  * Ponto de entrada do motor de eventos de notificação da plataforma Ibigan.
  *
  * Cada módulo registra seus eventos via `registerNotificationEvents`.
- * Na `main`, apenas eventos de plataforma estão ativos.
+ * Na branch `feature/ibigan-controle-equipamentos`, eventos do EquipControl também estão ativos.
  */
 import { PLATFORM_NOTIFICATION_EVENTS } from '@/lib/notification-events/platform-events';
 import {
@@ -13,11 +13,10 @@ import {
   registerNotificationEvents,
 } from '@/lib/notification-events/registry';
 
-// Branch controle-equipamento: descomente para ativar eventos do EquipControl
-// import { EQUIPCONTROL_NOTIFICATION_EVENTS } from '@/lib/notification-events/modules/equipcontrol-events';
+import { EQUIPCONTROL_NOTIFICATION_EVENTS } from '@/lib/notification-events/modules/equipcontrol-events';
 
 registerNotificationEvents(PLATFORM_NOTIFICATION_EVENTS);
-// registerNotificationEvents(EQUIPCONTROL_NOTIFICATION_EVENTS);
+registerNotificationEvents(EQUIPCONTROL_NOTIFICATION_EVENTS);
 
 export {
   NOTIFICATION_CATEGORY_LABELS,

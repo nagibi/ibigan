@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { resolveTenantSlugFromHostname } from '@/lib/tenant-host';
 import { buildTenantAuthQuery } from '@/lib/tenant-login-path';
 import { authService } from '@/services/auth.service';
 
@@ -7,7 +8,16 @@ export { buildTenantAuthQuery } from '@/lib/tenant-login-path';
 
 export function useTenantAuthContext() {
   const [searchParams] = useSearchParams();
-  const tenantQuery = (searchParams.get('tenant') ?? searchParams.get('tenant_id') ?? '').trim();
+  const hostSlug =
+    typeof window !== 'undefined'
+      ? resolveTenantSlugFromHostname(window.location.hostname)
+      : null;
+  const tenantQuery = (
+    searchParams.get('tenant')
+    ?? searchParams.get('tenant_id')
+    ?? hostSlug
+    ?? ''
+  ).trim();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['tenant-auth-context', window.location.hostname, tenantQuery],
@@ -24,11 +34,12 @@ export function useTenantAuthContext() {
     isError,
     isResolved,
     isTenantKnown,
-    isCentralHost: result?.is_central_host ?? true,
+    isCentralHost: result?.is_central_host ?? !hostSlug,
     tenant: result?.tenant ?? null,
     tenantId: result?.tenant?.id ?? (tenantQuery !== '' && !isLoading ? tenantQuery : ''),
     tenantSlug: result?.tenant?.slug ?? tenantQuery,
     tenantQuery,
-    source: result?.source ?? null,
+    hostSlug,
+    source: result?.source ?? (hostSlug ? 'subdomain' : null),
   };
 }

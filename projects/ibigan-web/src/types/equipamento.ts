@@ -38,7 +38,9 @@ export interface EquipamentoManutencaoAtiva {
   id: number;
   motivo: string;
   responsabilidade: 'fortes' | 'equipamento';
+  responsavel_user_id?: number | null;
   responsavel_manutencao?: string;
+  responsavel_user?: { id: number; name: string; email?: string } | null;
   data_entrada: string;
   dias_em_manutencao?: number;
   desconto_medicao?: boolean;
@@ -48,6 +50,14 @@ export interface EquipamentoManutencaoAtiva {
 export interface EquipamentoAuditUser {
   id: number;
   name: string;
+}
+
+export interface EquipamentoFoto {
+  id: number;
+  path?: string | null;
+  url?: string | null;
+  ordem?: number;
+  is_principal?: boolean;
 }
 
 export interface Equipamento {
@@ -67,6 +77,7 @@ export interface Equipamento {
   valor_diario?: number;
   foto_path?: string | null;
   foto_url?: string | null;
+  fotos?: EquipamentoFoto[];
   is_critico: boolean;
   is_active?: boolean;
   data_entrada: string;

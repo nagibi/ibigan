@@ -43,7 +43,7 @@ final class AuthController extends Controller
             'tenant_id' => ['required', 'string'],
         ]);
 
-        $tenant = Tenant::find($request->tenant_id);
+        $tenant = Tenant::findByIdOrSlug($request->tenant_id);
 
         if (! $tenant) {
             return ApiResponse::error(

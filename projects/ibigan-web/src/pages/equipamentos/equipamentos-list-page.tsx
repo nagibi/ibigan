@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
@@ -19,7 +18,7 @@ import {
 } from '@/pages/equipamentos/components/equipamento-card';
 import { applyContextFilterToParams, resolveContextFilter } from '@/lib/equipamento-filters';
 import { EquipamentoFilterChips } from '@/pages/equipamentos/components/equipamento-filter-chips';
-import { formatGridRecordCount } from '@/components/grid/grid-record-count';
+import { GridHeaderRecordCount } from '@/components/grid/grid-record-count';
 import { EquipamentoSearchField } from '@/pages/equipamentos/components/equipamento-search-field';
 import { EquipamentoMobileToolbar } from '@/pages/equipamentos/components/equipamento-mobile-toolbar';
 import { EquipamentoPageStack } from '@/pages/equipamentos/components/equipamento-page-stack';
@@ -61,7 +60,6 @@ type EquipamentosListPageProps = {
 };
 
 export function EquipamentosListPage({ mode, title, description }: EquipamentosListPageProps) {
-  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const filtroParam = searchParams.get('filtro');
   const { search, setSearch, qParam } = useEquipamentoUrlSearch();
@@ -131,7 +129,7 @@ export function EquipamentosListPage({ mode, title, description }: EquipamentosL
         ];
       case 'manutencao':
         return [
-          { id: 'finalizar', label: 'Finalizar manutenção', onClick: open('finalizar'), primary: true },
+          { id: 'finalizar', label: 'Finalizar', onClick: open('finalizar'), primary: true },
           { id: 'historico', label: 'Histórico', onClick: open('historico') },
         ];
       case 'baixados':
@@ -146,21 +144,19 @@ export function EquipamentosListPage({ mode, title, description }: EquipamentosL
   const items = data?.data ?? [];
   const meta = data?.meta;
 
-  const toolbarTitle = useMemo(
-    () => (
-      <>
-        <span className="min-w-0 truncate">{title}</span>
-        {typeof meta?.total === 'number' ? (
-          <span className="shrink-0 text-xs font-normal text-muted-foreground tabular-nums">
-            {formatGridRecordCount({ total: meta.total }, t)}
-          </span>
-        ) : null}
-      </>
-    ),
-    [meta?.total, t, title],
+  const recordCountLabel = useMemo(
+    () =>
+      typeof meta?.total === 'number' ? (
+        <GridHeaderRecordCount total={meta.total} />
+      ) : null,
+    [meta?.total],
   );
 
-  usePageToolbar({ title: toolbarTitle, description });
+  usePageToolbar({
+    title,
+    description,
+    headerActions: recordCountLabel,
+  });
 
   const showGroupedSections =
     mode === 'estoque' && filtro === 'todos' && !qParam && items.length > 0;

@@ -25,7 +25,8 @@ function NotificationSheetsHost({
   notificationsOpen: boolean;
   onNotificationsOpenChange: (open: boolean) => void;
 }) {
-  const { isOpen: preferencesOpen, setOpen: setPreferencesOpen } = useNotificationPreferencesSheet();
+  const { isOpen: preferencesOpen, moduleFilter, setOpen: setPreferencesOpen } =
+    useNotificationPreferencesSheet();
 
   return (
     <>
@@ -36,6 +37,7 @@ function NotificationSheetsHost({
       <NotificationPreferencesSheet
         open={preferencesOpen}
         onOpenChange={setPreferencesOpen}
+        module={moduleFilter ?? undefined}
       />
     </>
   );

@@ -30,7 +30,7 @@ function cleanupTenantDatabaseFiles(string ...$tenantIds): void
 }
 
 pest()->extend(TestCase::class)
-    ->in('Feature');
+    ->in('Feature', 'Unit');
 
 /**
  * @param  \Illuminate\Testing\TestResponse  $response

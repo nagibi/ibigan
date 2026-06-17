@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class Emprestimo extends Model
 {
@@ -126,5 +127,14 @@ class Emprestimo extends Model
                 now()->toDateString(),
                 now()->addDays($dias)->toDateString(),
             ]);
+    }
+
+    public static function diasEmUsoSqlExpression(): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "CAST((julianday(date('now')) - julianday(date(data_retirada))) AS INTEGER)";
+        }
+
+        return 'DATEDIFF(CURDATE(), data_retirada)';
     }
 }

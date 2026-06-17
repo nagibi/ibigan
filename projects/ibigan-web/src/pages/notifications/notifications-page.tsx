@@ -20,6 +20,7 @@ import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
 import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
 import { getColumnFilterDisplayValue } from '@/lib/grid-filter-display';
 import { useReadUnreadFilterOptions } from '@/lib/grid-filter-options';
+import { useNotificationCategoryFilterOptions } from '@/lib/notification-category-filter-options';
 import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import {
   dateRangeFilterFromKey,
@@ -27,8 +28,8 @@ import {
   useGridFilters,
 } from '@/hooks/use-grid-filters';
 import {
+  getNotificationCategoryDisplay,
   getNotificationTitle,
-  getNotificationType,
   getNotificationRecordId,
   getReportDownloadMeta,
   isReportNotification,
@@ -44,6 +45,7 @@ import {
   type AppNotification,
   type NotificationQuickFilter,
 } from '@/services/notifications.service';
+import { NOTIFICATION_PREFERENCES_TITLE } from '@/lib/notification-preferences-path';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { NotificationDetailSheet } from '@/components/notifications/notification-detail-sheet';
@@ -83,6 +85,7 @@ const GRID_COLUMNS_KEY = 'grid-columns:notifications';
 export function NotificationsPage() {
   const { t } = useTranslation();
   const readStatusFilterOptions = useReadUnreadFilterOptions();
+  const categoryFilterOptions = useNotificationCategoryFilterOptions();
   const navigate = useNavigate();
   const { open: openPreferences } = useNotificationPreferencesSheet();
   const notificationsMenu = useApiMenuByPath('/notifications');
@@ -110,6 +113,8 @@ export function NotificationsPage() {
       search: grid.debouncedSearch,
       quickFilter: activeFilter,
       columnFilters: columnFilters.activeFilterParams,
+      sort: grid.sort,
+      direction: grid.sortDir,
     }),
     [
       activeFilter,
@@ -118,6 +123,8 @@ export function NotificationsPage() {
       grid.page,
       grid.perPage,
       grid.resolvePerPage,
+      grid.sort,
+      grid.sortDir,
       knownTotal,
     ],
   );
@@ -152,6 +159,8 @@ export function NotificationsPage() {
     meta,
     resetDeps: [
       grid.debouncedSearch,
+      grid.sort,
+      grid.sortDir,
       columnFilters.activeFilterParams,
       activeFilter,
       infiniteScrollEnabled,
@@ -344,11 +353,17 @@ export function NotificationsPage() {
       {
         id: 'id',
         label: 'Id',
+        sortable: true,
+        sortKey: 'record_id',
         className: 'w-[70px] text-sm text-muted-foreground',
         filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
-        render: (notification) => (
-          <span className="font-medium tabular-nums">{getNotificationRecordId(notification)}</span>
-        ),
+        render: (notification) => {
+          const recordId = getNotificationRecordId(notification);
+
+          return (
+            <span className="tabular-nums">{recordId ?? '—'}</span>
+          );
+        },
       },
       {
         id: 'actions',
@@ -389,29 +404,15 @@ export function NotificationsPage() {
         ),
       },
       {
-        id: 'title',
-        label: 'Notificação',
-        className: 'min-w-[240px]',
-        filter: { type: 'text', filterKey: 'title', placeholder: 'Notificação' },
-        render: (notification) => (
-          <div className="min-w-0">
-            <p className={`truncate text-sm ${notification.read_at ? 'text-muted-foreground' : 'text-foreground'}`}>
-              {getNotificationTitle(notification)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {isReportNotification(notification) ? 'Relatórios' : getNotificationType(notification)}
-            </p>
-          </div>
-        ),
-      },
-      {
         id: 'read',
-        label: 'Status',
+        label: 'Lida',
+        sortable: true,
+        sortKey: 'read_at',
         className: 'w-[80px]',
         filter: {
           type: 'select',
           filterKey: 'read_status',
-          placeholder: 'Status',
+          placeholder: 'Lida',
           options: readStatusFilterOptions,
         },
         render: (notification) => {
@@ -441,17 +442,58 @@ export function NotificationsPage() {
         },
       },
       {
+        id: 'title',
+        label: 'Notificação',
+        sortable: true,
+        sortKey: 'title',
+        className: 'min-w-[240px]',
+        filter: { type: 'text', filterKey: 'title', placeholder: 'Notificação' },
+        render: (notification) => (
+          <p
+            className={`truncate text-sm ${
+              notification.read_at ? 'text-muted-foreground' : 'text-foreground'
+            }`}
+          >
+            {getNotificationTitle(notification)}
+          </p>
+        ),
+      },
+      {
+        id: 'category',
+        label: 'Categoria',
+        sortable: true,
+        sortKey: 'category',
+        className: 'min-w-[8rem] w-[10rem]',
+        filter: {
+          type: 'select',
+          filterKey: 'category',
+          placeholder: 'Categoria',
+          options: categoryFilterOptions,
+        },
+        render: (notification) => (
+          <p className="truncate text-sm text-muted-foreground">
+            {getNotificationCategoryDisplay(notification)}
+          </p>
+        ),
+      },
+      {
         id: 'created_at',
         label: 'Recebida',
-        className: 'w-[140px] text-sm text-muted-foreground',
+        sortable: true,
+        sortKey: 'created_at',
+        className: 'min-w-[11rem] w-[11rem] whitespace-nowrap',
         filter: { type: 'dateRange', filterKey: 'created_at', placeholder: 'Período' },
-        render: (notification) => formatDistanceToNow(new Date(notification.created_at), {
-          addSuffix: true,
-          locale: ptBR,
-        }),
+        render: (notification) => (
+          <span className="whitespace-nowrap">
+            {formatDistanceToNow(new Date(notification.created_at), {
+              addSuffix: true,
+              locale: ptBR,
+            })}
+          </span>
+        ),
       },
     ],
-    [downloadingId, handleDownloadReport, handleViewNotification, markAsReadMutation, markAsUnreadMutation, navigate, selected, toggleSelect],
+    [categoryFilterOptions, downloadingId, handleDownloadReport, handleViewNotification, markAsReadMutation, markAsUnreadMutation, navigate, readStatusFilterOptions, selected, toggleSelect],
   );
 
   const gridColumns = useGridColumns(GRID_COLUMNS_KEY, columnDefinitions);
@@ -542,13 +584,14 @@ export function NotificationsPage() {
     description: 'Central de notificações do sistema.',
     headerActions: (
       <Button
+        type="button"
         variant="primary"
         size="sm"
-        className="h-8 shrink-0"
-        onClick={openPreferences}
+        aria-label={notificationPreferencesMenu?.title ?? NOTIFICATION_PREFERENCES_TITLE}
+        onClick={() => openPreferences()}
       >
-        <PreferencesIcon className="mr-1.5 size-3.5" />
-        {notificationPreferencesMenu?.title ?? 'Configurações'}
+        <PreferencesIcon className="size-4" />
+        {NOTIFICATION_PREFERENCES_TITLE}
       </Button>
     ),
     actions: (
@@ -686,6 +729,9 @@ export function NotificationsPage() {
             loading: isLoading,
           })}
           onColumnOrderChange={gridColumns.reorderDraggableColumns}
+          sort={grid.sort}
+          sortDir={grid.sortDir}
+          onSort={grid.toggleSort}
           isRowSelected={(notification) => selected.includes(notification.id)}
           onRowClick={handleViewNotification}
           columnFilters={columnFilters.filters}

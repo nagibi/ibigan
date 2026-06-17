@@ -4,6 +4,7 @@ import type {
   NotificationSeverity,
 } from '@/types/notification-events';
 import { getNotificationEvent } from '@/lib/notification-events';
+import { resolveEquipcontrolNotificationActions } from '@/lib/notification-events/equipcontrol-actions';
 
 export function getNotificationType(notification: AppNotification): string {
   return notification.type.split('\\').pop() ?? notification.type;
@@ -60,7 +61,7 @@ function parseNumericId(value: unknown): number | null {
 }
 
 /** ID numérico do banco (distinto do UUID usado nas rotas da API). */
-export function getNotificationRecordId(notification: AppNotification): number | string {
+export function getNotificationRecordId(notification: AppNotification): number | null {
   const candidates = [
     notification.record_id,
     notification.data.record_id,
@@ -75,12 +76,7 @@ export function getNotificationRecordId(notification: AppNotification): number |
     }
   }
 
-  const routeId = parseNumericId(notification.id);
-  if (routeId != null) {
-    return routeId;
-  }
-
-  return notification.id;
+  return null;
 }
 
 export function getNotificationEventSlug(notification: AppNotification): string | null {
@@ -127,11 +123,21 @@ function parseAction(value: unknown): NotificationAction | null {
 
 export function getNotificationActions(notification: AppNotification): NotificationAction[] {
   const raw = notification.data.actions;
-  if (!Array.isArray(raw)) return [];
+  const fromApi = Array.isArray(raw)
+    ? raw.map(parseAction).filter((action): action is NotificationAction => action !== null)
+    : [];
 
-  return raw
-    .map(parseAction)
-    .filter((action): action is NotificationAction => action !== null);
+  if (fromApi.length > 0) return fromApi;
+
+  const slug = getNotificationEventSlug(notification);
+  if (!slug) return [];
+
+  const event = getNotificationEvent(slug);
+  if (event?.module === 'equipcontrol') {
+    return resolveEquipcontrolNotificationActions(slug, notification.data);
+  }
+
+  return [];
 }
 
 export function getNotificationCategoryLabel(notification: AppNotification): string | null {
@@ -142,4 +148,12 @@ export function getNotificationCategoryLabel(notification: AppNotification): str
   if (!event) return null;
 
   return event.label;
+}
+
+export function getNotificationCategoryDisplay(notification: AppNotification): string {
+  if (isReportNotification(notification)) {
+    return 'Relatórios';
+  }
+
+  return getNotificationCategoryLabel(notification) ?? getNotificationType(notification);
 }

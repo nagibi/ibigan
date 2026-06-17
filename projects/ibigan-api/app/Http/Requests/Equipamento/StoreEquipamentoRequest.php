@@ -21,7 +21,7 @@ final class StoreEquipamentoRequest extends FormRequest
     {
         $equipamentoId = $this->route('equipamento')?->id;
 
-        return [
+        $rules = [
             'patrimonio' => [
                 $equipamentoId ? 'sometimes' : 'required',
                 'string',
@@ -54,7 +54,29 @@ final class StoreEquipamentoRequest extends FormRequest
             ],
             'is_critico' => ['sometimes', 'boolean'],
             'foto' => ['nullable', 'image', 'max:5120'],
+            'fotos' => ['sometimes', 'array'],
+            'fotos.*' => ['image', 'max:5120'],
+            'foto_principal_novo_indice' => ['sometimes', 'integer', 'min:0'],
         ];
+
+        if ($equipamentoId) {
+            $rules['foto_principal_id'] = [
+                'sometimes',
+                'integer',
+                Rule::exists('equipamento_fotos', 'id')->where(
+                    fn ($query) => $query->where('equipamento_id', $equipamentoId),
+                ),
+            ];
+            $rules['fotos_remover'] = ['sometimes', 'array'];
+            $rules['fotos_remover.*'] = [
+                'integer',
+                Rule::exists('equipamento_fotos', 'id')->where(
+                    fn ($query) => $query->where('equipamento_id', $equipamentoId),
+                ),
+            ];
+        }
+
+        return $rules;
     }
 
     /**
@@ -69,6 +91,7 @@ final class StoreEquipamentoRequest extends FormRequest
             'obra_id.exists' => 'Obra inválida.',
             'valor_mensal.min' => 'O valor mensal não pode ser negativo.',
             'foto.max' => 'A foto não pode ultrapassar 5MB.',
+            'fotos.*.max' => 'Cada foto não pode ultrapassar 5MB.',
         ];
     }
 }

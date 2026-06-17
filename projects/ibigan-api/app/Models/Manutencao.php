@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class Manutencao extends Model
 {
@@ -22,6 +23,7 @@ class Manutencao extends Model
         'emprestimo_id',
         'responsabilidade',
         'motivo',
+        'responsavel_user_id',
         'responsavel_manutencao',
         'observacoes_tecnicas',
         'foto_path',
@@ -57,6 +59,11 @@ class Manutencao extends Model
         return $this->belongsTo(User::class, 'registrado_por');
     }
 
+    public function responsavelUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsavel_user_id');
+    }
+
     public function getDiasEmManutencaoAttribute(): int
     {
         $fim = $this->data_saida ?? now();
@@ -84,5 +91,14 @@ class Manutencao extends Model
             $q->where('desconto_medicao', true)
                 ->orWhere('responsabilidade', 'equipamento');
         });
+    }
+
+    public static function diasEmManutencaoSqlExpression(): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "CAST((julianday(date('now')) - julianday(date(data_entrada))) AS INTEGER)";
+        }
+
+        return 'DATEDIFF(CURDATE(), data_entrada)';
     }
 }

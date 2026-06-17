@@ -21,6 +21,8 @@ export interface NotificationListParams {
   search?: string;
   quickFilter?: NotificationQuickFilter;
   columnFilters?: Record<string, string>;
+  sort?: string | null;
+  direction?: 'asc' | 'desc';
 }
 
 function buildListParams({
@@ -29,8 +31,15 @@ function buildListParams({
   search,
   quickFilter = 'all',
   columnFilters = {},
+  sort,
+  direction = 'asc',
 }: NotificationListParams = {}): Record<string, string | number> {
   const params: Record<string, string | number> = { page, per_page: perPage };
+
+  if (sort?.trim()) {
+    params.sort = sort.trim();
+    params.direction = direction;
+  }
 
   if (search?.trim()) {
     params.search = search.trim();
@@ -72,6 +81,7 @@ export const notificationsService = {
 
   listFilterKeys: {
     readStatus: 'read_status',
+    category: 'category',
     title: 'title',
     id: 'id',
     createdAt: 'created_at',

@@ -54,14 +54,20 @@ final class TenantContextResolver
 
         $queryParam = (string) config('tenant-context.query_param', 'tenant');
         $slug = $request->query($queryParam);
+        $hostSlug = $this->resolveSlugFromHostSuffixes($host);
 
-        if (is_string($slug) && $slug !== '' && $this->isCentralHost($host)) {
-            $tenant = Tenant::query()->where('slug', $slug)->first();
+        if (is_string($slug) && $slug !== '') {
+            $allowQuery = $this->isCentralHost($host)
+                || ($hostSlug !== null && $hostSlug === $slug);
 
-            return [
-                'tenant' => $tenant,
-                'source' => $tenant ? self::SOURCE_QUERY : null,
-            ];
+            if ($allowQuery) {
+                $tenant = Tenant::query()->where('slug', $slug)->first();
+
+                return [
+                    'tenant' => $tenant,
+                    'source' => $tenant ? self::SOURCE_QUERY : null,
+                ];
+            }
         }
 
         return [
@@ -117,6 +123,17 @@ final class TenantContextResolver
 
     private function resolveByDevSubdomain(string $host): ?Tenant
     {
+        $slug = $this->resolveSlugFromHostSuffixes($host);
+
+        if ($slug === null) {
+            return null;
+        }
+
+        return Tenant::query()->where('slug', $slug)->first();
+    }
+
+    private function resolveSlugFromHostSuffixes(string $host): ?string
+    {
         $suffixes = config('tenant-context.dev_subdomain_suffixes', []);
 
         foreach ($suffixes as $suffix) {
@@ -135,7 +152,7 @@ final class TenantContextResolver
                 continue;
             }
 
-            return Tenant::query()->where('slug', $slug)->first();
+            return $slug;
         }
 
         return null;

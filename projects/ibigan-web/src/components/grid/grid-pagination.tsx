@@ -43,18 +43,18 @@ export function GridPagination({
 }: GridPaginationProps) {
   const { t } = useTranslation();
   const selectedPerPage = perPage ?? meta.per_page;
-  const effectivePerPage = getEffectiveGridPerPage(selectedPerPage, meta.total);
-  const from = meta.total === 0 ? 0 : (meta.current_page - 1) * effectivePerPage + 1;
-  const to = Math.min(meta.current_page * effectivePerPage, meta.total);
   const lastPage = Math.max(meta.last_page, 1);
+  const effectivePerPage = getEffectiveGridPerPage(selectedPerPage, meta.total);
+  const from =
+    meta.total === 0 ? 0 : (meta.current_page - 1) * effectivePerPage + 1;
+  const to = Math.min(meta.current_page * effectivePerPage, meta.total);
 
   return (
     <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <p className="hidden shrink-0 text-sm text-muted-foreground xl:block">
+      <p className="hidden text-sm text-muted-foreground sm:block">
         {t('grid.pagination.range', { from, to, total: meta.total })}
       </p>
-
-      <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-4">
+      <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-4 sm:ms-auto">
         {onPerPageChange ? (
           <div className="flex shrink-0 items-center gap-1.5">
             <span className="hidden text-sm text-muted-foreground sm:inline">

@@ -32,7 +32,7 @@ export function MenuCard({
       <div className="flex min-w-0 items-start gap-3">
         <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{menu.title}</p>
+          <p className="truncate">{menu.title}</p>
           <p className="truncate text-sm text-muted-foreground">{menu.path ?? '—'}</p>
         </div>
         <GridBadge tone={menu.is_active ? 'success' : 'destructive'} className="shrink-0">

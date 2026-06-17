@@ -30,6 +30,14 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return $this->hasMany(TenantUser::class);
     }
 
+    public static function findByIdOrSlug(string $idOrSlug): ?self
+    {
+        return static::query()
+            ->whereKey($idOrSlug)
+            ->orWhere('slug', $idOrSlug)
+            ->first();
+    }
+
     // Configurações de segurança (armazenadas em data JSON via VirtualColumn)
 
     public function getRegistrationModeAttribute(): string

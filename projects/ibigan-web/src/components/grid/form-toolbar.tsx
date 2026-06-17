@@ -1,8 +1,8 @@
+import { useEffect, useState, type ElementType, type ReactNode } from 'react';
 import { type VariantProps } from 'class-variance-authority';
-import { type ElementType, type ReactNode, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
+  Ban,
   ChevronDown,
   ClipboardList,
   Copy,
@@ -10,23 +10,17 @@ import {
   LoaderCircle,
   Pencil,
   Plus,
-  Undo2,
   RefreshCw,
   Save,
   Trash2,
+  Undo2,
   UserCheck,
   UserX,
 } from 'lucide-react';
-import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { shouldIgnoreFormDeleteShortcut } from '@/lib/form-keyboard-shortcuts';
+import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,13 +30,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
-import { shouldIgnoreFormDeleteShortcut } from '@/lib/form-keyboard-shortcuts';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
-  GridToolbarRoot,
-  GridToolbarGroup,
-} from './grid-toolbar';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ActivityLogsSheet } from '@/components/activity-logs/activity-logs-sheet';
+import { AlertDialogPanelTitle } from '@/components/common/panel-title';
 import { FormAuditSheet } from './form-audit-sheet';
+import { GridToolbarGroup, GridToolbarRoot } from './grid-toolbar';
 import { ToolbarTooltip } from './toolbar-tooltip';
 
 export interface FormToolbarProps {
@@ -127,10 +125,11 @@ function FormButton({
           className,
         )}
       >
-        {loading
-          ? <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
-          : <Icon className="size-3.5 shrink-0" />
-        }
+        {loading ? (
+          <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
+        ) : (
+          <Icon className="size-3.5 shrink-0" />
+        )}
         {showLabel && label}
       </Button>
     </ToolbarTooltip>
@@ -181,7 +180,8 @@ export function FormToolbar({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Delete') return;
-      if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey)
+        return;
       if (shouldIgnoreFormDeleteShortcut(event)) return;
 
       event.preventDefault();
@@ -192,24 +192,31 @@ export function FormToolbar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDeleting, onDelete]);
 
-  const hasSaveActions = Boolean(onSaveAndList || onSaveAndNew || onSaveAndEdit);
+  const hasSaveActions = Boolean(
+    onSaveAndList || onSaveAndNew || onSaveAndEdit,
+  );
   const showEditSave = isEditing && hasSaveActions;
   const showCreateToolbar = !isEditing && hasSaveActions;
   const primarySaveAction = onSaveAndList ?? onSaveAndNew ?? onSaveAndEdit;
   const primarySaveLabel = primarySaveLabelProp ?? t('form.save');
   const PrimarySaveIcon = PrimarySaveIconProp ?? Save;
-  const saveDisabled = isSubmitting || !primarySaveAction || primarySaveDisabled || (isEditing && !isDirty);
+  const saveDisabled =
+    isSubmitting ||
+    !primarySaveAction ||
+    primarySaveDisabled ||
+    (isEditing && !isDirty);
   const hasSaveDropdown = Boolean(
-    hasSaveActions && (
-      (onSaveAndNew && primarySaveAction !== onSaveAndNew)
-      || (onSaveAndEdit && primarySaveAction !== onSaveAndEdit)
-      || (onSaveAndList && primarySaveAction !== onSaveAndList)
-    ),
+    hasSaveActions &&
+    ((onSaveAndNew && primarySaveAction !== onSaveAndNew) ||
+      (onSaveAndEdit && primarySaveAction !== onSaveAndEdit) ||
+      (onSaveAndList && primarySaveAction !== onSaveAndList)),
   );
   const hasLifecycle = isEditing && (onToggleActive || onDelete || onDuplicate);
-  const hasAudit = isEditing && (createdBy || updatedBy || createdAt || updatedAt);
+  const hasAudit =
+    isEditing && (createdBy || updatedBy || createdAt || updatedAt);
   const hasActivityLog = isEditing && Boolean(activityLog);
-  const primarySaveTooltip = primarySaveTooltipProp ?? t('form.tooltip.save_and_list');
+  const primarySaveTooltip =
+    primarySaveTooltipProp ?? t('form.tooltip.save_and_list');
   const hasNavigation = Boolean(onBack || onRefresh);
 
   const backButton = onBack ? (
@@ -221,21 +228,22 @@ export function FormToolbar({
     />
   ) : null;
 
-  const refreshButton = onRefresh && !isMobile ? (
-    <FormButton
-      label={t('grid.refresh')}
-      tooltip={t('grid.tooltip.refresh')}
-      icon={RefreshCw}
-      onClick={onRefresh}
-      loading={isRefreshing}
-    />
-  ) : null;
+  const refreshButton =
+    onRefresh && !isMobile ? (
+      <FormButton
+        label={t('grid.refresh')}
+        tooltip={t('grid.tooltip.refresh')}
+        icon={RefreshCw}
+        onClick={onRefresh}
+        loading={isRefreshing}
+      />
+    ) : null;
 
   const clearButton = onClear ? (
     <FormButton
       label={t('common.clear')}
       tooltip={t('form.tooltip.clear')}
-      icon={Undo2}
+      icon={Ban}
       onClick={onClear}
       disabled={!isDirty}
     />
@@ -249,12 +257,16 @@ export function FormToolbar({
         size="sm"
         disabled={saveDisabled}
         onClick={primarySaveAction}
-        className={cn('h-8 shrink-0 gap-1.5', hasSaveDropdown && 'rounded-r-none')}
+        className={cn(
+          'h-8 shrink-0 gap-1.5',
+          hasSaveDropdown && 'rounded-r-none',
+        )}
       >
-        {isSubmitting
-          ? <LoaderCircle className="size-3.5 animate-spin" />
-          : <PrimarySaveIcon className="size-3.5" />
-        }
+        {isSubmitting ? (
+          <LoaderCircle className="size-3.5 animate-spin" />
+        ) : (
+          <PrimarySaveIcon className="size-3.5" />
+        )}
         {primarySaveLabel}
       </Button>
     </ToolbarTooltip>
@@ -285,26 +297,17 @@ export function FormToolbar({
       </ToolbarTooltip>
       <DropdownMenuContent align="start">
         {onSaveAndNew && primarySaveAction !== onSaveAndNew && (
-          <DropdownMenuItem
-            disabled={saveDisabled}
-            onClick={onSaveAndNew}
-          >
+          <DropdownMenuItem disabled={saveDisabled} onClick={onSaveAndNew}>
             <Plus className="size-4 mr-2" /> {t('form.save_and_new')}
           </DropdownMenuItem>
         )}
         {onSaveAndEdit && primarySaveAction !== onSaveAndEdit && (
-          <DropdownMenuItem
-            disabled={saveDisabled}
-            onClick={onSaveAndEdit}
-          >
+          <DropdownMenuItem disabled={saveDisabled} onClick={onSaveAndEdit}>
             <Pencil className="size-4 mr-2" /> {t('form.save_and_edit')}
           </DropdownMenuItem>
         )}
         {onSaveAndList && primarySaveAction !== onSaveAndList && (
-          <DropdownMenuItem
-            disabled={saveDisabled}
-            onClick={onSaveAndList}
-          >
+          <DropdownMenuItem disabled={saveDisabled} onClick={onSaveAndList}>
             <Save className="size-4 mr-2" /> {t('form.save_and_list')}
           </DropdownMenuItem>
         )}
@@ -339,7 +342,7 @@ export function FormToolbar({
                 tooltip={t('form.tooltip.new')}
                 icon={Plus}
                 onClick={onNew}
-                iconOnly
+                //iconOnly
               />
             )}
 
@@ -361,8 +364,14 @@ export function FormToolbar({
             <GridToolbarGroup>
               {onToggleActive && (
                 <FormButton
-                  label={isActive ? t('common.deactivate') : t('common.activate')}
-                  tooltip={isActive ? t('form.tooltip.deactivate') : t('form.tooltip.activate')}
+                  label={
+                    isActive ? t('common.deactivate') : t('common.activate')
+                  }
+                  tooltip={
+                    isActive
+                      ? t('form.tooltip.deactivate')
+                      : t('form.tooltip.activate')
+                  }
                   icon={isActive ? UserX : UserCheck}
                   onClick={onToggleActive}
                   loading={isTogglingActive}
@@ -455,7 +464,10 @@ export function FormToolbar({
             <AlertDialogCancel />
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => { setDeleteOpen(false); onDelete?.(); }}
+              onClick={() => {
+                setDeleteOpen(false);
+                onDelete?.();
+              }}
             >
               {t('common.delete')}
             </AlertDialogAction>

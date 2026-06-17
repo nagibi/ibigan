@@ -25,7 +25,7 @@ function normalizeGridColumnLayoutClass(className?: string): string | undefined 
   return normalized || undefined;
 }
 
-export const GRID_BODY_CELL_CLASS = 'text-sm font-normal text-muted-foreground';
+export const GRID_BODY_CELL_CLASS = 'text-sm font-normal text-muted-foreground [&_*]:font-normal';
 
 export function getGridColumnCellClassName(columnId: string, className?: string): string {
   const resolvedClassName = normalizeGridColumnLayoutClass(

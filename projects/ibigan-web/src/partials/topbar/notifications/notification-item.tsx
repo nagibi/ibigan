@@ -1,18 +1,22 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  AlertTriangle,
   BarChart2,
   CheckCircle,
   LoaderCircle,
   Mail,
   MailOpen,
+  Package,
   Trash2,
+  Wrench,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { type AppNotification } from '@/services/notifications.service';
-import { getReportDownloadMeta, formatNotificationBody } from '@/lib/notification-utils';
+import { getReportDownloadMeta, formatNotificationBody, getNotificationActions, getNotificationCategoryLabel, getNotificationEventSlug, getNotificationSeverity, getNotificationTitle } from '@/lib/notification-utils';
+import { getNotificationEvent } from '@/lib/notification-events';
 import { downloadReportResultCsvWithToast } from '@/services/reports.service';
 import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
 import { getInitials } from '@/lib/helpers';
@@ -310,6 +314,75 @@ export function NotificationItem({ notification, onMarkRead, onMarkUnread, onDel
               </Link>
             )}
           </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const eventSlug = getNotificationEventSlug(notification);
+  const equipcontrolEvent = eventSlug ? getNotificationEvent(eventSlug) : null;
+  const notificationActions = getNotificationActions(notification);
+
+  if (equipcontrolEvent?.module === 'equipcontrol') {
+    const title = getNotificationTitle(notification);
+    const category = getNotificationCategoryLabel(notification) ?? 'EquipControl';
+    const severity = getNotificationSeverity(notification);
+    const primaryAction = notificationActions.find((action) => action.primary) ?? notificationActions[0];
+    const primaryPath =
+      primaryAction?.type === 'navigate' ? String(primaryAction.payload.path ?? '') : '';
+    const body = data.body
+      ? formatNotificationBody(data.body)
+      : data.message
+        ? String(data.message)
+        : equipcontrolEvent.example ?? '';
+
+    const SeverityIcon =
+      severity === 'critical' || severity === 'warning' ? AlertTriangle : Package;
+    const avatarClass =
+      severity === 'critical'
+        ? 'bg-red-500/10 text-red-700'
+        : severity === 'warning'
+          ? 'bg-amber-500/10 text-amber-700'
+          : 'bg-primary/10 text-primary';
+
+    return (
+      <div className={cn('flex grow items-start gap-2.5 px-5 py-4', isUnread && 'bg-primary/5')}>
+        <NotificationAvatar className={avatarClass}>
+          {eventSlug?.startsWith('maintenance.') ? <Wrench className="size-4" /> : <SeverityIcon className="size-4" />}
+        </NotificationAvatar>
+        <div className="relative flex min-w-0 grow flex-col gap-3.5">
+          <div className="absolute end-0 top-0 z-10">{actions}</div>
+          <div className="flex flex-col gap-1 pe-14">
+            <div className={cn('text-sm font-medium', isUnread && 'font-semibold')}>
+              {primaryPath ? (
+                <Link
+                  to={primaryPath}
+                  className="hover:text-primary"
+                  onClick={() => isUnread && onMarkRead(notification.id)}
+                >
+                  {title}
+                </Link>
+              ) : (
+                title
+              )}
+            </div>
+            <NotificationMeta timeAgo={timeAgo} category={category} />
+          </div>
+          {body ? (
+            <Card className="rounded-lg bg-muted/70 p-2.5 shadow-none">
+              <p className="line-clamp-3 text-xs text-secondary-foreground">{body}</p>
+            </Card>
+          ) : null}
+          {primaryPath && primaryAction ? (
+            <Button variant="outline" size="sm" className="h-7 w-fit text-xs" asChild>
+              <Link
+                to={primaryPath}
+                onClick={() => isUnread && onMarkRead(notification.id)}
+              >
+                {primaryAction.label}
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </div>
     );

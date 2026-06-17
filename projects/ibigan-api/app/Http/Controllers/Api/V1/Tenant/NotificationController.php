@@ -27,11 +27,13 @@ final class NotificationController extends Controller
     {
         abort_unless($request->user()->can('notificacao-visualizar'), Response::HTTP_FORBIDDEN);
 
-        $notifications = $this->applyFilters(
-            $request->user()->notifications(),
+        $notifications = $this->applySort(
+            $this->applyFilters(
+                $request->user()->notifications(),
+                $request,
+            ),
             $request,
         )
-            ->latest()
             ->paginate($request->integer('per_page', 15));
 
         return response()->json([
@@ -158,7 +160,24 @@ final class NotificationController extends Controller
             )));
 
             if ($ids !== []) {
-                $query->whereIn('id', $ids);
+                $numericIds = array_values(array_filter(
+                    $ids,
+                    static fn (string $id): bool => ctype_digit($id),
+                ));
+                $uuidIds = array_values(array_filter(
+                    $ids,
+                    static fn (string $id): bool => ! ctype_digit($id),
+                ));
+
+                $query->where(function (Builder $q) use ($numericIds, $uuidIds): void {
+                    if ($numericIds !== []) {
+                        $q->orWhereIn('record_id', array_map(intval(...), $numericIds));
+                    }
+
+                    if ($uuidIds !== []) {
+                        $q->orWhereIn('id', $uuidIds);
+                    }
+                });
             }
         }
 
@@ -186,10 +205,39 @@ final class NotificationController extends Controller
             }
         }
 
+        if ($request->filled('filter_category')) {
+            $categories = GridFilter::csvValues($request->string('filter_category')->toString());
+
+            if ($categories !== []) {
+                $query->where(function (Builder $q) use ($categories): void {
+                    foreach ($categories as $category) {
+                        if ($category === 'report') {
+                            $q->orWhere(function (Builder $sub): void {
+                                $this->applyReportCategoryFilter($sub);
+                            });
+
+                            continue;
+                        }
+
+                        if (str_starts_with($category, 'type:')) {
+                            $type = substr($category, 5);
+                            $q->orWhere('type', 'like', "%{$type}%");
+
+                            continue;
+                        }
+
+                        $q->orWhere(function (Builder $sub) use ($category): void {
+                            $sub->where('data->event_slug', $category)
+                                ->orWhere('data->event', $category);
+                        });
+                    }
+                });
+            }
+        }
+
         if ($request->filled('filter_type') && $request->string('filter_type')->toString() === 'report') {
             $query->where(function (Builder $q): void {
-                $q->where('type', 'like', '%ReportCompletedNotification%')
-                    ->orWhere('data', 'like', '%"template_id"%');
+                $this->applyReportCategoryFilter($q);
             });
         }
 
@@ -202,5 +250,44 @@ final class NotificationController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * @param  Relation<\Illuminate\Notifications\DatabaseNotification, \App\Models\User, \Illuminate\Database\Eloquent\Collection<int, \Illuminate\Notifications\DatabaseNotification>>  $query
+     * @return Relation<\Illuminate\Notifications\DatabaseNotification, \App\Models\User, \Illuminate\Database\Eloquent\Collection<int, \Illuminate\Notifications\DatabaseNotification>>
+     */
+    private function applySort(Relation $query, Request $request): Relation
+    {
+        if (! $request->filled('sort')) {
+            return $query->reorder()->latest();
+        }
+
+        $sort = $request->string('sort')->toString();
+        $direction = $request->string('direction')->toString() === 'asc' ? 'asc' : 'desc';
+
+        return match ($sort) {
+            'record_id' => $query->reorder()->orderBy('record_id', $direction),
+            'read_at' => $query->reorder()->orderBy('read_at', $direction),
+            'created_at' => $query->reorder()->orderBy('created_at', $direction),
+            'category' => $query->reorder()->orderBy('type', $direction),
+            'title' => $query->reorder()
+                ->orderBy('data->subject', $direction)
+                ->orderBy('data->title', $direction)
+                ->orderBy('data->message', $direction)
+                ->orderBy('type', $direction),
+            default => $query->reorder()->latest(),
+        };
+    }
+
+    /**
+     * @param  Builder<\Illuminate\Notifications\DatabaseNotification>  $query
+     * @return Builder<\Illuminate\Notifications\DatabaseNotification>
+     */
+    private function applyReportCategoryFilter(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q): void {
+            $q->where('type', 'like', '%ReportCompletedNotification%')
+                ->orWhere('data', 'like', '%"template_id"%');
+        });
     }
 }

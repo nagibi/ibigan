@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import type { ViewMode } from '@/types/view-mode';
 import type { GridColumnDef } from '@/hooks/use-grid-columns';
 import type { GridRowAction } from '@/components/grid/grid-row-actions';
@@ -20,6 +20,7 @@ type GridColumnDataViewProps<T> = {
   emptyMessage?: string;
   titleColumnId?: string;
   getRowActions?: (row: T) => GridRowAction[];
+  renderCard?: (row: T) => ReactNode;
   infiniteScroll?: GridInfiniteScrollConfig;
   sort?: string | null;
   sortDir?: SortDirection;
@@ -47,6 +48,7 @@ export function GridColumnDataView<T>({
   emptyMessage,
   titleColumnId,
   getRowActions,
+  renderCard,
   infiniteScroll,
   sort,
   sortDir,
@@ -65,14 +67,20 @@ export function GridColumnDataView<T>({
   const resolvedCardData = cardData ?? data;
   const resolvedEmpty = isEmpty ?? (!loading && data.length === 0);
 
-  const renderCard = (row: T) => (
-    <GridColumnCard
-      row={row}
-      columns={columns}
-      titleColumnId={titleColumnId}
-      actions={getRowActions?.(row)}
-    />
-  );
+  const renderCardContent = (row: T) => {
+    if (renderCard) {
+      return renderCard(row);
+    }
+
+    return (
+      <GridColumnCard
+        row={row}
+        columns={columns}
+        titleColumnId={titleColumnId}
+        actions={getRowActions?.(row)}
+      />
+    );
+  };
 
   return (
     <DataView
@@ -110,7 +118,7 @@ export function GridColumnDataView<T>({
           isRowSelected={isRowSelected}
           onRowClick={onRowClick}
           onRowDoubleClick={onRowDoubleClick}
-          renderItem={renderCard}
+          renderItem={renderCardContent}
         />
       )}
       cardView={(
@@ -120,7 +128,7 @@ export function GridColumnDataView<T>({
           isRowSelected={isRowSelected}
           onRowClick={onRowClick}
           onRowDoubleClick={onRowDoubleClick}
-          renderCard={renderCard}
+          renderCard={renderCardContent}
         />
       )}
     />

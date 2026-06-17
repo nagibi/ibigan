@@ -2,7 +2,7 @@
   "auth.login.title": "Sign in",
   "auth.login.subtitle": "Access your Ibigan account",
   "auth.login.tenant_id": "Organization ID",
-  "auth.login.tenant_context_hint": "In development, use ?tenant=slug in the URL or access via subdomain (e.g. techsolutions.localhost).",
+  "auth.login.tenant_context_hint": "Use the company subdomain (e.g. techsolutions.nagibi.com.br) or ?tenant=slug on the central URL.",
   "auth.login.subtitle_tenant": "Sign in to {{name}}",
   "auth.login.tenant_inactive": "This organization is inactive.",
   "auth.login.email": "Email",

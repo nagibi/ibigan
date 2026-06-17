@@ -102,6 +102,21 @@ it('nao resolve tenant por query fora do host central', function (): void {
         ->assertJsonPath('result.is_central_host', false);
 });
 
+it('resolve tenant por subdominio de producao', function (): void {
+    config([
+        'tenant-context.central_hosts' => ['nagibi.com.br'],
+        'tenant-context.dev_subdomain_suffixes' => ['nagibi.com.br'],
+    ]);
+
+    Domain::query()->where('domain', $this->host)->delete();
+
+    tenantContextRequest('techctx.nagibi.com.br')
+        ->assertOk()
+        ->assertJsonPath('result.resolved', true)
+        ->assertJsonPath('result.source', 'subdomain')
+        ->assertJsonPath('result.tenant.slug', 'techctx');
+});
+
 it('resolve tenant pelo host informado via X-Forwarded-Host', function (): void {
     Domain::query()->where('domain', $this->host)->delete();
 

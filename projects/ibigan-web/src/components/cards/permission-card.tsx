@@ -17,7 +17,7 @@ export function PermissionCard({
   return (
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="min-w-0">
-        <p className="truncate font-medium">{formatPermissionName(permission.name)}</p>
+        <p className="truncate">{formatPermissionName(permission.name)}</p>
         <p className="text-sm text-muted-foreground">
           {formatPermissionResource(permission.resource)} · {formatPermissionAction(permission.action)}
         </p>

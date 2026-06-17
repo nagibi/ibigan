@@ -71,7 +71,7 @@ export function GridRowActions({ actions }: GridRowActionsProps) {
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 gap-1 px-2.5 text-xs font-medium"
+          className="h-8 gap-1 px-2.5 text-xs font-normal"
           aria-label={t('columns.actions')}
           data-grid-no-row-select
           onMouseEnter={hover.handleEnter}
@@ -92,7 +92,10 @@ export function GridRowActions({ actions }: GridRowActionsProps) {
           <DropdownMenuItem
             key={action.label}
             disabled={action.disabled}
-            className={cn(action.tone === 'destructive' && 'text-destructive focus:text-destructive')}
+            className={cn(
+              'font-normal',
+              action.tone === 'destructive' && 'text-destructive focus:text-destructive',
+            )}
             onClick={(event) => {
               event.stopPropagation();
               action.onClick();

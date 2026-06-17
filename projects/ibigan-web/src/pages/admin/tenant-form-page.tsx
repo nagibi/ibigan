@@ -37,6 +37,7 @@ const schema = z.object({
   timezone: z.string().min(1, 'Selecione um fuso horário.'),
   locale: z.string().min(1, 'Selecione um idioma.'),
   is_active: z.boolean(),
+  require_admin_approval: z.boolean(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -47,6 +48,7 @@ const DEFAULT_VALUES: FormData = {
   timezone: 'UTC',
   locale: 'pt_BR',
   is_active: true,
+  require_admin_approval: false,
 };
 
 function toPayload(values: FormData) {
@@ -58,6 +60,7 @@ function toPayload(values: FormData) {
     timezone: values.timezone,
     locale: values.locale,
     is_active: values.is_active,
+    require_admin_approval: values.require_admin_approval,
   };
 }
 
@@ -127,6 +130,7 @@ export function AdminTenantFormPage() {
           timezone: tenant.timezone,
           locale: tenant.locale,
           is_active: tenant.is_active,
+          require_admin_approval: tenant.require_admin_approval,
         },
         { keepDirty: false, keepErrors: false },
       );
@@ -237,6 +241,7 @@ export function AdminTenantFormPage() {
           timezone: tenant.timezone,
           locale: tenant.locale,
           is_active: tenant.is_active,
+          require_admin_approval: tenant.require_admin_approval,
         } : DEFAULT_VALUES)}
         onRefresh={formRefresh.onRefresh}
         isRefreshing={formRefresh.isRefreshing}
@@ -356,6 +361,26 @@ export function AdminTenantFormPage() {
                   </div>
                 </FormFieldGridItem>
               )}
+            </FormFieldGrid>
+          </FormPanel>
+
+          <FormPanel title="Segurança e acesso" className="mt-4">
+            <FormFieldGrid>
+              <FormFieldGridItem className="sm:col-span-2">
+                <FormField control={form.control} name="require_admin_approval" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Exigir aprovação de admin</FormLabel>
+                    <FormControl>
+                      <FormSwitchControl checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Quando ativo, novos usuários que aceitarem um convite ficam pendentes em
+                      Gestão → Aprovações até um administrador liberar o acesso.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </FormFieldGridItem>
             </FormFieldGrid>
           </FormPanel>
         </form>

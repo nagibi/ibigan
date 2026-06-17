@@ -10,7 +10,10 @@ use App\Http\Requests\ToggleActiveRequest;
 use App\Http\Resources\Equipamento\EquipamentoResource;
 use App\Actions\ToggleActiveAction;
 use App\Models\Equipamento;
+use App\Models\EquipamentoFoto;
 use App\Models\HistoricoEquipamento;
+use App\Models\Emprestimo;
+use App\Models\Manutencao;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -26,10 +29,11 @@ final class EquipamentoController extends Controller
             'tipo.grupo',
             'fornecedor',
             'obra',
+            'fotos',
             'creator',
             'updater',
             'emprestimoAtivo.renovacoes',
-            'manutencaoAtiva',
+            'manutencaoAtiva.responsavelUser',
             'baixa',
         ]);
 
@@ -61,7 +65,7 @@ final class EquipamentoController extends Controller
         }
 
         if ($request->filled('grupo_id')) {
-            $query->whereHas('tipo', fn ($q) => $q->where('grupo_id', $request->integer('grupo_id')));
+            $query->whereHas('tipo', fn($q) => $q->where('grupo_id', $request->integer('grupo_id')));
         }
 
         if ($request->filled('id')) {
@@ -79,9 +83,9 @@ final class EquipamentoController extends Controller
                 $q->where('patrimonio', 'like', "%{$search}%")
                     ->orWhereHas('tipo', function ($t) use ($search) {
                         $t->where('nome', 'like', "%{$search}%")
-                            ->orWhereHas('grupo', fn ($g) => $g->where('nome', 'like', "%{$search}%"));
+                            ->orWhereHas('grupo', fn($g) => $g->where('nome', 'like', "%{$search}%"));
                     })
-                    ->orWhereHas('fornecedor', fn ($f) => $f->where('nome', 'like', "%{$search}%"))
+                    ->orWhereHas('fornecedor', fn($f) => $f->where('nome', 'like', "%{$search}%"))
                     ->orWhereHas('obra', function ($o) use ($search) {
                         $o->where('codigo', 'like', "%{$search}%")
                             ->orWhere('nome', 'like', "%{$search}%");
@@ -145,7 +149,7 @@ final class EquipamentoController extends Controller
             $createdBy = $request->string('created_by')->toString();
             $query->whereHas(
                 'creator',
-                fn ($creatorQuery) => $creatorQuery->where('name', 'like', "%{$createdBy}%"),
+                fn($creatorQuery) => $creatorQuery->where('name', 'like', "%{$createdBy}%"),
             );
         }
 
@@ -153,14 +157,14 @@ final class EquipamentoController extends Controller
             $updatedBy = $request->string('updated_by')->toString();
             $query->whereHas(
                 'updater',
-                fn ($updaterQuery) => $updaterQuery->where('name', 'like', "%{$updatedBy}%"),
+                fn($updaterQuery) => $updaterQuery->where('name', 'like', "%{$updatedBy}%"),
             );
         }
 
         if ($request->filled('emprestimo_alerta')) {
             match ($request->string('emprestimo_alerta')->toString()) {
-                'vencidos' => $query->whereHas('emprestimoAtivo', fn ($q) => $q->vencidos()),
-                'proximos' => $query->whereHas('emprestimoAtivo', fn ($q) => $q->proximosVencimento()),
+                'vencidos' => $query->whereHas('emprestimoAtivo', fn($q) => $q->vencidos()),
+                'proximos' => $query->whereHas('emprestimoAtivo', fn($q) => $q->proximosVencimento()),
                 'normais' => $query->whereHas('emprestimoAtivo', function ($q) {
                     $q->whereNull('data_devolucao')
                         ->whereRaw('DATE_ADD(data_retirada, INTERVAL prazo_dias DAY) > ?', [
@@ -173,8 +177,8 @@ final class EquipamentoController extends Controller
 
         if ($request->filled('manutencao_filtro')) {
             match ($request->string('manutencao_filtro')->toString()) {
-                'hoje' => $query->whereHas('manutencaoAtiva', fn ($q) => $q->whereDate('data_entrada', today())),
-                'atrasados' => $query->whereHas('manutencaoAtiva', fn ($q) => $q->where(
+                'hoje' => $query->whereHas('manutencaoAtiva', fn($q) => $q->whereDate('data_entrada', today())),
+                'atrasados' => $query->whereHas('manutencaoAtiva', fn($q) => $q->where(
                     'data_entrada',
                     '<',
                     now()->subDays(7)->toDateString(),
@@ -182,6 +186,91 @@ final class EquipamentoController extends Controller
                 'criticos' => $query->where('is_critico', true),
                 default => null,
             };
+        }
+
+        if ($request->filled('colaborador')) {
+            $colaborador = $request->string('colaborador')->toString();
+            $query->whereHas('emprestimoAtivo', function ($q) use ($colaborador) {
+                $q->where('colaborador_nome', 'like', "%{$colaborador}%")
+                    ->orWhere('colaborador_matricula', 'like', "%{$colaborador}%");
+            });
+        }
+
+        if ($request->filled('encarregado')) {
+            $encarregado = $request->string('encarregado')->toString();
+            $query->whereHas(
+                'emprestimoAtivo',
+                fn($q) => $q->where('encarregado_nome', 'like', "%{$encarregado}%"),
+            );
+        }
+
+        if ($request->filled('data_retirada_from')) {
+            $query->whereHas(
+                'emprestimoAtivo',
+                fn($q) => $q->whereDate('data_retirada', '>=', $request->string('data_retirada_from')->toString()),
+            );
+        }
+
+        if ($request->filled('data_retirada_to')) {
+            $query->whereHas(
+                'emprestimoAtivo',
+                fn($q) => $q->whereDate('data_retirada', '<=', $request->string('data_retirada_to')->toString()),
+            );
+        }
+
+        if ($request->filled('dias_em_uso_min') || $request->filled('dias_em_uso_max')) {
+            $diasEmUsoSql = Emprestimo::diasEmUsoSqlExpression();
+            $query->whereHas('emprestimoAtivo', function ($q) use ($request, $diasEmUsoSql) {
+                if ($request->filled('dias_em_uso_min')) {
+                    $q->whereRaw("({$diasEmUsoSql}) >= ?", [$request->integer('dias_em_uso_min')]);
+                }
+
+                if ($request->filled('dias_em_uso_max')) {
+                    $q->whereRaw("({$diasEmUsoSql}) <= ?", [$request->integer('dias_em_uso_max')]);
+                }
+            });
+        }
+
+        if ($request->filled('motivo')) {
+            $motivo = $request->string('motivo')->toString();
+            $query->whereHas(
+                'manutencaoAtiva',
+                fn($q) => $q->where('motivo', 'like', "%{$motivo}%"),
+            );
+        }
+
+        if ($request->filled('responsabilidade')) {
+            $query->whereHas(
+                'manutencaoAtiva',
+                fn($q) => $q->where('responsabilidade', $request->string('responsabilidade')->toString()),
+            );
+        }
+
+        if ($request->filled('manutencao_data_entrada_from')) {
+            $query->whereHas(
+                'manutencaoAtiva',
+                fn($q) => $q->whereDate('data_entrada', '>=', $request->string('manutencao_data_entrada_from')->toString()),
+            );
+        }
+
+        if ($request->filled('manutencao_data_entrada_to')) {
+            $query->whereHas(
+                'manutencaoAtiva',
+                fn($q) => $q->whereDate('data_entrada', '<=', $request->string('manutencao_data_entrada_to')->toString()),
+            );
+        }
+
+        if ($request->filled('dias_em_manutencao_min') || $request->filled('dias_em_manutencao_max')) {
+            $diasEmManutencaoSql = Manutencao::diasEmManutencaoSqlExpression();
+            $query->whereHas('manutencaoAtiva', function ($q) use ($request, $diasEmManutencaoSql) {
+                if ($request->filled('dias_em_manutencao_min')) {
+                    $q->whereRaw("({$diasEmManutencaoSql}) >= ?", [$request->integer('dias_em_manutencao_min')]);
+                }
+
+                if ($request->filled('dias_em_manutencao_max')) {
+                    $q->whereRaw("({$diasEmManutencaoSql}) <= ?", [$request->integer('dias_em_manutencao_max')]);
+                }
+            });
         }
 
         $equipamentos = $query
@@ -197,20 +286,26 @@ final class EquipamentoController extends Controller
     public function store(StoreEquipamentoRequest $request): EquipamentoResource
     {
         $data = $request->validated();
+        unset(
+            $data['foto'],
+            $data['fotos'],
+            $data['fotos_remover'],
+            $data['foto_principal_id'],
+            $data['foto_principal_novo_indice'],
+        );
 
-        if ($request->hasFile('foto')) {
-            $data['foto_path'] = $request->file('foto')->store('equipamentos', 'public');
-        }
-        unset($data['foto']);
+        $actorId = $request->user()->id;
+        $uploadedFotos = $this->collectUploadedFotos($request);
 
-        $equipamento = DB::transaction(function () use ($data) {
-            $actorId = auth()->id();
-
+        $equipamento = DB::transaction(function () use ($data, $actorId, $uploadedFotos, $request) {
             $equipamento = Equipamento::query()->create([
                 ...$data,
                 'created_by' => $actorId,
                 'updated_by' => $actorId,
             ]);
+
+            $createdFotoIds = $this->storeEquipamentoFotos($equipamento, $uploadedFotos);
+            $this->applyFotoPrincipal($equipamento, $request, $createdFotoIds);
 
             HistoricoEquipamento::query()->create([
                 'equipamento_id' => $equipamento->id,
@@ -222,13 +317,13 @@ final class EquipamentoController extends Controller
                     'data_entrada' => $equipamento->data_entrada->toDateString(),
                 ],
                 'status_resultante' => 'em_estoque',
-                'registrado_por' => auth()->id(),
+                'registrado_por' => $actorId,
             ]);
 
             return $equipamento;
         });
 
-        $equipamento->load(['tipo.grupo', 'fornecedor', 'obra', 'creator', 'updater']);
+        $equipamento->load(['tipo.grupo', 'fornecedor', 'obra', 'fotos', 'creator', 'updater']);
 
         return new EquipamentoResource($equipamento);
     }
@@ -239,10 +334,11 @@ final class EquipamentoController extends Controller
             'tipo.grupo',
             'fornecedor',
             'obra',
+            'fotos',
             'creator',
             'updater',
             'emprestimoAtivo.renovacoes',
-            'manutencaoAtiva',
+            'manutencaoAtiva.responsavelUser',
             'baixa',
         ]);
 
@@ -252,14 +348,13 @@ final class EquipamentoController extends Controller
     public function update(StoreEquipamentoRequest $request, Equipamento $equipamento): EquipamentoResource|JsonResponse
     {
         $data = $request->validated();
-
-        if ($request->hasFile('foto')) {
-            if ($equipamento->foto_path && ! str_starts_with($equipamento->foto_path, 'http')) {
-                Storage::disk('public')->delete($equipamento->foto_path);
-            }
-            $data['foto_path'] = $request->file('foto')->store('equipamentos', 'public');
-        }
-        unset($data['foto']);
+        unset(
+            $data['foto'],
+            $data['fotos'],
+            $data['fotos_remover'],
+            $data['foto_principal_id'],
+            $data['foto_principal_novo_indice'],
+        );
 
         if (isset($data['patrimonio']) && $data['patrimonio'] !== $equipamento->patrimonio) {
             $temRegistros = $equipamento->emprestimos()->exists()
@@ -272,18 +367,54 @@ final class EquipamentoController extends Controller
             }
         }
 
-        $equipamento->update([
-            ...$data,
-            'updated_by' => auth()->id(),
-        ]);
+        $actorId = $request->user()->id;
+        $uploadedFotos = $this->collectUploadedFotos($request);
+        $fotosRemover = array_map(
+            static fn ($id) => (int) $id,
+            $request->input('fotos_remover', []),
+        );
+        $wasUpdated = false;
 
-        if ($equipamento->wasChanged()) {
+        DB::transaction(function () use (
+            $equipamento,
+            $data,
+            $actorId,
+            $uploadedFotos,
+            $fotosRemover,
+            $request,
+            &$wasUpdated,
+        ): void {
+            $equipamento->update([
+                ...$data,
+                'updated_by' => $actorId,
+            ]);
+            $wasUpdated = $equipamento->wasChanged();
+
+            if ($fotosRemover !== []) {
+                $this->removeEquipamentoFotos($equipamento, $fotosRemover);
+                $wasUpdated = true;
+            }
+
+            $createdFotoIds = [];
+            if ($uploadedFotos !== []) {
+                $createdFotoIds = $this->storeEquipamentoFotos($equipamento, $uploadedFotos);
+                $wasUpdated = true;
+            }
+
+            if ($this->applyFotoPrincipal($equipamento, $request, $createdFotoIds)) {
+                $wasUpdated = true;
+            }
+        });
+
+        $equipamento->refresh();
+
+        if ($wasUpdated) {
             HistoricoEquipamento::query()->create([
                 'equipamento_id' => $equipamento->id,
                 'evento' => 'editado',
                 'dados' => collect($data)->except(['foto_path'])->all(),
                 'status_resultante' => $equipamento->fresh(['emprestimoAtivo', 'manutencaoAtiva', 'baixa'])->status,
-                'registrado_por' => auth()->id(),
+                'registrado_por' => $actorId,
             ]);
         }
 
@@ -291,10 +422,11 @@ final class EquipamentoController extends Controller
             'tipo.grupo',
             'fornecedor',
             'obra',
+            'fotos',
             'creator',
             'updater',
             'emprestimoAtivo.renovacoes',
-            'manutencaoAtiva',
+            'manutencaoAtiva.responsavelUser',
             'baixa',
         ]);
 
@@ -317,7 +449,7 @@ final class EquipamentoController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $equipamento->forceFill(['updated_by' => auth()->id()]);
+        $equipamento->forceFill(['updated_by' => $request->user()->id]);
 
         $updated = app(ToggleActiveAction::class)->execute(
             $equipamento,
@@ -328,10 +460,11 @@ final class EquipamentoController extends Controller
             'tipo.grupo',
             'fornecedor',
             'obra',
+            'fotos',
             'creator',
             'updater',
             'emprestimoAtivo.renovacoes',
-            'manutencaoAtiva',
+            'manutencaoAtiva.responsavelUser',
             'baixa',
         ]);
 
@@ -359,5 +492,132 @@ final class EquipamentoController extends Controller
         return response()->json([
             'message' => 'Equipamento removido com sucesso.',
         ]);
+    }
+
+    /**
+     * @return array<int, \Illuminate\Http\UploadedFile>
+     */
+    private function collectUploadedFotos(StoreEquipamentoRequest $request): array
+    {
+        if ($request->hasFile('fotos')) {
+            $uploaded = $request->file('fotos');
+
+            return array_values(array_filter(is_array($uploaded) ? $uploaded : [$uploaded]));
+        }
+
+        if ($request->hasFile('foto')) {
+            return [$request->file('foto')];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  array<int, \Illuminate\Http\UploadedFile>  $files
+     * @return array<int, int>
+     */
+    private function storeEquipamentoFotos(Equipamento $equipamento, array $files): array
+    {
+        if ($files === []) {
+            return [];
+        }
+
+        $hasExisting = $equipamento->fotos()->exists();
+        $ordem = $hasExisting ? ((int) $equipamento->fotos()->max('ordem')) + 1 : 0;
+        $createdIds = [];
+
+        foreach ($files as $file) {
+            $path = $file->store('equipamentos', 'public');
+            $foto = $equipamento->fotos()->create([
+                'path' => $path,
+                'ordem' => $ordem,
+            ]);
+            $createdIds[] = $foto->id;
+            $ordem++;
+        }
+
+        $this->syncEquipamentoFotoPath($equipamento);
+
+        return $createdIds;
+    }
+
+    /**
+     * @param  array<int, int>  $createdFotoIds
+     */
+    private function applyFotoPrincipal(
+        Equipamento $equipamento,
+        StoreEquipamentoRequest $request,
+        array $createdFotoIds,
+    ): bool {
+        if ($request->filled('foto_principal_id')) {
+            $this->setFotoPrincipal($equipamento, (int) $request->input('foto_principal_id'));
+
+            return true;
+        }
+
+        if ($request->has('foto_principal_novo_indice') && $createdFotoIds !== []) {
+            $index = (int) $request->input('foto_principal_novo_indice');
+            if (isset($createdFotoIds[$index])) {
+                $this->setFotoPrincipal($equipamento, $createdFotoIds[$index]);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function setFotoPrincipal(Equipamento $equipamento, int $fotoId): void
+    {
+        $foto = $equipamento->fotos()->whereKey($fotoId)->first();
+        if ($foto === null) {
+            return;
+        }
+
+        $others = $equipamento->fotos()
+            ->where('id', '!=', $fotoId)
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get();
+
+        $foto->update(['ordem' => 0]);
+        $ordem = 1;
+        foreach ($others as $other) {
+            $other->update(['ordem' => $ordem]);
+            $ordem++;
+        }
+
+        $this->syncEquipamentoFotoPath($equipamento);
+    }
+
+    /**
+     * @param  array<int, int>  $fotoIds
+     */
+    private function removeEquipamentoFotos(Equipamento $equipamento, array $fotoIds): void
+    {
+        $fotos = $equipamento->fotos()->whereIn('id', $fotoIds)->get();
+
+        foreach ($fotos as $foto) {
+            $this->deleteEquipamentoFotoFile($foto);
+            $foto->delete();
+        }
+
+        $this->syncEquipamentoFotoPath($equipamento);
+    }
+
+    private function syncEquipamentoFotoPath(Equipamento $equipamento): void
+    {
+        $firstPath = $equipamento->fotos()->orderBy('ordem')->orderBy('id')->value('path');
+
+        $equipamento->updateQuietly([
+            'foto_path' => $firstPath,
+        ]);
+    }
+
+    private function deleteEquipamentoFotoFile(EquipamentoFoto $foto): void
+    {
+        if ($foto->path !== '' && ! str_starts_with($foto->path, 'http')) {
+            Storage::disk('public')->delete($foto->path);
+        }
     }
 }

@@ -10,6 +10,8 @@ use App\Models\EmprestimoRenovacao;
 use App\Models\Equipamento;
 use App\Models\HistoricoEquipamento;
 use App\Models\Manutencao;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -32,7 +34,7 @@ final class EquipamentoStatusService
                 'foto_cracha_path' => $dados['foto_cracha_path'] ?? null,
                 'foto_equipamento_retirada_path' => $dados['foto_equipamento_retirada_path'] ?? null,
                 'foto_assinatura_path' => $dados['foto_assinatura_path'] ?? null,
-                'autorizado_por' => auth()->id(),
+                'autorizado_por' => $this->actorId(),
                 'observacoes' => $dados['observacoes'] ?? null,
             ]);
 
@@ -74,7 +76,7 @@ final class EquipamentoStatusService
                 'emprestimo_id' => $emprestimo->id,
                 'data_renovacao' => $dados['data_renovacao'] ?? now()->toDateString(),
                 'prazo_adicional_dias' => $dados['prazo_adicional_dias'] ?? 15,
-                'autorizado_por' => auth()->id(),
+                'autorizado_por' => $this->actorId(),
                 'observacao' => $dados['observacao'] ?? null,
             ]);
 
@@ -91,6 +93,8 @@ final class EquipamentoStatusService
 
     public function enviarParaManutencao(Equipamento $equipamento, array $dados): Manutencao
     {
+        $this->applyResponsavelUser($dados);
+
         return DB::transaction(function () use ($equipamento, $dados) {
             $origem = 'estoque';
             $emprestimoId = null;
@@ -110,18 +114,20 @@ final class EquipamentoStatusService
                 'emprestimo_id' => $emprestimoId,
                 'responsabilidade' => $dados['responsabilidade'],
                 'motivo' => $dados['motivo'],
-                'responsavel_manutencao' => $dados['responsavel_manutencao'],
+                'responsavel_user_id' => $dados['responsavel_user_id'],
+                'responsavel_manutencao' => $dados['responsavel_manutencao'] ?? null,
                 'observacoes_tecnicas' => $dados['observacoes_tecnicas'] ?? null,
                 'foto_path' => $dados['foto_path'] ?? null,
                 'valor_mensal_snapshot' => $equipamento->valor_mensal,
                 'data_entrada' => $dados['data_entrada'],
-                'registrado_por' => auth()->id(),
+                'registrado_por' => $this->actorId(),
             ]);
 
             $this->registrarHistorico($equipamento, 'manutencao_aberta', 'em_manutencao', [
                 'motivo' => $dados['motivo'],
                 'responsabilidade' => $dados['responsabilidade'],
-                'responsavel' => $dados['responsavel_manutencao'],
+                'responsavel_user_id' => $dados['responsavel_user_id'],
+                'responsavel' => $dados['responsavel_manutencao'] ?? null,
             ]);
 
             return $manutencao;
@@ -166,7 +172,7 @@ final class EquipamentoStatusService
                 'foto_path' => $dados['foto_path'] ?? null,
                 'responsavel_perda' => $dados['responsavel_perda'] ?? null,
                 'valor_reposicao' => $dados['valor_reposicao'] ?? null,
-                'registrado_por' => auth()->id(),
+                'registrado_por' => $this->actorId(),
                 'observacoes' => $dados['observacoes'] ?? null,
             ]);
 
@@ -208,7 +214,29 @@ final class EquipamentoStatusService
             'evento' => $evento,
             'dados' => $dados,
             'status_resultante' => $statusResultante,
-            'registrado_por' => auth()->id(),
+            'registrado_por' => $this->actorId(),
         ]);
+    }
+
+    private function actorId(): ?int
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user?->id;
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     */
+    private function applyResponsavelUser(array &$dados): void
+    {
+        if (! array_key_exists('responsavel_user_id', $dados)) {
+            return;
+        }
+
+        $dados['responsavel_manutencao'] = User::query()
+            ->whereKey($dados['responsavel_user_id'])
+            ->value('name');
     }
 }

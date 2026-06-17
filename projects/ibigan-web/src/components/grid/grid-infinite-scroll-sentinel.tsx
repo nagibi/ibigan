@@ -52,7 +52,12 @@ export function GridInfiniteScrollSentinel({
   if (!hasMore && !loading) {
     if (loadedCount != null && total != null && total > 0) {
       return (
-        <p className={cn('px-4 py-3 text-center text-xs text-muted-foreground', className)}>
+        <p
+          className={cn(
+            'px-4 py-3 text-center text-xs text-muted-foreground xl:hidden',
+            className,
+          )}
+        >
           {t('grid.infinite.loaded_count', { loaded: loadedCount, total })}
         </p>
       );
@@ -76,7 +81,7 @@ export function GridInfiniteScrollSentinel({
         <span className="text-xs text-muted-foreground">{t('grid.infinite.load_more')}</span>
       )}
       {loadedCount != null && total != null ? (
-        <span className="text-[0.6875rem] text-muted-foreground">
+        <span className="text-[0.6875rem] text-muted-foreground xl:hidden">
           {t('grid.infinite.loaded_count', { loaded: loadedCount, total })}
         </span>
       ) : null}

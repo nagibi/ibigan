@@ -57,7 +57,7 @@ export function GridCardsView<T>({
           className={getGridRowClassName({
             selected: isRowSelected?.(row),
             interactive: isInteractive,
-            extra: 'min-w-0 w-full max-w-full overflow-hidden xl:border-b xl:border-e xl:border-border',
+            extra: 'min-w-0 w-full max-w-full overflow-hidden font-normal [&_*]:font-normal xl:border-b xl:border-e xl:border-border',
           })}
         >
           {renderCard(row)}
@@ -114,7 +114,7 @@ export function GridListView<T>({
           className={getGridRowClassName({
             selected: isRowSelected?.(row),
             interactive: isInteractive,
-            extra: 'min-w-0 w-full max-w-full overflow-hidden rounded-lg border border-border p-3',
+            extra: 'min-w-0 w-full max-w-full overflow-hidden rounded-lg border border-border p-3 font-normal [&_*]:font-normal',
           })}
         >
           {renderItem(row)}

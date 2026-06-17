@@ -302,7 +302,7 @@ class EquipamentoSeeder extends Seeder
         $service->enviarParaManutencao($emManutencao, [
             'responsabilidade' => 'equipamento',
             'motivo' => 'Motor com ruído anormal — revisão preventiva',
-            'responsavel_manutencao' => 'Oficina Técnica Locadora',
+            'responsavel_user_id' => $this->registrador->id,
             'data_entrada' => now()->subDays(6)->toDateString(),
             'foto_path' => $this->seedEquipamentoImage('manutencoes', 'EQ-3001'),
         ]);
@@ -320,7 +320,7 @@ class EquipamentoSeeder extends Seeder
         $service->enviarParaManutencao($manutencaoFortes, [
             'responsabilidade' => 'fortes',
             'motivo' => 'Troca de escova e revisão elétrica',
-            'responsavel_manutencao' => 'Manutenção Fortes SP',
+            'responsavel_user_id' => $this->registrador->id,
             'data_entrada' => now()->subDays(3)->toDateString(),
             'foto_path' => $this->seedEquipamentoImage('manutencoes', 'EQ-3002'),
         ]);
@@ -338,7 +338,7 @@ class EquipamentoSeeder extends Seeder
         $manutencaoEncerrada = $service->enviarParaManutencao($manutencaoFinalizada, [
             'responsabilidade' => 'equipamento',
             'motivo' => 'Revisão de 500 horas',
-            'responsavel_manutencao' => 'Assistência Autorizada',
+            'responsavel_user_id' => $this->registrador->id,
             'data_entrada' => now()->subDays(25)->toDateString(),
             'foto_path' => $this->seedEquipamentoImage('manutencoes', 'EQ-3003'),
         ]);

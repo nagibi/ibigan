@@ -22,13 +22,81 @@ export function resolveEquipamentoFotoUrl(equipamento: {
   patrimonio?: string;
   foto_url?: string | null;
   foto_path?: string | null;
+  fotos?: Array<{ url?: string | null; path?: string | null }> | null;
 }): string {
-  const resolved = resolveStoragePublicUrl(equipamento.foto_url ?? equipamento.foto_path);
+  const gallery = getEquipamentoFotoGallery(equipamento);
+  const resolved = resolveStoragePublicUrl(gallery[0]?.url ?? null);
   if (resolved) {
     return resolved;
   }
 
   return getEquipamentoPicsumUrl(equipamento.patrimonio ?? 'equipamento');
+}
+
+export type EquipamentoFotoGalleryItem = {
+  id?: number;
+  url: string;
+  isPrincipal?: boolean;
+};
+
+export function getEquipamentoFotoGallery(equipamento: {
+  patrimonio?: string;
+  foto_url?: string | null;
+  foto_path?: string | null;
+  fotos?: Array<{
+    id?: number;
+    url?: string | null;
+    path?: string | null;
+    ordem?: number;
+    is_principal?: boolean;
+  }> | null;
+}): EquipamentoFotoGalleryItem[] {
+  if (equipamento.fotos?.length) {
+    const sorted = [...equipamento.fotos].sort((left, right) => {
+      const leftOrder = left.ordem ?? 0;
+      const rightOrder = right.ordem ?? 0;
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return (left.id ?? 0) - (right.id ?? 0);
+    });
+
+    const principalId =
+      sorted.find((foto) => foto.is_principal)?.id ?? sorted[0]?.id;
+
+    return sorted
+      .map((foto) => {
+        const url = resolveStoragePublicUrl(foto.url ?? foto.path);
+        if (!url) {
+          return null;
+        }
+
+        return {
+          id: foto.id,
+          url,
+          isPrincipal: foto.id !== undefined && foto.id === principalId,
+        };
+      })
+      .filter((item): item is EquipamentoFotoGalleryItem => item !== null);
+  }
+
+  const fallbackUrl = resolveStoragePublicUrl(equipamento.foto_url ?? equipamento.foto_path);
+  if (fallbackUrl) {
+    return [{ url: fallbackUrl, isPrincipal: true }];
+  }
+
+  return [];
+}
+
+export function orderFotosWithPrincipalFirst(files: File[], principalIndex: number): File[] {
+  if (files.length <= 1 || principalIndex <= 0 || principalIndex >= files.length) {
+    return files;
+  }
+
+  const next = [...files];
+  const [principal] = next.splice(principalIndex, 1);
+  return [principal, ...next];
 }
 
 export function getEquipamentoAlerta(

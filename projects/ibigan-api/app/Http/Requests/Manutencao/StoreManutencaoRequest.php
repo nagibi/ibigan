@@ -22,7 +22,7 @@ final class StoreManutencaoRequest extends FormRequest
         return [
             'responsabilidade' => ['required', 'string', Rule::in(['fortes', 'equipamento'])],
             'motivo' => ['required', 'string', 'max:500'],
-            'responsavel_manutencao' => ['required', 'string', 'max:150'],
+            'responsavel_user_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'observacoes_tecnicas' => ['nullable', 'string', 'max:1000'],
             'data_entrada' => ['required', 'date', 'before_or_equal:today'],
             'foto' => ['nullable', 'image', 'max:5120'],
@@ -38,7 +38,8 @@ final class StoreManutencaoRequest extends FormRequest
             'responsabilidade.required' => 'Informe quem é responsável pela manutenção.',
             'responsabilidade.in' => 'Responsabilidade deve ser "fortes" ou "equipamento".',
             'motivo.required' => 'Informe o motivo da manutenção.',
-            'responsavel_manutencao.required' => 'Informe o responsável pela manutenção.',
+            'responsavel_user_id.required' => 'Informe o responsável pela manutenção.',
+            'responsavel_user_id.exists' => 'Usuário responsável inválido.',
             'data_entrada.before_or_equal' => 'A data de entrada não pode ser no futuro.',
         ];
     }

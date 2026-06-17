@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom';
 import {
   Archive,
   BarChart2,
+  Bell,
   Building2,
   ChevronRight,
   History,
   LayoutDashboard,
-  Settings,
   Shapes,
   Truck,
 } from 'lucide-react';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { Card, CardContent } from '@/components/ui/card';
+import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 
 const MENU_ITEMS = [
   {
@@ -59,6 +60,8 @@ const MENU_ITEMS = [
 ] as const;
 
 export function EquipamentosMaisPage() {
+  const { open: openPreferences } = useNotificationPreferencesSheet();
+
   usePageToolbar({
     title: 'Mais',
     description: 'Dashboard, histórico e cadastros do módulo',
@@ -85,11 +88,19 @@ export function EquipamentosMaisPage() {
 
       <button
         type="button"
-        className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border px-4 py-3 text-left text-sm text-muted-foreground"
-        disabled
+        onClick={() => openPreferences({ module: 'equipcontrol' })}
+        className="flex w-full items-center gap-3 rounded-xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/30"
       >
-        <Settings className="size-5 shrink-0" />
-        Configurações do módulo em breve
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Bell className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">Notificações</p>
+          <p className="text-xs text-muted-foreground">
+            Alertas de empréstimos, estoque, manutenção e mais
+          </p>
+        </div>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
       </button>
     </div>
   );

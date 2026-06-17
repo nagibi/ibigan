@@ -22,6 +22,11 @@ export const VIEW_PREFERENCE_KEYS = {
   platformMessageTemplates: 'platform-message-templates.view',
   platformReports: 'platform-reports.view',
   equipamentosEstoque: 'equipamentos.estoque.view',
+  equipamentosManutencao: 'equipamentos.manutencao.view',
+  equipamentosMovimentacoes: 'equipamentos.movimentacoes.view',
+  equipamentosTipos: 'equipamentos.tipos.view',
+  equipamentosFornecedores: 'equipamentos.fornecedores.view',
+  equipamentosObras: 'equipamentos.obras.view',
 } as const;
 
 export type ViewPreferenceKey = (typeof VIEW_PREFERENCE_KEYS)[keyof typeof VIEW_PREFERENCE_KEYS];

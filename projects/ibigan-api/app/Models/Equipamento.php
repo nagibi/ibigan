@@ -87,6 +87,11 @@ class Equipamento extends Model
         return $this->hasMany(HistoricoEquipamento::class)->orderByDesc('created_at');
     }
 
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(EquipamentoFoto::class)->orderBy('ordem')->orderBy('id');
+    }
+
     public function emprestimoAtivo(): HasOne
     {
         return $this->hasOne(Emprestimo::class)

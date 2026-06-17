@@ -1,50 +1,75 @@
-import { useEffect, useRef, useState } from 'react';
-import { Camera, ZoomIn, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, Star, ZoomIn, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { EquipamentoThumbnail } from '@/pages/equipamentos/components/equipamento-thumbnail';
 import { EquipamentoFotoCropDialog } from '@/pages/equipamentos/components/equipamento-foto-crop-dialog';
 import { EquipamentoFotoViewerDialog } from '@/pages/equipamentos/components/equipamento-foto-viewer-dialog';
+import type { EquipamentoFoto } from '@/types/equipamento';
 
-type EquipamentoFotoFieldProps = {
+export type EquipamentoFotoPrincipal =
+  | { type: 'existing'; id: number }
+  | { type: 'new'; index: number };
+
+type EquipamentoFotosFieldProps = {
   label?: string;
   patrimonio: string;
   tipoNome?: string | null;
-  currentFotoUrl?: string | null;
-  value: File | null;
-  onChange: (file: File | null) => void;
+  existingFotos?: EquipamentoFoto[];
+  removedFotoIds?: number[];
+  newFotos: File[];
+  onNewFotosChange: (files: File[]) => void;
+  onRemoveExisting?: (fotoId: number) => void;
+  onRemoveNew?: (index: number) => void;
+  principal?: EquipamentoFotoPrincipal | null;
+  onPrincipalChange?: (principal: EquipamentoFotoPrincipal | null) => void;
   className?: string;
 };
 
-export function EquipamentoFotoField({
-  label = 'Foto do equipamento',
+export function EquipamentoFotosField({
+  label = 'Fotos do equipamento',
   patrimonio,
   tipoNome,
-  currentFotoUrl,
-  value,
-  onChange,
+  existingFotos = [],
+  removedFotoIds = [],
+  newFotos,
+  onNewFotosChange,
+  onRemoveExisting,
+  onRemoveNew,
+  principal = null,
+  onPrincipalChange,
   className,
-}: EquipamentoFotoFieldProps) {
+}: EquipamentoFotosFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const visibleExisting = existingFotos.filter((foto) => !removedFotoIds.includes(foto.id));
+  const hasPhotos = visibleExisting.length > 0 || newFotos.length > 0;
+  const canSetPrincipal = Boolean(onPrincipalChange) && hasPhotos;
+
+  const viewerImages = useMemo(
+    () => [
+      ...visibleExisting.map((foto) => ({ id: foto.id, url: foto.url ?? '' })),
+      ...previewUrls.map((url, index) => ({ id: undefined, url: url ?? `new-${index}` })),
+    ].filter((item) => item.url),
+    [previewUrls, visibleExisting],
+  );
 
   useEffect(() => {
-    if (!value) {
-      setPreviewUrl(null);
-      return;
-    }
+    const urls = newFotos.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(urls);
 
-    const url = URL.createObjectURL(value);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [value]);
-
-  const displayUrl = previewUrl ?? currentFotoUrl ?? null;
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [newFotos]);
 
   const resetCropState = () => {
     if (cropImageSrc) {
@@ -52,6 +77,7 @@ export function EquipamentoFotoField({
     }
     setCropImageSrc(null);
     setPendingFile(null);
+    setCropQueue([]);
   };
 
   const handleCropDialogOpenChange = (open: boolean) => {
@@ -61,82 +87,241 @@ export function EquipamentoFotoField({
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    resetCropState();
+  const beginCrop = (file: File) => {
     setCropImageSrc(URL.createObjectURL(file));
     setPendingFile(file);
     setCropOpen(true);
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+
+    if (files.length === 0) {
+      return;
+    }
+
+    resetCropState();
+    const [first, ...rest] = files;
+    setCropQueue(rest);
+    beginCrop(first);
+  };
+
   const handleCropConfirm = (file: File) => {
-    onChange(file);
+    const nextFotos = [...newFotos, file];
+    onNewFotosChange(nextFotos);
+
+    if (!principal && onPrincipalChange && visibleExisting.length === 0) {
+      onPrincipalChange({ type: 'new', index: 0 });
+    }
+
+    if (cropQueue.length > 0) {
+      const [next, ...rest] = cropQueue;
+      setCropQueue(rest);
+      if (cropImageSrc) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+      setCropImageSrc(null);
+      setPendingFile(null);
+      beginCrop(next);
+      return;
+    }
+
     setCropOpen(false);
     resetCropState();
   };
 
-  const handleRemove = () => {
-    onChange(null);
-    if (inputRef.current) {
-      inputRef.current.value = '';
+  const openViewer = (index: number) => {
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
+
+  const isExistingPrincipal = (fotoId: number) =>
+    principal?.type === 'existing' && principal.id === fotoId;
+
+  const isNewPrincipal = (index: number) =>
+    principal?.type === 'new' && principal.index === index;
+
+  const handleSetExistingPrincipal = (fotoId: number) => {
+    onPrincipalChange?.({ type: 'existing', id: fotoId });
+  };
+
+  const handleSetNewPrincipal = (index: number) => {
+    onPrincipalChange?.({ type: 'new', index });
+  };
+
+  const handleRemoveExisting = (fotoId: number) => {
+    onRemoveExisting?.(fotoId);
+
+    if (principal?.type === 'existing' && principal.id === fotoId) {
+      const nextExisting = visibleExisting.find((foto) => foto.id !== fotoId);
+      if (nextExisting && nextExisting.id > 0) {
+        onPrincipalChange?.({ type: 'existing', id: nextExisting.id });
+      } else if (newFotos.length > 0) {
+        onPrincipalChange?.({ type: 'new', index: 0 });
+      } else {
+        onPrincipalChange?.(null);
+      }
+    }
+  };
+
+  const handleRemoveNew = (index: number) => {
+    onRemoveNew?.(index);
+
+    if (principal?.type === 'new') {
+      if (principal.index === index) {
+        if (visibleExisting.length > 0) {
+          const nextExisting = visibleExisting[0];
+          if (nextExisting.id > 0) {
+            onPrincipalChange?.({ type: 'existing', id: nextExisting.id });
+          }
+        } else if (newFotos.length > 1) {
+          onPrincipalChange?.({ type: 'new', index: 0 });
+        } else {
+          onPrincipalChange?.(null);
+        }
+      } else if (principal.index > index) {
+        onPrincipalChange?.({ type: 'new', index: principal.index - 1 });
+      }
     }
   };
 
   return (
     <div className={cn('grid gap-2', className)}>
       <Label>{label}</Label>
-      <div className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/20 p-3">
-        {displayUrl ? (
-          <button
-            type="button"
-            onClick={() => setViewerOpen(true)}
-            aria-label="Ver foto em tamanho maior"
-            className="group relative size-16 shrink-0 overflow-hidden rounded-lg border border-border"
-          >
-            <img
-              src={displayUrl}
-              alt={tipoNome ?? patrimonio}
-              className="size-16 object-cover transition-transform group-hover:scale-105"
-            />
-            <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/25">
-              <ZoomIn className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-            </span>
-          </button>
+      <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3">
+        {hasPhotos ? (
+          <div className="flex flex-wrap gap-2">
+            {visibleExisting.map((foto, index) => (
+              <div key={`existing-${foto.id}`} className="group relative size-16 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => openViewer(index)}
+                  aria-label="Ver foto em tamanho maior"
+                  className={cn(
+                    'size-16 overflow-hidden rounded-lg border bg-background',
+                    isExistingPrincipal(foto.id) ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+                  )}
+                >
+                  <img
+                    src={foto.url}
+                    alt={tipoNome ?? patrimonio}
+                    className="size-16 object-cover transition-transform group-hover:scale-105"
+                  />
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/25">
+                    <ZoomIn className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                  </span>
+                </button>
+                {isExistingPrincipal(foto.id) ? (
+                  <span className="pointer-events-none absolute bottom-0 left-0 right-0 bg-primary/90 px-1 py-0.5 text-center text-[9px] font-medium text-primary-foreground">
+                    Principal
+                  </span>
+                ) : null}
+                {canSetPrincipal && !isExistingPrincipal(foto.id) ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute bottom-0 left-0 size-6 rounded-full shadow-sm"
+                    onClick={() => handleSetExistingPrincipal(foto.id)}
+                    aria-label="Definir como foto principal"
+                  >
+                    <Star className="size-3" />
+                  </Button>
+                ) : null}
+                {onRemoveExisting ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute -right-1 -top-1 size-6 rounded-full shadow-sm"
+                    onClick={() => handleRemoveExisting(foto.id)}
+                    aria-label="Remover foto"
+                  >
+                    <X className="size-3" />
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+            {newFotos.map((file, index) => {
+              const previewUrl = previewUrls[index];
+              if (!previewUrl) {
+                return null;
+              }
+
+              const viewerItemIndex = visibleExisting.length + index;
+
+              return (
+                <div key={`new-${file.name}-${index}`} className="group relative size-16 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => openViewer(viewerItemIndex)}
+                    aria-label="Ver foto em tamanho maior"
+                    className={cn(
+                      'size-16 overflow-hidden rounded-lg border bg-background',
+                      isNewPrincipal(index) ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+                    )}
+                  >
+                    <img
+                      src={previewUrl}
+                      alt={tipoNome ?? patrimonio}
+                      className="size-16 object-cover transition-transform group-hover:scale-105"
+                    />
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/25">
+                      <ZoomIn className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                    </span>
+                  </button>
+                  {isNewPrincipal(index) ? (
+                    <span className="pointer-events-none absolute bottom-0 left-0 right-0 bg-primary/90 px-1 py-0.5 text-center text-[9px] font-medium text-primary-foreground">
+                      Principal
+                    </span>
+                  ) : null}
+                  {canSetPrincipal && !isNewPrincipal(index) ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      className="absolute bottom-0 left-0 size-6 rounded-full shadow-sm"
+                      onClick={() => handleSetNewPrincipal(index)}
+                      aria-label="Definir como foto principal"
+                    >
+                      <Star className="size-3" />
+                    </Button>
+                  ) : null}
+                  {onRemoveNew ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      className="absolute -right-1 -top-1 size-6 rounded-full shadow-sm"
+                      onClick={() => handleRemoveNew(index)}
+                      aria-label="Remover foto"
+                    >
+                      <X className="size-3" />
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <EquipamentoThumbnail
-            equipamento={{ patrimonio, tipo: { nome: tipoNome } }}
-            size="md"
-            className="size-16"
-          />
+          <div className="flex items-center gap-3">
+            <EquipamentoThumbnail
+              equipamento={{ patrimonio, tipo: { nome: tipoNome } }}
+              size="md"
+              className="size-16"
+            />
+            <p className="text-xs text-muted-foreground">
+              Adicione uma ou mais fotos. Toque na estrela para definir a principal.
+            </p>
+          </div>
         )}
 
-        <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Tire uma foto no celular. Depois você pode dar zoom, girar e enquadrar.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => inputRef.current?.click()}
-            >
-              <Camera className="size-4" />
-              {displayUrl ? 'Trocar foto' : 'Adicionar foto'}
-            </Button>
-            {value ? (
-              <Button type="button" size="sm" variant="ghost" onClick={handleRemove}>
-                <X className="size-4" />
-                Remover
-              </Button>
-            ) : null}
-          </div>
+        <div className={cn('flex flex-wrap gap-2', hasPhotos ? 'mt-3' : 'mt-0')}>
+          <Button type="button" size="sm" variant="outline" onClick={() => inputRef.current?.click()}>
+            <Camera className="size-4" />
+            Adicionar fotos
+          </Button>
         </div>
       </div>
 
@@ -145,6 +330,7 @@ export function EquipamentoFotoField({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         capture="environment"
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />
@@ -160,7 +346,8 @@ export function EquipamentoFotoField({
       <EquipamentoFotoViewerDialog
         open={viewerOpen}
         onOpenChange={setViewerOpen}
-        imageUrl={displayUrl}
+        images={viewerImages}
+        initialIndex={viewerIndex}
         title={tipoNome ?? patrimonio}
         subtitle={patrimonio}
       />
@@ -168,9 +355,58 @@ export function EquipamentoFotoField({
   );
 }
 
+/** @deprecated Use EquipamentoFotosField */
+export const EquipamentoFotoField = EquipamentoFotosField;
+
+function appendFotosToFormData(formData: FormData, fotos?: File[]) {
+  fotos?.forEach((file, index) => {
+    formData.append(`fotos[${index}]`, file);
+  });
+
+  if (fotos?.[0]) {
+    formData.append('foto', fotos[0]);
+  }
+}
+
+function appendFotosRemoverToFormData(formData: FormData, fotosRemover?: number[]) {
+  fotosRemover?.forEach((id, index) => {
+    formData.append(`fotos_remover[${index}]`, String(id));
+  });
+}
+
+function appendPrincipalToFormData(
+  formData: FormData,
+  principal?: EquipamentoFotoPrincipal | null,
+) {
+  if (!principal) {
+    return;
+  }
+
+  if (principal.type === 'existing') {
+    formData.append('foto_principal_id', String(principal.id));
+    return;
+  }
+
+  formData.append('foto_principal_novo_indice', String(principal.index));
+}
+
+export function resolvePrincipalPayload(principal?: EquipamentoFotoPrincipal | null) {
+  if (!principal) {
+    return {};
+  }
+
+  if (principal.type === 'existing') {
+    return { foto_principal_id: principal.id };
+  }
+
+  return { foto_principal_novo_indice: principal.index };
+}
+
 function buildEquipamentoFormData(
   fields: Record<string, string | number | boolean>,
-  foto?: File | null,
+  fotos?: File[],
+  fotosRemover?: number[],
+  principal?: EquipamentoFotoPrincipal | null,
 ): FormData {
   const formData = new FormData();
 
@@ -183,9 +419,9 @@ function buildEquipamentoFormData(
     formData.append(key, String(value));
   });
 
-  if (foto) {
-    formData.append('foto', foto);
-  }
+  appendFotosToFormData(formData, fotos);
+  appendFotosRemoverToFormData(formData, fotosRemover);
+  appendPrincipalToFormData(formData, principal);
 
   return formData;
 }
@@ -198,10 +434,11 @@ export function buildEquipamentoStoreFormData(payload: {
   valor_mensal: number;
   data_entrada: string;
   is_critico: boolean;
-  foto?: File | null;
+  fotos?: File[];
+  principal?: EquipamentoFotoPrincipal | null;
 }): FormData {
-  const { foto, ...fields } = payload;
-  return buildEquipamentoFormData(fields, foto);
+  const { fotos, principal, ...fields } = payload;
+  return buildEquipamentoFormData(fields, fotos, undefined, principal);
 }
 
 export function buildEquipamentoUpdateFormData(payload: {
@@ -211,8 +448,64 @@ export function buildEquipamentoUpdateFormData(payload: {
   obra_id: number;
   valor_mensal: number;
   is_critico: boolean;
-  foto?: File | null;
+  fotos?: File[];
+  fotos_remover?: number[];
+  principal?: EquipamentoFotoPrincipal | null;
 }): FormData {
-  const { foto, ...fields } = payload;
-  return buildEquipamentoFormData(fields, foto);
+  const { fotos, fotos_remover, principal, ...fields } = payload;
+  return buildEquipamentoFormData(fields, fotos, fotos_remover, principal);
+}
+
+export function getEquipamentoExistingFotos(
+  equipamento: { fotos?: EquipamentoFoto[]; foto_url?: string | null },
+): EquipamentoFoto[] {
+  if (equipamento.fotos?.length) {
+    return [...equipamento.fotos].sort((left, right) => {
+      const leftOrder = left.ordem ?? 0;
+      const rightOrder = right.ordem ?? 0;
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.id - right.id;
+    });
+  }
+
+  if (equipamento.foto_url) {
+    return [{ id: 0, url: equipamento.foto_url, ordem: 0, is_principal: true }];
+  }
+
+  return [];
+}
+
+export function getDefaultEquipamentoPrincipal(
+  existingFotos: EquipamentoFoto[],
+): EquipamentoFotoPrincipal | null {
+  const principal =
+    existingFotos.find((foto) => foto.is_principal)
+    ?? existingFotos.find((foto) => foto.id > 0)
+    ?? existingFotos[0];
+
+  if (!principal || principal.id <= 0) {
+    return null;
+  }
+
+  return { type: 'existing', id: principal.id };
+}
+
+export function hasPrincipalChanged(
+  current: EquipamentoFotoPrincipal | null,
+  initial: EquipamentoFotoPrincipal | null,
+): boolean {
+  if (!current && !initial) {
+    return false;
+  }
+
+  if (!current || !initial) {
+    return true;
+  }
+
+  return current.type !== initial.type
+    || (current.type === 'existing' && initial.type === 'existing' && current.id !== initial.id)
+    || (current.type === 'new' && initial.type === 'new' && current.index !== initial.index);
 }

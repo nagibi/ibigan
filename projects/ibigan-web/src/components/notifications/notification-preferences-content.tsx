@@ -9,8 +9,10 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { InfoHint } from '@/components/common/info-hint';
 import { NotificationPreferencesSkeleton } from '@/components/common/side-panel-skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Accordion,
   AccordionContent,
@@ -20,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useNotificationEventCatalog } from '@/hooks/use-notification-event-catalog';
+import { groupEventsByCategory } from '@/lib/notification-catalog-merge';
 import { NOTIFICATION_CATEGORY_LABELS, NOTIFICATION_CATEGORY_ORDER } from '@/lib/notification-events';
 import {
   formatEventHint,
@@ -31,7 +34,9 @@ import { cn } from '@/lib/utils';
 import { notificationPreferencesService } from '@/services/notification-preferences.service';
 import type {
   NotificationChannel,
+  NotificationEventCategory,
   NotificationEventDefinition,
+  NotificationModule,
   NotificationSeverity,
 } from '@/types/notification-events';
 
@@ -45,33 +50,151 @@ const VISIBLE_CHANNELS: Array<{
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
 ];
 
-const DEFAULT_OPEN_CATEGORIES = ['platform'];
+const DEFAULT_OPEN_CATEGORIES: NotificationEventCategory[] = ['platform'];
 
-function SeverityIndicator({ severity }: { severity: NotificationSeverity }) {
+const EQUIPCONTROL_OPEN_CATEGORIES: NotificationEventCategory[] = [
+  'loans',
+  'inventory',
+  'maintenance',
+];
+
+export function NotificationPreferencesColumnHeader({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 border-b border-border/60 bg-background py-2',
+        className,
+      )}
+    >
+      <div className="hidden min-w-0 flex-1 text-xs font-medium text-muted-foreground sm:block">
+        Evento
+      </div>
+      <div className="flex w-full shrink-0 items-center justify-around text-[10px] text-muted-foreground sm:w-[9rem]">
+        {VISIBLE_CHANNELS.map(({ key, label, icon: Icon }) => (
+          <span key={key} className="flex flex-col items-center gap-0.5">
+            <Icon className="size-3.5" />
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SeverityIndicator({
+  severity,
+  hint,
+  side = 'bottom',
+}: {
+  severity: NotificationSeverity;
+  hint: string;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+}) {
+  const isMobile = useIsMobile();
   const config = {
     info: {
       icon: Info,
       className: 'text-blue-600 dark:text-blue-400',
-      label: 'Informativo',
     },
     warning: {
       icon: AlertTriangle,
       className: 'text-amber-600 dark:text-amber-400',
-      label: 'Atenção',
     },
     critical: {
       icon: AlertCircle,
       className: 'text-destructive',
-      label: 'Crítico',
     },
   }[severity];
 
   const Icon = config.icon;
 
-  return (
-    <span className={cn('flex size-5 shrink-0 items-center justify-center', config.className)} title={config.label}>
+  const trigger = (
+    <button
+      type="button"
+      className={cn(
+        'inline-flex size-5 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        config.className,
+      )}
+      aria-label={hint}
+    >
       <Icon className="size-3.5" aria-hidden />
-    </span>
+    </button>
+  );
+
+  if (isMobile) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+        <PopoverContent
+          align="start"
+          side={side}
+          className="w-auto max-w-[min(18rem,calc(100vw-2rem))] p-3 text-xs leading-relaxed whitespace-pre-wrap"
+        >
+          {hint}
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+      <TooltipContent
+        side={side}
+        variant="light"
+        className="max-w-xs whitespace-pre-wrap text-left"
+      >
+        {hint}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function ChannelToggles({
+  event,
+  prefs,
+  isPending,
+  onToggle,
+  showLabels = false,
+  className,
+}: {
+  event: NotificationEventDefinition;
+  prefs: ReturnType<typeof resolveEventChannelPrefs>;
+  isPending: boolean;
+  onToggle: (channel: NotificationChannel, enabled: boolean) => void;
+  showLabels?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'grid w-full grid-cols-3 gap-0.5 sm:flex sm:w-[9rem] sm:shrink-0 sm:items-center sm:justify-around',
+        className,
+      )}
+    >
+      {VISIBLE_CHANNELS.map(({ key, label, icon: Icon }) => {
+        if (!isChannelAllowed(event, key)) {
+          return <span key={key} className="size-8 justify-self-center" aria-hidden />;
+        }
+
+        return (
+          <div key={key} className="flex flex-col items-center gap-1">
+            {showLabels ? (
+              <>
+                <Icon className="size-3.5 text-muted-foreground sm:hidden" aria-hidden />
+                <span className="text-[10px] leading-none text-muted-foreground sm:hidden">{label}</span>
+              </>
+            ) : null}
+            <Switch
+              checked={prefs[key]}
+              onCheckedChange={(enabled) => onToggle(key, enabled)}
+              disabled={isPending}
+              aria-label={`${event.label} — ${label}`}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -87,44 +210,61 @@ function PreferenceRow({
   onToggle: (channel: NotificationChannel, enabled: boolean) => void;
 }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3">
-      <SeverityIndicator severity={event.severity} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <p className="text-sm font-medium">{event.label}</p>
-          <InfoHint content={formatEventHint(event)} side="bottom" />
-          {event.supports_escalation ? (
-            <Badge variant="outline" size="sm" className="text-[10px] font-normal">
-              Escalonável
-            </Badge>
-          ) : null}
+    <div className="py-2 sm:py-2.5">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <p className="text-sm font-medium leading-snug">{event.label}</p>
+            <SeverityIndicator severity={event.severity} hint={formatEventHint(event)} />
+            {event.supports_escalation ? (
+              <Badge variant="primary" appearance="light" size="sm" className="font-semibold">
+                Escalonável
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground sm:line-clamp-2">
+            {event.description}
+          </p>
         </div>
-        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{event.description}</p>
-      </div>
-      <div className="flex w-[9.5rem] shrink-0 items-center justify-around pt-0.5">
-        {VISIBLE_CHANNELS.map(({ key }) => {
-          if (!isChannelAllowed(event, key)) {
-            return <span key={key} className="size-8" aria-hidden />;
-          }
-
-          return (
-            <Switch
-              key={key}
-              checked={prefs[key]}
-              onCheckedChange={(enabled) => onToggle(key, enabled)}
-              disabled={isPending}
-              aria-label={`${event.label} — ${key}`}
-            />
-          );
-        })}
+        <ChannelToggles
+          event={event}
+          prefs={prefs}
+          isPending={isPending}
+          onToggle={onToggle}
+          showLabels
+          className="sm:pt-0.5"
+        />
       </div>
     </div>
   );
 }
 
-export function NotificationPreferencesContent() {
+interface NotificationPreferencesContentProps {
+  module?: NotificationModule;
+  showColumnHeader?: boolean;
+}
+
+export function NotificationPreferencesContent({
+  module,
+  showColumnHeader = true,
+}: NotificationPreferencesContentProps = {}) {
   const queryClient = useQueryClient();
-  const { catalog, eventsByCategory, isRemote } = useNotificationEventCatalog();
+  const { catalog: fullCatalog, eventsByCategory: fullEventsByCategory, isRemote } =
+    useNotificationEventCatalog();
+
+  const catalog = useMemo(
+    () => (module ? fullCatalog.filter((event) => event.module === module) : fullCatalog),
+    [fullCatalog, module],
+  );
+
+  const eventsByCategory = useMemo(() => {
+    if (!module) return fullEventsByCategory;
+    return groupEventsByCategory(catalog);
+  }, [catalog, fullEventsByCategory, module]);
+
+  const defaultOpenCategories = module === 'equipcontrol'
+    ? EQUIPCONTROL_OPEN_CATEGORIES
+    : DEFAULT_OPEN_CATEGORIES;
 
   const { data, isLoading } = useQuery({
     queryKey: ['notification-preferences'],
@@ -154,7 +294,7 @@ export function NotificationPreferencesContent() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <p className="text-xs leading-relaxed text-muted-foreground">
         Configure quais eventos deseja receber e por qual canal. As preferências respeitam os limites
         definidos pela sua empresa.
@@ -165,41 +305,35 @@ export function NotificationPreferencesContent() {
         ) : null}
       </p>
 
-      <div className="overflow-hidden rounded-md border">
-        <div className="flex items-center gap-3 border-b bg-muted/30 px-4 py-2.5">
-          <div className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">Evento</div>
-          <div className="flex w-[9.5rem] shrink-0 items-center justify-around text-[10px] text-muted-foreground">
-            {VISIBLE_CHANNELS.map(({ key, label, icon: Icon }) => (
-              <span key={key} className="flex flex-col items-center gap-0.5">
-                <Icon className="size-3.5" />
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
+      <div>
+        {showColumnHeader ? <NotificationPreferencesColumnHeader className="mb-2" /> : null}
 
         <Accordion
           type="multiple"
-          defaultValue={DEFAULT_OPEN_CATEGORIES}
-          variant="outline"
-          className="rounded-none border-0"
+          defaultValue={defaultOpenCategories}
+          variant="default"
+          className="w-full"
         >
           {NOTIFICATION_CATEGORY_ORDER.map((category) => {
             const events = eventsByCategory[category];
             if (events.length === 0) return null;
 
             return (
-              <AccordionItem key={category} value={category} className="border-b last:border-b-0">
-                <AccordionTrigger className="px-4 py-3 text-sm hover:no-underline">
+              <AccordionItem
+                key={category}
+                value={category}
+                className="border-b border-border/60 last:border-b-0"
+              >
+                <AccordionTrigger className="px-0 py-2.5 text-sm hover:no-underline sm:py-3">
                   <span className="flex items-center gap-2">
                     {NOTIFICATION_CATEGORY_LABELS[category]}
-                    <Badge variant="secondary" size="sm" className="font-normal">
+                    <Badge variant="primary" appearance="light" size="sm" className="font-semibold">
                       {events.length}
                     </Badge>
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="p-0">
-                  <div className="divide-y">
+                <AccordionContent className="p-0 pb-2">
+                  <div className="divide-y divide-border/60">
                     {events.map((event) => (
                       <PreferenceRow
                         key={event.slug}

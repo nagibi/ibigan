@@ -19,6 +19,7 @@ import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
 import { useGridFilters } from '@/hooks/use-grid-filters';
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard';
 import { useGridPageActions } from '@/hooks/use-grid-page-actions';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { useSyncGridUrl } from '@/hooks/use-sync-grid-url';
 import { tiposCatalogService } from '@/services/equipamento-catalog.service';
@@ -32,14 +33,17 @@ import {
   AlertDialogHeader,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+import { GridStatusSwitch } from '@/components/grid/grid-status-switch';
 import { AlertDialogPanelTitle } from '@/components/common/panel-title';
+import { PageBody } from '@/components/common/page-body';
+import { TipoCatalogCard } from '@/components/cards/equipamento-catalog-cards';
 import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
 import { GridColumnsControl } from '@/components/grid/grid-columns-control';
 import { GridPagination } from '@/components/grid/grid-pagination';
 import { GridPanel } from '@/components/grid/grid-panel';
 import { getGridRecordCount } from '@/components/grid/grid-record-count';
 import { GridResetControl } from '@/components/grid/grid-reset-control';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 import {
   GridRowActions,
   type GridRowAction,
@@ -48,6 +52,9 @@ import {
   GridPanelToolbar,
   StandardGridToolbar,
 } from '@/components/grid/grid-toolbar';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { useCatalogInfiniteDisplay } from '@/pages/equipamentos/catalog/use-catalog-infinite-display';
 
 const TIPOS_ACTIVITY_LOG_TYPE = 'tipos';
 const GRID_COLUMNS_KEY = 'grid-columns:equipamentos-tipos';
@@ -64,6 +71,9 @@ export function TiposPage() {
   const [searchParams] = useSearchParams();
   const initialUrlState = useRef(parseGridUrlState(searchParams)).current;
   const { showError, showSuccess, showToggleActive } = useApiToolbarAlert();
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(
+    VIEW_PREFERENCE_KEYS.equipamentosTipos,
+  );
 
   const grid = useGrid({
     defaultPage: initialUrlState.page,
@@ -183,6 +193,14 @@ export function TiposPage() {
 
   const items = data?.data ?? [];
   const meta = data?.meta;
+  const { displayItems, infiniteScroll, resolvedMeta } = useCatalogInfiniteDisplay({
+    items,
+    meta,
+    isLoading,
+    infiniteScrollEnabled,
+    grid,
+    columnFilters,
+  });
 
   useEffect(() => {
     grid.setPage(1);
@@ -335,10 +353,9 @@ export function TiposPage() {
         className: 'w-[80px]',
         exportValue: (row) => (row.is_ativo ? 'Sim' : 'Não'),
         render: (row) => (
-          <Switch
+          <GridStatusSwitch
             checked={row.is_ativo}
             disabled={rowStatusId === row.id}
-            onClick={(event) => event.stopPropagation()}
             onCheckedChange={(checked) =>
               void handleRowStatusChange(row, checked)
             }
@@ -353,7 +370,7 @@ export function TiposPage() {
         sortable: true,
         sortKey: 'nome',
         filter: { type: 'text', filterKey: 'nome', placeholder: 'Nome' },
-        render: (row) => <span className="font-medium">{row.nome}</span>,
+        render: (row) => <span>{row.nome}</span>,
         exportValue: (row) => row.nome,
       },
       {
@@ -456,25 +473,24 @@ export function TiposPage() {
     actions: toolbarActions,
   });
 
-  const pagination = meta ? (
+  const pagination = (
     <GridPagination
-      meta={meta}
+      meta={resolvedMeta}
       perPage={grid.perPage}
       onPageChange={grid.setPage}
       onPerPageChange={grid.setPerPage}
     />
-  ) : null;
+  );
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden xl:h-[calc(100dvh-var(--header-height)-var(--page-content-header-height,0px)-0.75rem)]">
+    <PageBody>
       <GridPanel
-        className="min-h-0 flex-1"
         toolbar={
           <GridPanelToolbar
             onSelectAll={() =>
-              grid.toggleSelectAll(items.map((item) => item.id))
+              grid.toggleSelectAll(displayItems.map((item) => item.id))
             }
-            isAllSelected={grid.isAllSelected(items.length)}
+            isAllSelected={grid.isAllSelected(displayItems.length)}
             selectedCount={grid.selected.length}
             onClearSelection={grid.clearSelection}
             onRefresh={() => void refetch()}
@@ -505,7 +521,7 @@ export function TiposPage() {
                 canHideColumn={gridColumns.canHideColumn}
                 onShowAll={gridColumns.showAllColumns}
                 onHideAll={gridColumns.hideAllColumns}
-                onResetDefault={gridColumns.resetToDefault}
+                onResetDefault={gridColumns.resetColumns}
               />
             }
             resetControl={
@@ -514,28 +530,46 @@ export function TiposPage() {
                 onReset={handleResetGrid}
               />
             }
+            viewModeControl={
+              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
+            }
             recordCount={getGridRecordCount(
-              meta?.total ?? 0,
-              items.length,
-              false,
+              resolvedMeta.total,
+              displayItems.length,
+              infiniteScrollEnabled,
             )}
           />
         }
-        footer={pagination}
+        footer={!infiniteScrollEnabled ? pagination : undefined}
       >
         <GridColumnDataView
-          viewMode="table"
+          viewMode={viewMode}
           columns={gridColumns.visibleColumns}
           data={items}
+          cardData={infiniteScrollEnabled ? displayItems : undefined}
           getRowKey={(row) => row.id}
           loading={isLoading}
           emptyMessage="Nenhum tipo encontrado."
           titleColumnId="nome"
+          getRowActions={getRowActions}
+          renderCard={(row) => (
+            <TipoCatalogCard
+              item={row}
+              actions={getRowActions(row)}
+              statusUpdating={rowStatusId === row.id}
+              onActiveChange={(active) => void handleRowStatusChange(row, active)}
+            />
+          )}
+          infiniteScroll={buildServerGridInfiniteScrollProps({
+            enabled: infiniteScrollEnabled,
+            infiniteScroll,
+            loading: isLoading,
+          })}
           isRowSelected={(row) => grid.selected.includes(row.id)}
           onRowClick={(row, event) =>
             grid.selectRow(row.id, {
               shift: event.shiftKey,
-              rangeOrder: items.map((item) => item.id),
+              rangeOrder: displayItems.map((item) => item.id),
             })
           }
           onRowDoubleClick={(row) => navigate(`/equipamentos/tipos/${row.id}`)}
@@ -575,6 +609,6 @@ export function TiposPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageBody>
   );
 }

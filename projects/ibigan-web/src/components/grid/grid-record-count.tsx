@@ -35,6 +35,30 @@ export function formatGridRecordCount(
   return t('grid.record_total', { count: total });
 }
 
+/** Contagem total no cabeçalho da página — visível apenas abaixo de xl (mobile). */
+export function GridHeaderRecordCount({
+  total,
+  loaded,
+  className,
+}: GridRecordCountInfo & { className?: string }) {
+  const { t } = useTranslation();
+
+  if (typeof total !== 'number') {
+    return null;
+  }
+
+  return (
+    <span
+      className={cn(
+        'shrink-0 text-xs font-normal text-muted-foreground tabular-nums xl:hidden',
+        className,
+      )}
+    >
+      {formatGridRecordCount({ total, loaded }, t)}
+    </span>
+  );
+}
+
 export function GridMobileRecordCountBar({
   total,
   loaded,

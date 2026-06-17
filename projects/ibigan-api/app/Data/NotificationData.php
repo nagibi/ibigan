@@ -11,6 +11,7 @@ final class NotificationData extends Data
 {
     public function __construct(
         public string $id,
+        public int $record_id,
         public string $type,
         /** @var array<string, mixed> */
         public array $data,
@@ -22,6 +23,7 @@ final class NotificationData extends Data
     {
         return new self(
             id: $notification->id,
+            record_id: (int) $notification->record_id,
             type: $notification->type,
             data: $notification->data,
             read_at: $notification->read_at?->toIso8601String(),

@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowDownLeft,
-  ArrowLeftRight,
   ArrowUpRight,
   MoreHorizontal,
   Package,
   PackagePlus,
   Plus,
+  Repeat2,
   Wrench,
   X,
 } from 'lucide-react';
@@ -149,7 +149,7 @@ export function EquipcontrolBottomNav() {
             className={itemClass(isActive('/equipamentos/movimentacoes'))}
             onClick={() => navigate('/equipamentos/movimentacoes')}
           >
-            <ArrowLeftRight className="size-5 shrink-0" />
+            <Repeat2 className="size-5 shrink-0" />
             <span className={labelClass}>Movimentações</span>
           </button>
 

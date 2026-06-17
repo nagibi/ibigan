@@ -65,10 +65,11 @@ it('retorna lista paginada de notificações', function (): void {
         ->assertJsonPath('status', 1)
         ->assertJsonStructure([
             'result' => [
-                'data' => [['id', 'type', 'data', 'read_at', 'created_at']],
+                'data' => [['id', 'record_id', 'type', 'data', 'read_at', 'created_at']],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ],
-        ]);
+        ])
+        ->assertJsonPath('result.data.0.record_id', 1);
 });
 
 it('retorna lista vazia quando não há notificações', function (): void {
@@ -201,12 +202,69 @@ it('filtra notificações por status de leitura', function (): void {
         ->assertJsonPath('result.meta.total', 1);
 });
 
+it('ordena notificações por coluna', function (): void {
+    $olderId = null;
+    $newerId = null;
+
+    $this->tenant->run(function () use (&$olderId, &$newerId): void {
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+
+        $notifications = $this->admin->notifications()->orderBy('created_at')->get();
+        $older = $notifications->first();
+        $newer = $notifications->last();
+
+        $older->forceFill(['created_at' => now()->subDays(2)])->save();
+        $newer->forceFill(['created_at' => now()])->save();
+
+        $olderId = $older->id;
+        $newerId = $newer->id;
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $ascFirstId = $this->getJson('/api/v1/notifications?sort=created_at&direction=asc', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->json('result.data.0.id');
+
+    $descFirstId = $this->getJson('/api/v1/notifications?sort=created_at&direction=desc', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->json('result.data.0.id');
+
+    expect($ascFirstId)->toBe($olderId)
+        ->and($descFirstId)->toBe($newerId);
+});
+
+it('filtra notificações por categoria', function (): void {
+    $this->tenant->run(function (): void {
+        $this->admin->notify(new UserCreatedNotification($this->admin));
+        $this->admin->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => 'App\Notifications\ReportCompletedNotification',
+            'data' => ['template_id' => 1, 'template_name' => 'Campanhas'],
+        ]);
+    });
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson('/api/v1/notifications?filter_category=report', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1);
+
+    $this->getJson('/api/v1/notifications?filter_category=type:UserCreatedNotification', ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1);
+});
+
 it('filtra notificações por id e título', function (): void {
     $notificationId = null;
+    $recordId = null;
 
-    $this->tenant->run(function () use (&$notificationId): void {
+    $this->tenant->run(function () use (&$notificationId, &$recordId): void {
         $this->admin->notify(new UserCreatedNotification($this->admin));
-        $notificationId = $this->admin->notifications()->first()->id;
+        $notification = $this->admin->notifications()->first();
+        $notificationId = $notification->id;
+        $recordId = $notification->record_id;
     });
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
@@ -215,6 +273,11 @@ it('filtra notificações por id e título', function (): void {
         ->assertOk()
         ->assertJsonPath('result.meta.total', 1)
         ->assertJsonPath('result.data.0.id', $notificationId);
+
+    $this->getJson("/api/v1/notifications?filter_id={$recordId}", ['X-Tenant-ID' => $this->tenant->id])
+        ->assertOk()
+        ->assertJsonPath('result.meta.total', 1)
+        ->assertJsonPath('result.data.0.record_id', $recordId);
 
     $this->getJson('/api/v1/notifications?filter_title='.$this->admin->name, ['X-Tenant-ID' => $this->tenant->id])
         ->assertOk()

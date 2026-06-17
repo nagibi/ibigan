@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react';
+import {
+  EquipcontrolAlertasPanel,
+  useEquipcontrolAlertasTotal,
+} from '@/pages/equipamentos/components/equipcontrol-alertas-panel';
 import { NotificationItem } from '@/partials/topbar/notifications/notification-item';
+import { useAuthStore } from '@/stores/auth.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
@@ -23,11 +28,8 @@ import { useEquipcontrolAlertasEnabled } from '@/hooks/use-equipcontrol-alertas-
 import { useNotificationsList } from '@/hooks/use-notifications-list';
 import { useNotificationPreferencesSheet } from '@/providers/notification-preferences-sheet-provider';
 import { notificationsService } from '@/services/notifications.service';
-import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { SheetPanelTitle } from '@/components/common/panel-title';
-import { NotificationListSkeleton } from '@/components/common/side-panel-skeleton';
 import {
   Sheet,
   SheetBody,
@@ -37,10 +39,8 @@ import {
   SheetHeader,
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  EquipcontrolAlertasPanel,
-  useEquipcontrolAlertasTotal,
-} from '@/pages/equipamentos/components/equipcontrol-alertas-panel';
+import { SheetPanelTitle } from '@/components/common/panel-title';
+import { NotificationListSkeleton } from '@/components/common/side-panel-skeleton';
 
 export function NotificationsSheetPanel({
   open,
@@ -58,7 +58,9 @@ export function NotificationsSheetPanel({
   const [activeTab, setActiveTab] = useState('all');
 
   const { data, isLoading } = useNotificationsList(open);
-  const alertasTotal = useEquipcontrolAlertasTotal(open && equipcontrolAlertasEnabled);
+  const alertasTotal = useEquipcontrolAlertasTotal(
+    open && equipcontrolAlertasEnabled,
+  );
 
   const markAsReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markAsRead(id),
@@ -178,7 +180,15 @@ export function NotificationsSheetPanel({
               aria-label="Preferências de notificações"
               onClick={() => {
                 onOpenChange(false);
-                window.setTimeout(() => openPreferences(), 0);
+                window.setTimeout(
+                  () =>
+                    openPreferences(
+                      equipcontrolAlertasEnabled
+                        ? { module: 'equipcontrol' }
+                        : undefined,
+                    ),
+                  0,
+                );
               }}
             >
               <Settings className="size-4" />
@@ -277,8 +287,8 @@ export function NotificationsSheetPanel({
               {equipcontrolAlertasEnabled ? (
                 <TabsContent value="alertas" className="mt-0">
                   <p className="mb-4 px-5 text-xs text-muted-foreground">
-                    Panorama operacional ao vivo de equipamentos — empréstimos, manutenções e
-                    equipamentos parados.
+                    Panorama operacional ao vivo de equipamentos — empréstimos,
+                    manutenções e equipamentos parados.
                   </p>
                   <EquipcontrolAlertasPanel
                     enabled={open}
@@ -302,7 +312,7 @@ export function NotificationsSheetPanel({
                 navigate('/equipamentos/dashboard');
               }}
             >
-              Ver dashboard completo
+              Ver dashboard
             </Button>
           ) : (
             <div className="grid w-full grid-cols-2 gap-2.5">
@@ -316,7 +326,9 @@ export function NotificationsSheetPanel({
                     toast.info('Nenhuma notificação lida para arquivar.');
                     return;
                   }
-                  Promise.all(readIds.map((id) => notificationsService.destroy(id)))
+                  Promise.all(
+                    readIds.map((id) => notificationsService.destroy(id)),
+                  )
                     .then(() => {
                       void invalidateNotifications(queryClient);
                       toast.success('Notificações lidas arquivadas.');

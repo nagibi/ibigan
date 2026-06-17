@@ -23,6 +23,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\Server;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -106,6 +107,16 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(function (SocialiteWasCalled $event): void {
             $event->extendSocialite('apple', AppleProvider::class);
+        });
+
+        DatabaseNotification::creating(function (DatabaseNotification $notification): void {
+            if ($notification->record_id !== null) {
+                return;
+            }
+
+            $nextRecordId = (int) DatabaseNotification::query()->max('record_id');
+
+            $notification->record_id = $nextRecordId + 1;
         });
 
         $this->registerClockworkDevToolsMiddleware();

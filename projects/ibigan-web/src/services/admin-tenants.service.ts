@@ -10,6 +10,7 @@ export interface AdminTenant {
   timezone: string;
   locale: string;
   is_active: boolean;
+  require_admin_approval: boolean;
   users_count: number;
   created_at: string;
   updated_at: string;
@@ -34,6 +35,7 @@ export interface StoreAdminTenantPayload {
   timezone?: string;
   locale?: string;
   is_active?: boolean;
+  require_admin_approval?: boolean;
 }
 
 export interface UpdateAdminTenantPayload {
@@ -42,6 +44,7 @@ export interface UpdateAdminTenantPayload {
   timezone?: string;
   locale?: string;
   is_active?: boolean;
+  require_admin_approval?: boolean;
 }
 
 export const adminTenantsService = {
