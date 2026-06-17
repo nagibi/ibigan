@@ -16,9 +16,6 @@ echo "==> Composer (produção)"
 "${DC[@]}" run --rm app composer install --no-dev --optimize-autoloader --no-interaction
 
 echo "==> Containers"
-# Libera a porta do Reverb antes do recreate (evita "port is already allocated")
-"${DC[@]}" stop reverb 2>/dev/null || true
-"${DC[@]}" rm -f reverb 2>/dev/null || true
 "${DC[@]}" up -d --build --remove-orphans
 
 echo "==> Aguardando serviços..."

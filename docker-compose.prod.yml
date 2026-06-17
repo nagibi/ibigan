@@ -1,4 +1,6 @@
-name: ibigan
+# Produção — um stack por instalação (/opt/ibigan, /opt/nagibi, …).
+# Defina STACK_NAME e portas no .env da raiz para evitar conflito no mesmo servidor.
+name: ${STACK_NAME:-ibigan}
 
 services:
 
@@ -10,7 +12,7 @@ services:
         USER_ID: 1000
         GROUP_ID: 1000
         INSTALL_XDEBUG: 0
-    container_name: ibigan_app
+    container_name: ${STACK_NAME:-ibigan}_app
     restart: unless-stopped
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
@@ -18,7 +20,7 @@ services:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     networks:
-      - ibigan_network
+      - stack_network
     depends_on:
       mysql:
         condition: service_healthy
@@ -30,20 +32,20 @@ services:
   # ── Nginx ─────────────────────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
-    container_name: ibigan_nginx
+    container_name: ${STACK_NAME:-ibigan}_nginx
     restart: unless-stopped
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./projects/ibigan-web/dist:/var/www/spa
       - ./docker/nginx/conf.d/production.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
-      - ibigan_network
+      - stack_network
     depends_on:
       - app
     extra_hosts:
@@ -52,10 +54,10 @@ services:
   # ── MySQL 8.4 ─────────────────────────────────────────────────
   mysql:
     image: mysql:8.4
-    container_name: ibigan_mysql
+    container_name: ${STACK_NAME:-ibigan}_mysql
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306"
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -67,7 +69,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - ibigan_network
+      - stack_network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -78,13 +80,13 @@ services:
   # ── Redis 7 ───────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: ibigan_redis
+    container_name: ${STACK_NAME:-ibigan}_redis
     restart: unless-stopped
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     networks:
-      - ibigan_network
+      - stack_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -99,7 +101,7 @@ services:
         USER_ID: 1000
         GROUP_ID: 1000
         INSTALL_XDEBUG: 0
-    container_name: ibigan_horizon
+    container_name: ${STACK_NAME:-ibigan}_horizon
     restart: unless-stopped
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
@@ -107,7 +109,7 @@ services:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     networks:
-      - ibigan_network
+      - stack_network
     depends_on:
       mysql:
         condition: service_healthy
@@ -123,7 +125,7 @@ services:
         USER_ID: 1000
         GROUP_ID: 1000
         INSTALL_XDEBUG: 0
-    container_name: ibigan_scheduler
+    container_name: ${STACK_NAME:-ibigan}_scheduler
     restart: unless-stopped
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
@@ -131,7 +133,7 @@ services:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     networks:
-      - ibigan_network
+      - stack_network
     depends_on:
       mysql:
         condition: service_healthy
@@ -140,6 +142,8 @@ services:
     command: php artisan schedule:work
 
   # ── Reverb (WebSockets) ───────────────────────────────────────
+  # WebSocket público via nginx (/app/ → reverb:8080). Não publicar porta no host
+  # evita conflito quando há vários stacks no mesmo servidor (8082, 8083, …).
   reverb:
     build:
       context: ./docker/php
@@ -147,23 +151,21 @@ services:
         USER_ID: 1000
         GROUP_ID: 1000
         INSTALL_XDEBUG: 0
-    container_name: ibigan_reverb
+    container_name: ${STACK_NAME:-ibigan}_reverb
     restart: unless-stopped
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
-    ports:
-      - "127.0.0.1:${REVERB_HOST_PORT:-8082}:8080"
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     networks:
-      - ibigan_network
+      - stack_network
     depends_on:
       - redis
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
 
 networks:
-  ibigan_network:
+  stack_network:
     driver: bridge
 
 volumes:
