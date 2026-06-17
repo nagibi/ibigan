@@ -7,6 +7,36 @@ cd "$ROOT_DIR"
 ENV_FILE="${ENV_FILE:-/opt/ibigan/.env}"
 DC=(docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE")
 
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Arquivo de ambiente não encontrado: $ENV_FILE" >&2
+  exit 1
+fi
+
+# shellcheck disable=SC1090
+set -a
+source "$ENV_FILE"
+set +a
+
+CENTRAL_DOMAIN="${CENTRAL_DOMAIN:-${APP_URL#https://}}"
+CENTRAL_DOMAIN="${CENTRAL_DOMAIN#http://}"
+CENTRAL_DOMAIN="${CENTRAL_DOMAIN%%/*}"
+
+if [[ -z "$CENTRAL_DOMAIN" ]]; then
+  echo "Defina CENTRAL_DOMAIN ou APP_URL no $ENV_FILE" >&2
+  exit 1
+fi
+
+if ! command -v envsubst >/dev/null 2>&1; then
+  echo "Instale gettext-base no servidor (provê envsubst): apt install -y gettext-base" >&2
+  exit 1
+fi
+
+echo "==> Nginx production.conf (${CENTRAL_DOMAIN})"
+export CENTRAL_DOMAIN
+envsubst '${CENTRAL_DOMAIN}' \
+  < "$ROOT_DIR/docker/nginx/conf.d/production.conf.template" \
+  > "$ROOT_DIR/docker/nginx/conf.d/production.conf"
+
 echo "==> Permissões Laravel"
 chown -R 1000:1000 "$ROOT_DIR/projects/ibigan-api"
 chmod -R 775 "$ROOT_DIR/projects/ibigan-api/bootstrap/cache"

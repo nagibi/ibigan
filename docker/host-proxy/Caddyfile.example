@@ -1,0 +1,15 @@
+# Proxy no HOST (fora do Docker) quando dois stacks compartilham o mesmo IP.
+# Instale Caddy no VPS, copie/adapte este arquivo para /etc/caddy/Caddyfile e:
+#   systemctl reload caddy
+#
+# Pré-requisito: cada stack com nginx só em localhost (ver .env.production.example).
+# Certificados TLS ficam no Caddy; nginx interno pode continuar com Let's Encrypt
+# montado em /etc/letsencrypt ou você pode usar só HTTP no backend (porta 18080).
+
+ibigan.com.br {
+	reverse_proxy 127.0.0.1:18080
+}
+
+nagibi.com.br {
+	reverse_proxy 127.0.0.1:28080
+}
