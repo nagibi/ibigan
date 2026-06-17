@@ -31,11 +31,17 @@ if ! command -v envsubst >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Nginx production.conf (${CENTRAL_DOMAIN})"
-export CENTRAL_DOMAIN
-envsubst '${CENTRAL_DOMAIN}' \
-  < "$ROOT_DIR/docker/nginx/conf.d/production.conf.template" \
-  > "$ROOT_DIR/docker/nginx/conf.d/production.conf"
+if [[ "${NGINX_BEHIND_PROXY:-false}" == "true" || "${NGINX_BEHIND_PROXY:-}" == "1" ]]; then
+  echo "==> Nginx production.conf (behind Caddy, HTTP only)"
+  cp "$ROOT_DIR/docker/nginx/conf.d/production.behind-proxy.conf.template" \
+    "$ROOT_DIR/docker/nginx/conf.d/production.conf"
+else
+  echo "==> Nginx production.conf (${CENTRAL_DOMAIN}, TLS no nginx)"
+  export CENTRAL_DOMAIN
+  envsubst '${CENTRAL_DOMAIN}' \
+    < "$ROOT_DIR/docker/nginx/conf.d/production.conf.template" \
+    > "$ROOT_DIR/docker/nginx/conf.d/production.conf"
+fi
 
 echo "==> Permissões Laravel"
 chown -R 1000:1000 "$ROOT_DIR/projects/ibigan-api"

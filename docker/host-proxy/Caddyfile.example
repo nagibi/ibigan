@@ -1,15 +1,31 @@
-# Proxy no HOST (fora do Docker) quando dois stacks compartilham o mesmo IP.
-# Instale Caddy no VPS, copie/adapte este arquivo para /etc/caddy/Caddyfile e:
-#   systemctl reload caddy
+# Edge único no VPS — Caddy na 80/443, cada stack nginx só em localhost (HTTP).
 #
-# Pré-requisito: cada stack com nginx só em localhost (ver .env.production.example).
-# Certificados TLS ficam no Caddy; nginx interno pode continuar com Let's Encrypt
-# montado em /etc/letsencrypt ou você pode usar só HTTP no backend (porta 18080).
+# Pré-requisitos em /opt/ibigan/.env e /opt/nagibi/.env:
+#   NGINX_BEHIND_PROXY=true
+#   ibigan:  NGINX_HTTP_BIND=127.0.0.1  NGINX_HTTP_PORT=18080
+#   nagibi:  NGINX_HTTP_BIND=127.0.0.1  NGINX_HTTP_PORT=28080
+#
+#   caddy validate --config /etc/caddy/Caddyfile
+#   systemctl reload caddy
 
 ibigan.com.br {
-	reverse_proxy 127.0.0.1:18080
+	reverse_proxy http://127.0.0.1:18080 {
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+	}
+}
+
+www.ibigan.com.br {
+	redir https://ibigan.com.br{uri} permanent
 }
 
 nagibi.com.br {
-	reverse_proxy 127.0.0.1:28080
+	reverse_proxy http://127.0.0.1:28080 {
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+	}
+}
+
+www.nagibi.com.br {
+	redir https://nagibi.com.br{uri} permanent
 }
