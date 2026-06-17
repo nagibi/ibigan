@@ -80,6 +80,12 @@ echo "==> Nginx (validar e recarregar config)"
 NGINX_TEST_BIND="${NGINX_HTTP_BIND:-127.0.0.1}"
 NGINX_TEST_PORT="${NGINX_HTTP_PORT:-80}"
 echo "==> Smoke test nginx (http://${NGINX_TEST_BIND}:${NGINX_TEST_PORT})"
+if ! "${DC[@]}" exec -T nginx test -f /var/www/spa/index.html; then
+  echo "ERRO: /var/www/spa/index.html não existe no container nginx." >&2
+  echo "      Atualize docker-compose.prod.yml (volume dist → /var/www/spa) e recrie:" >&2
+  echo "      ${DC[*]} up -d --force-recreate nginx" >&2
+  exit 1
+fi
 if ! curl -sf -o /dev/null -H "Host: ${CENTRAL_DOMAIN}" "http://${NGINX_TEST_BIND}:${NGINX_TEST_PORT}/"; then
   echo "ERRO: nginx não responde em http://${NGINX_TEST_BIND}:${NGINX_TEST_PORT}/" >&2
   "${DC[@]}" logs --tail 30 nginx || true

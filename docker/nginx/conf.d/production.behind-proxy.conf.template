@@ -89,7 +89,8 @@ server {
 
     location / {
         root /var/www/spa;
-        try_files $uri $uri/ @spa;
+        index index.html;
+        try_files $uri @spa;
     }
 
     location @spa {
