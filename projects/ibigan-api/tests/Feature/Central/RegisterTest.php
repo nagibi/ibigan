@@ -8,10 +8,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-afterEach(function (): void {
-    tenancy()->end();
-});
-
 // --- Register ---
 
 it('cria tenant e usuário admin com dados válidos', function (): void {
