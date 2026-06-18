@@ -14,6 +14,7 @@ use App\Support\GridFilter;
 use App\Services\ReportService;
 use App\Support\ApiResponse;
 use App\Support\ReportCsvExporter;
+use App\Support\ReportExecutionStaleResolver;
 use App\Support\ReportResultStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -33,10 +34,10 @@ final class ReportController extends Controller
         abort_unless($request->user()->can('relatorio-visualizar'), Response::HTTP_FORBIDDEN);
 
         $templates = ReportTemplate::query()
-            ->when($request->user()->cannot('relatorio-gerenciar'), fn ($q) => $q->where('is_active', true))
+            ->when($request->user()->cannot('relatorio-gerenciar'), fn($q) => $q->where('is_active', true))
             ->when(
                 $request->filled('filter_id'),
-                fn ($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
+                fn($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
             )
             ->orderBy('name')
             ->paginate($request->integer('per_page', 15));
@@ -45,7 +46,7 @@ final class ReportController extends Controller
             'status'  => 1,
             'message' => 'MSG000067',
             'result'  => [
-                'data' => $templates->map(fn ($t) => $this->formatReportTemplate($t)),
+                'data' => $templates->map(fn($t) => $this->formatReportTemplate($t)),
                 'meta' => [
                     'current_page' => $templates->currentPage(),
                     'last_page'    => $templates->lastPage(),
@@ -187,6 +188,8 @@ final class ReportController extends Controller
         abort_unless($request->user()->can('relatorio-visualizar'), Response::HTTP_FORBIDDEN);
         abort_unless($execution->report_template_id === $report->id, Response::HTTP_NOT_FOUND);
 
+        ReportExecutionStaleResolver::failStale($execution);
+
         return response()->json([
             'status' => 1,
             'result' => [
@@ -262,13 +265,15 @@ final class ReportController extends Controller
 
         return response($csv, Response::HTTP_OK, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'.csv"',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '.csv"',
         ]);
     }
 
     public function executions(Request $request, ReportTemplate $report): JsonResponse
     {
         abort_unless($request->user()->can('relatorio-visualizar'), Response::HTTP_FORBIDDEN);
+
+        ReportExecutionStaleResolver::failStaleForReport($report->id);
 
         $executions = $report->executions()
             ->with('executor')
@@ -310,7 +315,7 @@ final class ReportController extends Controller
             ->where('executed_by', $request->user()->id)
             ->when(
                 $request->filled('filter_id'),
-                fn ($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
+                fn($q) => GridFilter::applyIdFromCsv($q, $request->string('filter_id')->toString()),
             )
             ->orderByDesc('executed_at')
             ->paginate($request->integer('per_page', 20));

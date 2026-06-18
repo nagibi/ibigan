@@ -1,48 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import {
-  CheckCircle,
-  Clock,
-  LoaderCircle,
-  Play,
-  XCircle,
-} from 'lucide-react';
-import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { usePageToolbar } from '@/hooks/use-page-toolbar';
-import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
-import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
-import { useFormRefresh } from '@/hooks/use-form-refresh';
+import { CheckCircle, Clock, LoaderCircle, Play, XCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, useParams } from 'react-router-dom';
 import { applyApiFormErrors } from '@/lib/apply-api-form-errors';
+import { formatBrl } from '@/lib/brazilian-masks';
 import {
   buildReportExecuteDefaults,
   reportParameterRules,
 } from '@/lib/report-execute-form';
+import { hasRecentInProgressExecutions } from '@/lib/report-execution-polling';
+import { useApiToolbarAlert } from '@/hooks/use-api-toolbar-alert';
+import { useFormRefresh } from '@/hooks/use-form-refresh';
+import { useFormToolbarAlert } from '@/hooks/use-form-toolbar-alert';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import {
   reportsService,
   type ReportColumn,
   type ReportExecution,
   type ReportParameter,
 } from '@/services/reports.service';
-import { buildInactiveAlert, mergeToolbarAlerts } from '@/components/grid/toolbar-alert';
-import { FormToolbar } from '@/components/grid/form-toolbar';
-import { PageBody } from '@/components/common/page-body';
-import { FormFieldGrid, FormFieldGridItem } from '@/components/grid/form-field-grid';
-import { GridTableScroll } from '@/components/grid/grid-table-scroll';
-import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
-import { FormPanel } from '@/components/grid/form-panel';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Form,
   FormControl,
@@ -51,6 +31,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -58,18 +39,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { PageBody } from '@/components/common/page-body';
+import {
+  FormFieldGrid,
+  FormFieldGridItem,
+} from '@/components/grid/form-field-grid';
+import { FormPageSkeleton } from '@/components/grid/form-page-skeleton';
+import { FormPanel } from '@/components/grid/form-panel';
+import { FormToolbar } from '@/components/grid/form-toolbar';
+import { GridTableScroll } from '@/components/grid/grid-table-scroll';
+import {
+  buildInactiveAlert,
+  mergeToolbarAlerts,
+} from '@/components/grid/toolbar-alert';
+import { GridDownloadIcon } from '@/components/icons/grid-download-icon';
 
 function formatCell(value: unknown, fmt: string): string {
   if (value === null || value === undefined) return '—';
   if (fmt === 'datetime') {
-    try { return format(new Date(String(value)), 'dd/MM/yyyy HH:mm', { locale: ptBR }); }
-    catch { return String(value); }
+    try {
+      return format(new Date(String(value)), 'dd/MM/yyyy HH:mm', {
+        locale: ptBR,
+      });
+    } catch {
+      return String(value);
+    }
   }
   if (fmt === 'date') {
-    try { return format(new Date(String(value)), 'dd/MM/yyyy', { locale: ptBR }); }
-    catch { return String(value); }
+    try {
+      return format(new Date(String(value)), 'dd/MM/yyyy', { locale: ptBR });
+    } catch {
+      return String(value);
+    }
   }
-  if (fmt === 'currency') return `R$ ${Number(value).toFixed(2)}`;
+  if (fmt === 'currency') {
+    const amount = Number(value);
+    return Number.isNaN(amount) ? String(value) : formatBrl(amount);
+  }
   if (fmt === 'boolean') return value ? 'Sim' : 'Não';
   return String(value);
 }
@@ -135,7 +148,9 @@ export function ReportExecutePage() {
   const reportId = Number(id);
   const navigate = useNavigate();
   const { apiAlert, showSuccess, showError } = useApiToolbarAlert();
-  const [activeExecutionId, setActiveExecutionId] = useState<number | null>(null);
+  const [activeExecutionId, setActiveExecutionId] = useState<number | null>(
+    null,
+  );
   const [results, setResults] = useState<{
     rows: Record<string, unknown>[];
     count: number;
@@ -148,19 +163,30 @@ export function ReportExecutePage() {
   });
   const formAlert = useFormToolbarAlert(form);
 
-  const { data: reportData, isLoading, isFetched, isError: isReportError, isFetching: isReportFetching, refetch: refetchReport } = useQuery({
+  const {
+    data: reportData,
+    isLoading,
+    isFetched,
+    isError: isReportError,
+    isFetching: isReportFetching,
+    refetch: refetchReport,
+  } = useQuery({
     queryKey: ['report', id],
     queryFn: () => reportsService.show(reportId),
     enabled: Number.isFinite(reportId),
   });
 
-  const { data: executionsData, refetch: refetchExecutions, isFetching: isExecutionsFetching } = useQuery({
+  const {
+    data: executionsData,
+    refetch: refetchExecutions,
+    isFetching: isExecutionsFetching,
+  } = useQuery({
     queryKey: ['report-executions', id],
     queryFn: () => reportsService.executions(reportId),
     enabled: Number.isFinite(reportId),
     refetchInterval: (query) => {
       const items = query.state.data?.data?.result?.data ?? [];
-      return items.some((item) => ['queued', 'running'].includes(item.status)) ? 3000 : false;
+      return hasRecentInProgressExecutions(items) ? 3000 : false;
     },
   });
 
@@ -198,7 +224,9 @@ export function ReportExecutePage() {
   });
 
   const executionStatus = executionStatusData?.data?.result?.status;
-  const isExecuting = executeMutation.isPending || isExecutionRunning(activeExecutionId, executionStatus);
+  const isExecuting =
+    executeMutation.isPending ||
+    isExecutionRunning(activeExecutionId, executionStatus);
   const isReportInactive = report != null && !report.is_active;
 
   useEffect(() => {
@@ -215,14 +243,22 @@ export function ReportExecutePage() {
     form.reset(buildReportExecuteDefaults(parameters));
   }, [form, parameters]);
 
-  const loadResults = useCallback(async (executionId: number, durationMs = 0) => {
-    const response = await reportsService.result(reportId, executionId, 1, 10000);
-    setResults({
-      rows: response.data.result.data,
-      count: response.data.result.meta.total,
-      duration: durationMs,
-    });
-  }, [reportId]);
+  const loadResults = useCallback(
+    async (executionId: number, durationMs = 0) => {
+      const response = await reportsService.result(
+        reportId,
+        executionId,
+        1,
+        10000,
+      );
+      setResults({
+        rows: response.data.result.data,
+        count: response.data.result.meta.total,
+        duration: durationMs,
+      });
+    },
+    [reportId],
+  );
 
   useEffect(() => {
     if (!activeExecutionId || executionStatus !== 'completed') {
@@ -236,7 +272,9 @@ export function ReportExecutePage() {
       .then(() => {
         if (cancelled) return;
         const count = executionStatusData?.data?.result?.rows_count ?? 0;
-        showSuccess(formatReportResultMessage(report?.name ?? 'Relatório', count));
+        showSuccess(
+          formatReportResultMessage(report?.name ?? 'Relatório', count),
+        );
       })
       .catch(() => {
         if (cancelled) return;
@@ -266,7 +304,10 @@ export function ReportExecutePage() {
       return;
     }
 
-    showError(executionStatusData?.data?.result?.error_message ?? 'Erro ao executar relatório.');
+    showError(
+      executionStatusData?.data?.result?.error_message ??
+        'Erro ao executar relatório.',
+    );
     setActiveExecutionId(null);
   }, [executionStatus, executionStatusData, showError]);
 
@@ -285,10 +326,16 @@ export function ReportExecutePage() {
     const cols = normalizeColumns(report.columns, results.rows);
     const header = cols.map((column) => column.label).join(',');
     const rows = results.rows.map((row) =>
-      cols.map((column) => `"${String(row[column.key] ?? '').replace(/"/g, '""')}"`).join(','),
+      cols
+        .map(
+          (column) => `"${String(row[column.key] ?? '').replace(/"/g, '""')}"`,
+        )
+        .join(','),
     );
     const csv = [header, ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csv], {
+      type: 'text/csv;charset=utf-8;',
+    });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -298,11 +345,12 @@ export function ReportExecutePage() {
   }, [report, results]);
 
   const pageAlert = useMemo(
-    () => mergeToolbarAlerts(
-      apiAlert,
-      formAlert,
-      isReportInactive ? buildInactiveAlert('report') : null,
-    ),
+    () =>
+      mergeToolbarAlerts(
+        apiAlert,
+        formAlert,
+        isReportInactive ? buildInactiveAlert('report') : null,
+      ),
     [apiAlert, formAlert, isReportInactive],
   );
 
@@ -333,26 +381,39 @@ export function ReportExecutePage() {
         primarySaveDisabled={isReportInactive}
         entityLabel="relatório"
         recordLabel={report?.name}
-        extra={results ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 px-2 text-xs font-medium"
-            onClick={exportCSV}
-          >
-            <GridDownloadIcon className="size-3.5" />
-            Exportar CSV
-          </Button>
-        ) : undefined}
+        extra={
+          results ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-xs font-medium"
+              onClick={exportCSV}
+            >
+              <GridDownloadIcon className="size-3.5" />
+              Exportar CSV
+            </Button>
+          ) : undefined
+        }
       />
     ),
-    [exportCSV, formRefresh.isRefreshing, formRefresh.onRefresh, handleExecute, isExecuting, isReportInactive, navigate, report?.name, results],
+    [
+      exportCSV,
+      formRefresh.isRefreshing,
+      formRefresh.onRefresh,
+      handleExecute,
+      isExecuting,
+      isReportInactive,
+      navigate,
+      report?.name,
+      results,
+    ],
   );
 
   usePageToolbar({
     title: report?.name ?? 'Executar relatório',
-    description: report?.description ?? 'Configure os parâmetros e execute o relatório.',
+    description:
+      report?.description ?? 'Configure os parâmetros e execute o relatório.',
     alert: pageAlert,
     actions: toolbarActions,
   });
@@ -372,8 +433,14 @@ export function ReportExecutePage() {
     return (
       <PageBody>
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-          <p className="text-sm text-muted-foreground">Relatório não encontrado ou indisponível.</p>
-          <Button type="button" variant="outline" onClick={() => navigate('/reports')}>
+          <p className="text-sm text-muted-foreground">
+            Relatório não encontrado ou indisponível.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/reports')}
+          >
             Voltar para relatórios
           </Button>
         </div>
@@ -396,7 +463,9 @@ export function ReportExecutePage() {
             <FormFieldGrid>
               {parameters.length === 0 ? (
                 <FormFieldGridItem span={2}>
-                  <p className="text-sm text-muted-foreground">Sem parâmetros necessários.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Sem parâmetros necessários.
+                  </p>
                 </FormFieldGridItem>
               ) : (
                 parameters.map((parameter) => (
@@ -407,20 +476,35 @@ export function ReportExecutePage() {
                       rules={reportParameterRules(parameter)}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel required={parameter.required}>{parameter.label}</FormLabel>
+                          <FormLabel required={parameter.required}>
+                            {parameter.label}
+                          </FormLabel>
                           <FormControl>
                             {parameter.type === 'select' ? (
-                              <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value ?? ''}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
                                 <SelectContent>
                                   {parameter.options?.map((option) => (
-                                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                                    <SelectItem key={option} value={option}>
+                                      {option}
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             ) : (
                               <Input
-                                type={parameter.type === 'date' ? 'date' : parameter.type === 'number' ? 'number' : 'text'}
+                                type={
+                                  parameter.type === 'date'
+                                    ? 'date'
+                                    : parameter.type === 'number'
+                                      ? 'number'
+                                      : 'text'
+                                }
                                 {...field}
                                 value={field.value ?? ''}
                               />
@@ -442,27 +526,41 @@ export function ReportExecutePage() {
         <FormPanel title="Histórico recente">
           <div className="divide-y rounded-md border">
             {executions.slice(0, 5).map((execution: ReportExecution) => {
-              const isCompleted = execution.status === 'completed' || execution.status === 'success';
+              const isCompleted =
+                execution.status === 'completed' ||
+                execution.status === 'success';
 
               return (
-                <div key={execution.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <div
+                  key={execution.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">
                       {formatExecutionDate(execution.executed_at)}
-                      {execution.executed_by ? ` · ${execution.executed_by}` : ''}
+                      {execution.executed_by
+                        ? ` · ${execution.executed_by}`
+                        : ''}
                     </p>
-                    {execution.progress_message && !isCompleted && execution.status !== 'failed' && (
-                      <p className="truncate text-xs text-muted-foreground">{execution.progress_message}</p>
-                    )}
+                    {execution.progress_message &&
+                      !isCompleted &&
+                      execution.status !== 'failed' && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {execution.progress_message}
+                        </p>
+                      )}
                     {execution.error_message && (
-                      <p className="truncate text-xs text-destructive">{execution.error_message}</p>
+                      <p className="truncate text-xs text-destructive">
+                        {execution.error_message}
+                      </p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <ExecutionStatusIcon status={execution.status} />
                     {isCompleted && (
                       <span className="text-xs text-muted-foreground">
-                        {execution.rows_count} linhas · {execution.duration_ms}ms
+                        {execution.rows_count} linhas · {execution.duration_ms}
+                        ms
                       </span>
                     )}
                   </div>
@@ -475,14 +573,19 @@ export function ReportExecutePage() {
 
       <FormPanel
         title="Resultados"
-        description={results ? `${results.count} registros · ${results.duration}ms` : undefined}
+        description={
+          results
+            ? `${results.count} registros · ${results.duration}ms`
+            : undefined
+        }
       >
         {isExecuting ? (
           <div className="flex h-48 items-center justify-center rounded-md border text-muted-foreground">
             <div className="text-center">
               <LoaderCircle className="mx-auto mb-2 size-8 animate-spin opacity-60" />
               <p className="text-sm">
-                {executionStatusData?.data?.result?.progress_message ?? 'Executando relatório...'}
+                {executionStatusData?.data?.result?.progress_message ??
+                  'Executando relatório...'}
               </p>
             </div>
           </div>
@@ -490,7 +593,9 @@ export function ReportExecutePage() {
           <div className="flex h-48 items-center justify-center rounded-md border text-muted-foreground">
             <div className="text-center">
               <Clock className="mx-auto mb-2 size-8 opacity-20" />
-              <p className="text-sm">Execute o relatório para ver os resultados.</p>
+              <p className="text-sm">
+                Execute o relatório para ver os resultados.
+              </p>
             </div>
           </div>
         ) : (
@@ -499,14 +604,19 @@ export function ReportExecutePage() {
               <TableHeader>
                 <TableRow>
                   {cols.map((column) => (
-                    <TableHead key={column.key} className="whitespace-nowrap">{column.label}</TableHead>
+                    <TableHead key={column.key} className="whitespace-nowrap">
+                      {column.label}
+                    </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {results.rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={Math.max(cols.length, 1)} className="py-8 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={Math.max(cols.length, 1)}
+                      className="py-8 text-center text-muted-foreground"
+                    >
                       Nenhum resultado encontrado para os filtros informados.
                     </TableCell>
                   </TableRow>
@@ -514,7 +624,10 @@ export function ReportExecutePage() {
                   results.rows.map((row, index) => (
                     <TableRow key={index}>
                       {cols.map((column) => (
-                        <TableCell key={column.key} className="whitespace-nowrap text-sm">
+                        <TableCell
+                          key={column.key}
+                          className="whitespace-nowrap text-sm"
+                        >
                           {formatCell(row[column.key], column.format ?? 'text')}
                         </TableCell>
                       ))}
@@ -538,5 +651,9 @@ function isExecutionRunning(
     return false;
   }
 
-  return executionStatus == null || executionStatus === 'queued' || executionStatus === 'running';
+  return (
+    executionStatus == null ||
+    executionStatus === 'queued' ||
+    executionStatus === 'running'
+  );
 }

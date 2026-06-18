@@ -46,6 +46,13 @@ export function formatCnpj(value?: string | null): string {
   return `${part1}.${part2}.${part3}/${part4}-${part5}`;
 }
 
+export function formatBrl(value: number): string {
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
 export function applyMask(
   value: string,
   mask: 'phone' | 'cpf' | 'cnpj',

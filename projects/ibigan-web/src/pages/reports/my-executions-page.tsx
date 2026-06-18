@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  endOfDay,
+  format,
+  isAfter,
+  isBefore,
+  parseISO,
+  startOfDay,
+} from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   BarChart2,
   CheckCircle,
@@ -9,42 +17,45 @@ import {
   LoaderCircle,
   XCircle,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
 import { GRID_DOWNLOAD_ICON } from '@/lib/grid-download-action';
-import { format, isAfter, isBefore, parseISO, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useGridPageActions } from '@/hooks/use-grid-page-actions';
-import { usePageToolbar } from '@/hooks/use-page-toolbar';
+import {
+  getColumnFilterDisplayValue,
+  matchesSelectFilterValue,
+} from '@/lib/grid-filter-display';
+import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
+import { hasRecentInProgressExecutions } from '@/lib/report-execution-polling';
 import { useGrid } from '@/hooks/use-grid';
 import { useGridColumns, type GridColumnDef } from '@/hooks/use-grid-columns';
-import { useGridViewMode } from '@/hooks/use-grid-view-mode';
-import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
-import { VIEW_PREFERENCE_KEYS } from '@/types/view-mode';
-import { buildServerGridInfiniteScrollProps } from '@/lib/grid-infinite-scroll';
-import { getColumnFilterDisplayValue, matchesSelectFilterValue } from '@/lib/grid-filter-display';
 import {
   dateRangeFilterFromKey,
   dateRangeFilterToKey,
   useGridFilters,
 } from '@/hooks/use-grid-filters';
-import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
-import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
-import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
-import { GridColumnsControl } from '@/components/grid/grid-columns-control';
-import { getGridRecordCount } from '@/components/grid/grid-record-count';
-import { GridResetControl } from '@/components/grid/grid-reset-control';
-import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
+import { useGridInfiniteScroll } from '@/hooks/use-grid-infinite-scroll';
+import { useGridPageActions } from '@/hooks/use-grid-page-actions';
+import { useGridViewMode } from '@/hooks/use-grid-view-mode';
+import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import {
   downloadReportResultCsvWithToast,
   reportsService,
   type MyReportExecution,
 } from '@/services/reports.service';
+import { Button } from '@/components/ui/button';
 import { PageBody } from '@/components/common/page-body';
-import { GridPanel } from '@/components/grid/grid-panel';
+import { GridBadge } from '@/components/grid/grid-badge';
+import { GridColumnDataView } from '@/components/grid/grid-column-data-view';
+import { GridColumnsControl } from '@/components/grid/grid-columns-control';
+import { formatDateRangeFilterLabel } from '@/components/grid/grid-date-range-filter';
+import { parseMultiFilterValue } from '@/components/grid/grid-multi-value-filter';
 import { GridPagination } from '@/components/grid/grid-pagination';
+import { GridPanel } from '@/components/grid/grid-panel';
+import { getGridRecordCount } from '@/components/grid/grid-record-count';
+import { GridResetControl } from '@/components/grid/grid-reset-control';
 import { GridRowActions } from '@/components/grid/grid-row-actions';
 import { GridPanelToolbar } from '@/components/grid/grid-toolbar';
-import { GridBadge } from '@/components/grid/grid-badge';
-import { Button } from '@/components/ui/button';
+import { GridViewModeControl } from '@/components/grid/grid-view-mode-control';
 
 const GRID_COLUMNS_KEY = 'grid-columns:report-executions';
 
@@ -55,10 +66,13 @@ const STATUS_OPTIONS = [
   { label: 'Falhou', value: 'failed' },
 ];
 
-const STATUS_CONFIG: Record<string, {
-  label: string;
-  variant: 'success' | 'secondary' | 'destructive' | 'outline';
-}> = {
+const STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    variant: 'success' | 'secondary' | 'destructive' | 'outline';
+  }
+> = {
   queued: { label: 'Na fila', variant: 'secondary' },
   running: { label: 'Executando', variant: 'outline' },
   completed: { label: 'Concluído', variant: 'success' },
@@ -67,9 +81,12 @@ const STATUS_CONFIG: Record<string, {
 };
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === 'running') return <LoaderCircle className="size-4 animate-spin text-blue-500" />;
-  if (status === 'completed' || status === 'success') return <CheckCircle className="size-4 text-green-600" />;
-  if (status === 'failed') return <XCircle className="size-4 text-destructive" />;
+  if (status === 'running')
+    return <LoaderCircle className="size-4 animate-spin text-blue-500" />;
+  if (status === 'completed' || status === 'success')
+    return <CheckCircle className="size-4 text-green-600" />;
+  if (status === 'failed')
+    return <XCircle className="size-4 text-destructive" />;
   return <Clock className="size-4 text-muted-foreground" />;
 }
 
@@ -81,8 +98,8 @@ function matchesExecutionFilters(
   const q = search.trim().toLowerCase();
   if (q) {
     const matchesSearch =
-      execution.template_name.toLowerCase().includes(q)
-      || execution.status.toLowerCase().includes(q);
+      execution.template_name.toLowerCase().includes(q) ||
+      execution.status.toLowerCase().includes(q);
     if (!matchesSearch) return false;
   }
 
@@ -93,12 +110,16 @@ function matchesExecutionFilters(
   }
 
   const templateName = filters.template_name?.trim();
-  if (templateName && !execution.template_name.toLowerCase().includes(templateName.toLowerCase())) {
+  if (
+    templateName &&
+    !execution.template_name.toLowerCase().includes(templateName.toLowerCase())
+  ) {
     return false;
   }
 
   const status = filters.status?.trim();
-  if (status && !matchesSelectFilterValue(execution.status, status)) return false;
+  if (status && !matchesSelectFilterValue(execution.status, status))
+    return false;
 
   const from = filters[dateRangeFilterFromKey('executed_at')]?.trim();
   const to = filters[dateRangeFilterToKey('executed_at')]?.trim();
@@ -123,7 +144,9 @@ function formatExecutionProgress(execution: MyReportExecution): string {
 export function MyExecutionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(VIEW_PREFERENCE_KEYS.myExecutions);
+  const { viewMode, setViewMode, infiniteScrollEnabled } = useGridViewMode(
+    VIEW_PREFERENCE_KEYS.myExecutions,
+  );
   const grid = useGrid({ defaultSort: 'executed_at', defaultSortDir: 'desc' });
   const columnFilters = useGridFilters(() => grid.setPage(1));
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
@@ -136,7 +159,7 @@ export function MyExecutionsPage() {
     queryFn: () => reportsService.myExecutions(grid.page, requestPerPage),
     refetchInterval: (query) => {
       const items = query.state.data?.data.result.data ?? [];
-      return items.some((item) => ['queued', 'running'].includes(item.status)) ? 3000 : false;
+      return hasRecentInProgressExecutions(items) ? 3000 : false;
     },
   });
 
@@ -174,10 +197,17 @@ export function MyExecutionsPage() {
     }
   }, [executions, grid.page, isLoading, infiniteScroll.receivePage]);
 
-  const displayExecutions = infiniteScrollEnabled ? infiniteScroll.items : executions;
+  const displayExecutions = infiniteScrollEnabled
+    ? infiniteScroll.items
+    : executions;
 
   useEffect(() => {
-    const prev = queryClient.getQueryData<typeof data>(['my-executions', grid.page, grid.perPage, requestPerPage]);
+    const prev = queryClient.getQueryData<typeof data>([
+      'my-executions',
+      grid.page,
+      grid.perPage,
+      requestPerPage,
+    ]);
     if (!prev || !data) return;
 
     const prevItems = prev.data.result.data ?? [];
@@ -217,7 +247,12 @@ export function MyExecutionsPage() {
         id: 'id',
         label: 'Id',
         className: 'w-[70px] text-sm text-muted-foreground',
-        filter: { type: 'multi', filterKey: 'id', placeholder: 'ID', inputMode: 'numeric' },
+        filter: {
+          type: 'multi',
+          filterKey: 'id',
+          placeholder: 'ID',
+          inputMode: 'numeric',
+        },
         render: (execution) => execution.id,
       },
       {
@@ -229,17 +264,20 @@ export function MyExecutionsPage() {
           <GridRowActions
             actions={[
               ...(execution.status === 'completed'
-                ? [{
-                    label: 'Download',
-                    icon: GRID_DOWNLOAD_ICON,
-                    onClick: () => void handleDownload(execution),
-                    disabled: downloadingId === execution.id,
-                  }]
+                ? [
+                    {
+                      label: 'Download',
+                      icon: GRID_DOWNLOAD_ICON,
+                      onClick: () => void handleDownload(execution),
+                      disabled: downloadingId === execution.id,
+                    },
+                  ]
                 : []),
               {
                 label: 'Visualizar',
                 icon: Eye,
-                onClick: () => navigate(`/reports/${execution.template_id}/execute`),
+                onClick: () =>
+                  navigate(`/reports/${execution.template_id}/execute`),
               },
             ]}
           />
@@ -249,7 +287,11 @@ export function MyExecutionsPage() {
         id: 'template_name',
         label: 'Relatório',
         className: 'min-w-[200px]',
-        filter: { type: 'text', filterKey: 'template_name', placeholder: 'Relatório' },
+        filter: {
+          type: 'text',
+          filterKey: 'template_name',
+          placeholder: 'Relatório',
+        },
         render: (execution) => (
           <div className="flex items-center gap-2">
             <StatusIcon status={execution.status} />
@@ -261,7 +303,8 @@ export function MyExecutionsPage() {
         id: 'status',
         label: 'Status',
         className: 'w-[132px] min-w-[132px] max-w-[132px]',
-        exportValue: (execution) => (STATUS_CONFIG[execution.status] ?? STATUS_CONFIG.queued).label,
+        exportValue: (execution) =>
+          (STATUS_CONFIG[execution.status] ?? STATUS_CONFIG.queued).label,
         filter: {
           type: 'select',
           filterKey: 'status',
@@ -303,9 +346,13 @@ export function MyExecutionsPage() {
       {
         id: 'executed_at',
         label: 'Executado em',
-        className: 'w-[168px] min-w-[168px] max-w-[168px] whitespace-nowrap text-sm text-muted-foreground',
+        className:
+          'w-[168px] min-w-[168px] max-w-[168px] whitespace-nowrap text-sm text-muted-foreground',
         filter: { type: 'dateRange', filterKey: 'executed_at' },
-        render: (execution) => format(new Date(execution.executed_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR }),
+        render: (execution) =>
+          format(new Date(execution.executed_at), "dd/MM/yy 'às' HH:mm", {
+            locale: ptBR,
+          }),
       },
     ],
     [downloadingId, handleDownload, navigate],
@@ -321,12 +368,16 @@ export function MyExecutionsPage() {
   });
 
   const filteredExecutions = useMemo(
-    () => displayExecutions.filter((execution) =>
-      matchesExecutionFilters(execution, grid.debouncedSearch, columnFilters.debouncedFilters),
-    ),
+    () =>
+      displayExecutions.filter((execution) =>
+        matchesExecutionFilters(
+          execution,
+          grid.debouncedSearch,
+          columnFilters.debouncedFilters,
+        ),
+      ),
     [columnFilters.debouncedFilters, displayExecutions, grid.debouncedSearch],
   );
-
 
   const activeFilters = useMemo(() => {
     const items = [];
@@ -344,15 +395,22 @@ export function MyExecutionsPage() {
       if (!column.filter) continue;
 
       if (column.filter.type === 'dateRange') {
-        const from = columnFilters.filters[dateRangeFilterFromKey(column.filter.filterKey)]?.trim() ?? '';
-        const to = columnFilters.filters[dateRangeFilterToKey(column.filter.filterKey)]?.trim() ?? '';
+        const from =
+          columnFilters.filters[
+            dateRangeFilterFromKey(column.filter.filterKey)
+          ]?.trim() ?? '';
+        const to =
+          columnFilters.filters[
+            dateRangeFilterToKey(column.filter.filterKey)
+          ]?.trim() ?? '';
         if (!from && !to) continue;
 
         items.push({
           id: column.filter.filterKey,
           label: column.label,
           value: formatDateRangeFilterLabel(from, to),
-          onRemove: () => columnFilters.clearDateRangeFilter(column.filter!.filterKey),
+          onRemove: () =>
+            columnFilters.clearDateRangeFilter(column.filter!.filterKey),
         });
         continue;
       }
@@ -384,7 +442,12 @@ export function MyExecutionsPage() {
 
   const toolbarActions = useMemo(
     () => (
-      <Button variant="primary" size="sm" className="h-8 gap-1.5" onClick={() => navigate('/reports')}>
+      <Button
+        variant="primary"
+        size="sm"
+        className="h-8 gap-1.5"
+        onClick={() => navigate('/reports')}
+      >
         <BarChart2 className="size-4" />
         Ver relatórios
       </Button>
@@ -394,14 +457,15 @@ export function MyExecutionsPage() {
 
   usePageToolbar({
     title: 'Minhas Execuções',
-    description: 'Acompanhe o status dos seus relatórios e baixe os resultados.',
+    description:
+      'Acompanhe o status dos seus relatórios e baixe os resultados.',
     actions: toolbarActions,
   });
 
   return (
     <PageBody>
       <GridPanel
-        toolbar={(
+        toolbar={
           <GridPanelToolbar
             onRefresh={refresh}
             isRefreshing={isLoading || isFetching}
@@ -409,7 +473,9 @@ export function MyExecutionsPage() {
             onSearch={grid.setSearch}
             filters={{
               active: activeFilters,
-              onClearAll: hasActiveFilters ? gridActions.handleClearFilters : undefined,
+              onClearAll: hasActiveFilters
+                ? gridActions.handleClearFilters
+                : undefined,
               columnFilters: {
                 columns: gridColumns.visibleColumns,
                 values: columnFilters.filters,
@@ -418,7 +484,7 @@ export function MyExecutionsPage() {
                 onFilterClear: columnFilters.clearColumnFilter,
               },
             }}
-            columnsControl={(
+            columnsControl={
               <GridColumnsControl
                 columns={columnDefinitions}
                 order={gridColumns.order}
@@ -433,27 +499,40 @@ export function MyExecutionsPage() {
                 onHideAll={gridColumns.hideAllColumns}
                 onResetDefault={gridActions.handleResetColumns}
               />
-            )}
-            resetControl={(
+            }
+            resetControl={
               <GridResetControl
-                disabled={!hasActiveFilters && !gridColumns.isCustomized && !grid.isCustomized}
+                disabled={
+                  !hasActiveFilters &&
+                  !gridColumns.isCustomized &&
+                  !grid.isCustomized
+                }
                 onReset={gridActions.handleResetGrid}
               />
-            )}
-            viewModeControl={
-              <GridViewModeControl viewMode={viewMode} onViewModeChange={setViewMode} />
             }
-            recordCount={getGridRecordCount(meta.total, filteredExecutions.length, infiniteScrollEnabled)}
+            viewModeControl={
+              <GridViewModeControl
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+              />
+            }
+            recordCount={getGridRecordCount(
+              meta.total,
+              filteredExecutions.length,
+              infiniteScrollEnabled,
+            )}
           />
-        )}
-        footer={!infiniteScrollEnabled ? (
-          <GridPagination
-            meta={meta}
-            perPage={grid.perPage}
-            onPageChange={grid.setPage}
-            onPerPageChange={grid.setPerPage}
-          />
-        ) : undefined}
+        }
+        footer={
+          !infiniteScrollEnabled ? (
+            <GridPagination
+              meta={meta}
+              perPage={grid.perPage}
+              onPageChange={grid.setPage}
+              onPerPageChange={grid.setPerPage}
+            />
+          ) : undefined
+        }
       >
         <GridColumnDataView
           viewMode={viewMode}
@@ -473,7 +552,9 @@ export function MyExecutionsPage() {
           onColumnFilterChange={columnFilters.setFilter}
           onDateRangeFilterChange={columnFilters.setDateRangeFilter}
           onColumnFilterClear={columnFilters.clearColumnFilter}
-          onRowDoubleClick={(execution) => navigate(`/reports/${execution.template_id}/execute`)}
+          onRowDoubleClick={(execution) =>
+            navigate(`/reports/${execution.template_id}/execute`)
+          }
         />
       </GridPanel>
     </PageBody>

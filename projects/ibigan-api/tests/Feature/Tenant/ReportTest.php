@@ -14,9 +14,9 @@ use Laravel\Sanctum\Sanctum;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    $tenantId = 'tenant-'.uniqid();
+    $tenantId = 'tenant-' . uniqid();
     $this->tenant = Tenant::create(['id' => $tenantId, 'slug' => $tenantId, 'name' => 'Test']);
-    $this->tenant->run(fn () => $this->seed(RolePermissionSeeder::class));
+    $this->tenant->run(fn() => $this->seed(RolePermissionSeeder::class));
 
     $this->admin = $this->tenant->run(function (): User {
         $user = User::factory()->create();
@@ -43,7 +43,7 @@ function reportHeaders(string $tenantId): array
 }
 
 it('lista relatórios para usuário com permissão', function (): void {
-    $this->tenant->run(fn () => ReportTemplate::factory()->count(3)->create(['created_by' => $this->admin->id]));
+    $this->tenant->run(fn() => ReportTemplate::factory()->count(3)->create(['created_by' => $this->admin->id]));
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
@@ -80,7 +80,7 @@ it('nega criação para viewer', function (): void {
 it('executa relatório com parâmetros', function (): void {
     Queue::fake();
 
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'query' => 'SELECT id, name FROM users LIMIT 5',
         'parameters' => [],
@@ -101,7 +101,7 @@ it('executa relatório com parâmetros', function (): void {
 });
 
 it('rejeita query com INSERT', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'query' => 'INSERT INTO users (name) VALUES ("hack")',
         'is_active' => true,
@@ -113,11 +113,12 @@ it('rejeita query com INSERT', function (): void {
         'parameters' => [],
     ], reportHeaders($this->tenant->id))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['query']);
+        ->assertJsonPath('message_code', 'validation.failed')
+        ->assertJsonPath('errors.0.field', 'query');
 });
 
 it('rejeita query que não começa com SELECT', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'query' => 'DROP TABLE users',
         'is_active' => true,
@@ -134,7 +135,7 @@ it('rejeita query que não começa com SELECT', function (): void {
 it('registra execução no histórico', function (): void {
     Queue::fake();
 
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'query' => 'SELECT id FROM users LIMIT 1',
         'is_active' => true,
@@ -153,7 +154,7 @@ it('registra execução no histórico', function (): void {
 });
 
 it('admin atualiza template', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
@@ -165,7 +166,7 @@ it('admin atualiza template', function (): void {
 });
 
 it('admin remove template', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
 
     Sanctum::actingAs($this->admin, ['*'], 'sanctum');
 
@@ -174,7 +175,7 @@ it('admin remove template', function (): void {
 });
 
 it('ativa registro', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'is_active' => false,
     ]));
@@ -189,7 +190,7 @@ it('ativa registro', function (): void {
 });
 
 it('inativa registro', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'is_active' => true,
     ]));
@@ -204,7 +205,7 @@ it('inativa registro', function (): void {
 });
 
 it('nega toggle para viewer', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create(['created_by' => $this->admin->id]));
 
     Sanctum::actingAs($this->viewer, ['*'], 'sanctum');
 
@@ -215,7 +216,7 @@ it('nega toggle para viewer', function (): void {
 });
 
 it('processa job e permite baixar resultado', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'query' => 'SELECT id, name FROM users LIMIT 2',
         'parameters' => [],
@@ -248,14 +249,14 @@ it('processa job e permite baixar resultado', function (): void {
 })->group('integration');
 
 it('localiza resultado salvo em caminho legado do tenant', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'is_active' => true,
     ]));
 
     $execution = $this->tenant->run(function () use ($template) {
         $path = 'reports/legacy-result.json';
-        $absolutePath = storage_path('tenant'.$this->tenant->id.'/app/'.$path);
+        $absolutePath = storage_path('tenant' . $this->tenant->id . '/app/' . $path);
         if (! is_dir(dirname($absolutePath))) {
             mkdir(dirname($absolutePath), 0775, true);
         }
@@ -284,7 +285,7 @@ it('localiza resultado salvo em caminho legado do tenant', function (): void {
 });
 
 it('permite baixar resultado salvo mesmo com status failed', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'is_active' => true,
     ]));
@@ -321,7 +322,7 @@ it('permite baixar resultado salvo mesmo com status failed', function (): void {
 });
 
 it('permite download csv via url assinada sem autenticação', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'name' => 'Campanhas por status',
         'columns' => [
@@ -374,12 +375,12 @@ it('permite download csv via url assinada sem autenticação', function (): void
 });
 
 it('rejeita download csv com url não assinada', function (): void {
-    $template = $this->tenant->run(fn () => ReportTemplate::factory()->create([
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
         'created_by' => $this->admin->id,
         'is_active' => true,
     ]));
 
-    $execution = $this->tenant->run(fn () => \App\Models\ReportExecution::query()->create([
+    $execution = $this->tenant->run(fn() => \App\Models\ReportExecution::query()->create([
         'report_template_id' => $template->id,
         'executed_by' => $this->admin->id,
         'parameters' => [],
@@ -392,4 +393,28 @@ it('rejeita download csv com url não assinada', function (): void {
 
     $this->get("/api/v1/tenants/{$this->tenant->id}/reports/{$template->id}/executions/{$execution->id}/download")
         ->assertForbidden();
+});
+
+it('marca execuções antigas em running como failed ao listar histórico', function (): void {
+    $template = $this->tenant->run(fn() => ReportTemplate::factory()->create([
+        'created_by' => $this->admin->id,
+        'query' => 'SELECT id FROM users LIMIT 1',
+        'is_active' => true,
+    ]));
+
+    $this->tenant->run(fn() => \App\Models\ReportExecution::query()->create([
+        'report_template_id' => $template->id,
+        'executed_by' => $this->admin->id,
+        'parameters' => [],
+        'status' => 'running',
+        'progress_message' => 'Processando registros...',
+        'executed_at' => now()->subHours(2),
+    ]));
+
+    Sanctum::actingAs($this->admin, ['*'], 'sanctum');
+
+    $this->getJson("/api/v1/reports/{$template->id}/executions", reportHeaders($this->tenant->id))
+        ->assertOk()
+        ->assertJsonPath('result.data.0.status', 'failed')
+        ->assertJsonPath('result.data.0.error_message', 'Execução expirada ou interrompida.');
 });

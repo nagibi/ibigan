@@ -5,10 +5,62 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 ENV_FILE="${ENV_FILE:-/opt/ibigan/.env}"
+LARAVEL_ENV="$ROOT_DIR/projects/ibigan-api/.env"
 DC=(docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE")
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Arquivo de ambiente não encontrado: $ENV_FILE" >&2
+  exit 1
+fi
+
+if [[ ! -f "$LARAVEL_ENV" ]]; then
+  echo "ERRO: $LARAVEL_ENV não encontrado" >&2
+  echo "      Crie um arquivo real (não symlink) com APP_KEY, DB_*, Reverb, mail, etc." >&2
+  exit 1
+fi
+
+if [[ -L "$LARAVEL_ENV" ]]; then
+  echo "ERRO: $LARAVEL_ENV é symlink — o volume Docker não resolve links fora de /var/www" >&2
+  echo "      rm $LARAVEL_ENV && cp .env.example $LARAVEL_ENV && preencha APP_KEY e credenciais" >&2
+  exit 1
+fi
+
+require_env() {
+  local file="$1"
+  local key="$2"
+  local value
+  value="$(grep -E "^${key}=" "$file" | tail -n1 | cut -d= -f2- | tr -d '\r' || true)"
+  if [[ -z "$value" ]]; then
+    echo "ERRO: defina ${key} em ${file}" >&2
+    exit 1
+  fi
+}
+
+env_value() {
+  grep -E "^${2}=" "$1" | tail -n1 | cut -d= -f2- | tr -d '\r' || true
+}
+
+echo "==> Validar .env raiz (Docker)"
+for key in MYSQL_ROOT_PASSWORD MYSQL_PASSWORD MYSQL_USER MYSQL_DATABASE CENTRAL_DOMAIN; do
+  require_env "$ENV_FILE" "$key"
+done
+
+echo "==> Validar .env Laravel"
+for key in APP_KEY DB_PASSWORD DB_USERNAME DB_DATABASE; do
+  require_env "$LARAVEL_ENV" "$key"
+done
+
+db_password="$(env_value "$LARAVEL_ENV" DB_PASSWORD)"
+mysql_password="$(env_value "$ENV_FILE" MYSQL_PASSWORD)"
+if [[ "$db_password" != "$mysql_password" ]]; then
+  echo "ERRO: DB_PASSWORD ($LARAVEL_ENV) deve ser igual a MYSQL_PASSWORD ($ENV_FILE)" >&2
+  exit 1
+fi
+
+db_username="$(env_value "$LARAVEL_ENV" DB_USERNAME)"
+mysql_user="$(env_value "$ENV_FILE" MYSQL_USER)"
+if [[ "$db_username" != "$mysql_user" ]]; then
+  echo "ERRO: DB_USERNAME ($LARAVEL_ENV) deve ser igual a MYSQL_USER ($ENV_FILE)" >&2
   exit 1
 fi
 
@@ -17,12 +69,12 @@ set -a
 source "$ENV_FILE"
 set +a
 
-CENTRAL_DOMAIN="${CENTRAL_DOMAIN:-${APP_URL#https://}}"
+CENTRAL_DOMAIN="${CENTRAL_DOMAIN#https://}"
 CENTRAL_DOMAIN="${CENTRAL_DOMAIN#http://}"
 CENTRAL_DOMAIN="${CENTRAL_DOMAIN%%/*}"
 
 if [[ -z "$CENTRAL_DOMAIN" ]]; then
-  echo "Defina CENTRAL_DOMAIN ou APP_URL no $ENV_FILE" >&2
+  echo "Defina CENTRAL_DOMAIN no $ENV_FILE" >&2
   exit 1
 fi
 
