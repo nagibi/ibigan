@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Diagnóstico rápido de 502 — ibigan atrás do Caddy no host.
+# Diagnóstico rápido de 502/404 — ibigan atrás do Caddy no host.
 set -uo pipefail
 
 ENV_FILE="${ENV_FILE:-/opt/ibigan/.env}"
+ROOT="${ROOT:-/opt/ibigan}"
 STACK="${STACK_NAME:-ibigan}"
 
 if [[ -f "$ENV_FILE" ]]; then
@@ -17,6 +18,22 @@ DOMAIN="${DOMAIN#http://}"
 DOMAIN="${DOMAIN%%/*}"
 
 echo "=== Stack: ${STACK} | domínio: ${DOMAIN} | backend: http://${HTTP_BIND}:${HTTP_PORT} ==="
+echo
+
+echo "--- SPA no host ---"
+SPA_INDEX="${ROOT}/projects/ibigan-web/dist/index.html"
+if [[ -f "$SPA_INDEX" ]]; then
+  echo "OK: $SPA_INDEX existe ($(du -h "$SPA_INDEX" | awk '{print $1}'))"
+else
+  echo "ERRO: $SPA_INDEX ausente — causa típica de 404 na raiz"
+  echo "      cd ${ROOT}/projects/ibigan-web && npm ci && npm run build"
+fi
+echo
+
+echo "--- SPA no container nginx ---"
+docker exec "${STACK}_nginx" test -f /var/www/spa/index.html 2>/dev/null \
+  && echo "OK: /var/www/spa/index.html no container" \
+  || echo "ERRO: /var/www/spa/index.html não montado no nginx (rode deploy-prod.sh)"
 echo
 
 echo "--- docker ps (nginx) ---"
@@ -39,7 +56,9 @@ echo "--- curl público ---"
 curl -sS -o /dev/null -w "https://${DOMAIN} → HTTP %{http_code}\n" -I "https://${DOMAIN}" || true
 echo
 
-echo "=== Correção típica de 502 ==="
-echo "1. Caddy deve usar: reverse_proxy http://127.0.0.1:${HTTP_PORT}  (NÃO https://...18443)"
-echo "2. nginx precisa config HTTP (deploy com NGINX_HTTP_BIND=127.0.0.1)"
-echo "3. systemctl reload caddy && docker restart ${STACK}_nginx"
+echo "=== Correções típicas ==="
+echo "404: build do frontend + deploy:"
+echo "  cd ${ROOT}/projects/ibigan-web && npm ci && npm run build"
+echo "  ${ROOT}/scripts/deploy-prod.sh"
+echo "502: Caddy deve usar reverse_proxy http://127.0.0.1:${HTTP_PORT} (ibigan=18080, nagibi=28080)"
+echo "     NGINX_HTTP_PORT no ${ENV_FILE} deve coincidir com o Caddyfile"
