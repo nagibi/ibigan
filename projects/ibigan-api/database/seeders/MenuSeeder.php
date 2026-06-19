@@ -347,13 +347,26 @@ class MenuSeeder extends Seeder
         ]);
 
         Menu::create([
+            'title' => 'Meilisearch',
+            'slug' => 'meilisearch',
+            'icon' => 'Search',
+            'path' => config('dev-tools.meilisearch_url'),
+            'target' => '_blank',
+            'parent_id' => $ferramentas->id,
+            'order' => 9,
+            'is_active' => true,
+            'requires_auth' => true,
+            'roles' => ['admin', 'super-admin'],
+        ]);
+
+        Menu::create([
             'title' => 'cAdvisor',
             'slug' => 'cadvisor',
             'icon' => 'Container',
             'path' => config('dev-tools.cadvisor_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
-            'order' => 9,
+            'order' => 10,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -366,7 +379,7 @@ class MenuSeeder extends Seeder
             'path' => config('dev-tools.sentry_url'),
             'target' => '_blank',
             'parent_id' => $ferramentas->id,
-            'order' => 10,
+            'order' => 11,
             'is_active' => true,
             'requires_auth' => true,
             'roles' => ['admin', 'super-admin'],
@@ -412,6 +425,7 @@ class MenuSeeder extends Seeder
             'mailpit' => 'menu.mailpit',
             'grafana' => 'menu.grafana',
             'prometheus' => 'menu.prometheus',
+            'meilisearch' => 'menu.meilisearch',
             'cadvisor' => 'menu.cadvisor',
             'sentry' => 'menu.sentry',
             'configuracoes' => 'menu.settings',

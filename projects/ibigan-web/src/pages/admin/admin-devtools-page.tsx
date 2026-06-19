@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Bug, Clock, Container, ExternalLink, Flame, Gauge, LineChart, ScrollText, Telescope } from 'lucide-react';
+import { BookOpen, Bug, Clock, Container, ExternalLink, Flame, Gauge, LineChart, ScrollText, Search, Telescope } from 'lucide-react';
 import { usePageToolbar } from '@/hooks/use-page-toolbar';
 import { PageBody } from '@/components/common/page-body';
 import { buildDevToolsHref } from '@/lib/dev-tools-link';
@@ -88,6 +88,13 @@ export function AdminDevToolsPage() {
         descriptionKey: 'admin.devtools.prometheus_description',
         url: DEV_TOOLS_URLS.prometheus,
         icon: Flame,
+      },
+      {
+        id: 'meilisearch',
+        titleKey: 'menu.meilisearch',
+        descriptionKey: 'admin.devtools.meilisearch_description',
+        url: DEV_TOOLS_URLS.meilisearch,
+        icon: Search,
       },
       {
         id: 'cadvisor',

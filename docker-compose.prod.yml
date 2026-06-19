@@ -26,6 +26,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -93,6 +95,25 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── Meilisearch ───────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: ${STACK_NAME:-ibigan}_meilisearch
+    restart: unless-stopped
+    networks:
+      - stack_network
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY}
+      MEILI_ENV: production
+      MEILI_EXPERIMENTAL_ENABLE_METRICS: "true"
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   # ── Horizon ───────────────────────────────────────────────────
   horizon:
     build:
@@ -114,6 +135,8 @@ services:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      meilisearch:
         condition: service_healthy
     command: php artisan horizon
 
@@ -171,3 +194,4 @@ networks:
 volumes:
   mysql_data:
   redis_data:
+  meili_data:
