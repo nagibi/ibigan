@@ -6,6 +6,7 @@ use App\Mail\TemplateMailable;
 use App\Models\MessageTemplate;
 use App\Models\ReportExecution;
 use App\Models\ReportTemplate;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Notifications\ReportCompletedNotification;
 use App\Support\MessageTemplateSlugs;
@@ -16,11 +17,16 @@ use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
+/**
+ * @property Tenant $tenant
+ * @property User $user
+ */
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    /** @var TestCase&object{tenant: Tenant, user: User} $this */
     $tenantId = 'tenant-'.uniqid();
-    $this->tenant = \App\Models\Tenant::create([
+    $this->tenant = Tenant::create([
         'id' => $tenantId,
         'slug' => $tenantId,
         'name' => 'Test Corp',
