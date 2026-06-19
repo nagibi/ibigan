@@ -31,9 +31,10 @@ final class ResetPasswordNotification extends Notification
     {
         $content = $this->resolveTemplate($notifiable);
 
-        return new TemplateMailable(
-            emailSubject: $content['subject'],
-            emailBody: $content['body'],
+        return TemplateMailable::forNotifiable(
+            $notifiable,
+            $content['subject'],
+            $content['body'],
         );
     }
 
