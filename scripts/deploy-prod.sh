@@ -9,8 +9,13 @@ LARAVEL_ENV="$ROOT_DIR/projects/ibigan-api/.env"
 DC=(docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE")
 
 if [[ ! -f "$ENV_FILE" ]]; then
-  echo "Arquivo de ambiente não encontrado: $ENV_FILE" >&2
-  exit 1
+  if [[ -f "$ROOT_DIR/.env.production.example" ]]; then
+    echo "==> Criar ${ENV_FILE} a partir de .env.production.example"
+    cp "$ROOT_DIR/.env.production.example" "$ENV_FILE"
+  else
+    echo "Arquivo de ambiente não encontrado: $ENV_FILE" >&2
+    exit 1
+  fi
 fi
 
 if [[ ! -f "$LARAVEL_ENV" ]]; then
@@ -33,13 +38,87 @@ require_env() {
   if [[ -z "$value" ]]; then
     echo "ERRO: defina ${key} em ${file}" >&2
     echo "      Modelo: ${ROOT_DIR}/.env.production.example (Docker) ou projects/ibigan-api/.env.production.example (Laravel)" >&2
+    echo "      No servidor: nano ${ENV_FILE}  e  nano ${LARAVEL_ENV}" >&2
     exit 1
   fi
 }
 
 env_value() {
-  grep -E "^${2}=" "$1" | tail -n1 | cut -d= -f2- | tr -d '\r' || true
+  grep -E "^${2}=" "$1" | tail -n1 | cut -d= -f2- | tr -d '\r' | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" || true
 }
+
+set_env_var() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+
+  if grep -qE "^${key}=" "$file"; then
+    grep -vE "^${key}=" "$file" > "${file}.tmp"
+    mv "${file}.tmp" "$file"
+  fi
+
+  printf '%s=%s\n' "$key" "$value" >> "$file"
+}
+
+ensure_docker_env_from_laravel() {
+  local docker_file="$1"
+  local laravel_file="$2"
+
+  local db_user db_pass db_name app_url central
+  db_user="$(env_value "$laravel_file" DB_USERNAME)"
+  db_pass="$(env_value "$laravel_file" DB_PASSWORD)"
+  db_name="$(env_value "$laravel_file" DB_DATABASE)"
+  app_url="$(env_value "$laravel_file" APP_URL)"
+  central="$(env_value "$laravel_file" CENTRAL_DOMAIN)"
+
+  if [[ -z "$(env_value "$docker_file" MYSQL_USER)" && -n "$db_user" ]]; then
+    echo "==> MYSQL_USER ausente em ${docker_file} — usando DB_USERNAME do Laravel"
+    set_env_var "$docker_file" MYSQL_USER "$db_user"
+  fi
+
+  if [[ -z "$(env_value "$docker_file" MYSQL_PASSWORD)" && -n "$db_pass" ]]; then
+    echo "==> MYSQL_PASSWORD ausente em ${docker_file} — usando DB_PASSWORD do Laravel"
+    set_env_var "$docker_file" MYSQL_PASSWORD "$db_pass"
+  fi
+
+  if [[ -z "$(env_value "$docker_file" MYSQL_DATABASE)" && -n "$db_name" ]]; then
+    echo "==> MYSQL_DATABASE ausente em ${docker_file} — usando DB_DATABASE do Laravel"
+    set_env_var "$docker_file" MYSQL_DATABASE "$db_name"
+  fi
+
+  if [[ -z "$(env_value "$docker_file" CENTRAL_DOMAIN)" ]]; then
+    if [[ -n "$central" ]]; then
+      echo "==> CENTRAL_DOMAIN ausente em ${docker_file} — usando valor do Laravel"
+      set_env_var "$docker_file" CENTRAL_DOMAIN "$central"
+    elif [[ -n "$app_url" ]]; then
+      central="${app_url#https://}"
+      central="${central#http://}"
+      central="${central%%/*}"
+      echo "==> CENTRAL_DOMAIN ausente em ${docker_file} — derivado de APP_URL (${central})"
+      set_env_var "$docker_file" CENTRAL_DOMAIN "$central"
+    fi
+  fi
+
+  local mysql_pass root_pass
+  mysql_pass="$(env_value "$docker_file" MYSQL_PASSWORD)"
+  root_pass="$(env_value "$docker_file" MYSQL_ROOT_PASSWORD)"
+
+  if [[ -z "$root_pass" ]]; then
+    if [[ -n "$mysql_pass" ]]; then
+      echo "==> MYSQL_ROOT_PASSWORD ausente — usando MYSQL_PASSWORD (defina senhas distintas se preferir)"
+      set_env_var "$docker_file" MYSQL_ROOT_PASSWORD "$mysql_pass"
+    elif [[ -n "$db_pass" ]]; then
+      echo "==> MYSQL_ROOT_PASSWORD ausente — usando DB_PASSWORD do Laravel"
+      set_env_var "$docker_file" MYSQL_ROOT_PASSWORD "$db_pass"
+      if [[ -z "$(env_value "$docker_file" MYSQL_PASSWORD)" ]]; then
+        set_env_var "$docker_file" MYSQL_PASSWORD "$db_pass"
+      fi
+    fi
+  fi
+}
+
+echo "==> Sincronizar .env Docker a partir do Laravel (se necessário)"
+ensure_docker_env_from_laravel "$ENV_FILE" "$LARAVEL_ENV"
 
 echo "==> Validar .env raiz (Docker)"
 for key in MYSQL_ROOT_PASSWORD MYSQL_PASSWORD MYSQL_USER MYSQL_DATABASE CENTRAL_DOMAIN; do
