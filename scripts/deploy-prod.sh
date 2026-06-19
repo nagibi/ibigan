@@ -32,6 +32,7 @@ require_env() {
   value="$(grep -E "^${key}=" "$file" | tail -n1 | cut -d= -f2- | tr -d '\r' || true)"
   if [[ -z "$value" ]]; then
     echo "ERRO: defina ${key} em ${file}" >&2
+    echo "      Modelo: ${ROOT_DIR}/.env.production.example (Docker) ou projects/ibigan-api/.env.production.example (Laravel)" >&2
     exit 1
   fi
 }
