@@ -117,8 +117,70 @@ ensure_docker_env_from_laravel() {
   fi
 }
 
+ensure_mysql_host_port() {
+  local docker_file="$1"
+  local port
+  port="$(env_value "$docker_file" MYSQL_HOST_PORT)"
+
+  if [[ -z "$port" ]]; then
+    port=3307
+    echo "==> MYSQL_HOST_PORT ausente — usando ${port} (nagibi no mesmo servidor usa 3306)"
+    set_env_var "$docker_file" MYSQL_HOST_PORT "$port"
+    return
+  fi
+
+  if [[ "$port" == "3306" ]] && command -v ss >/dev/null 2>&1 && ss -tln | grep -qE ':3306\s'; then
+    echo "==> Porta 3306 já em uso (stack nagibi?) — ajustando ibigan para MYSQL_HOST_PORT=3307"
+    set_env_var "$docker_file" MYSQL_HOST_PORT 3307
+  fi
+}
+
+ensure_nginx_ports() {
+  local docker_file="$1"
+  local behind bind port
+
+  behind="$(env_value "$docker_file" NGINX_BEHIND_PROXY)"
+  if [[ -z "$behind" || "$behind" == "false" || "$behind" == "0" ]]; then
+    echo "==> NGINX_BEHIND_PROXY ausente — usando true (Caddy no host em 80/443)"
+    set_env_var "$docker_file" NGINX_BEHIND_PROXY true
+  fi
+
+  bind="$(env_value "$docker_file" NGINX_HTTP_BIND)"
+  if [[ -z "$bind" || "$bind" == "0.0.0.0" ]]; then
+    echo "==> NGINX_HTTP_BIND — usando 127.0.0.1 (não disputar porta 80 com Caddy)"
+    set_env_var "$docker_file" NGINX_HTTP_BIND 127.0.0.1
+  fi
+
+  port="$(env_value "$docker_file" NGINX_HTTP_PORT)"
+  if [[ -z "$port" || "$port" == "80" || "$port" == "443" ]]; then
+    port=18080
+    echo "==> NGINX_HTTP_PORT — usando ${port} (nagibi usa 28080 no mesmo servidor)"
+    set_env_var "$docker_file" NGINX_HTTP_PORT "$port"
+  fi
+
+  # TLS fica no Caddy — variáveis HTTPS no .env não devem publicar 443 no Docker
+  if grep -qE '^NGINX_HTTPS_' "$docker_file" 2>/dev/null; then
+    echo "==> Removendo NGINX_HTTPS_* do .env (Caddy já usa 80/443 no host)"
+    grep -vE '^NGINX_HTTPS_' "$docker_file" > "${docker_file}.tmp"
+    mv "${docker_file}.tmp" "$docker_file"
+  fi
+}
+
+validate_compose_no_public_https() {
+  local compose_file="$ROOT_DIR/docker-compose.prod.yml"
+  if grep -qE 'NGINX_HTTPS_(BIND|PORT)|:[0-9]+:443"' "$compose_file" 2>/dev/null; then
+    echo "ERRO: ${compose_file} ainda mapeia porta 443 no host." >&2
+    echo "      Atualize o repositório (git pull / deploy) — ibigan usa só 127.0.0.1:18080." >&2
+    exit 1
+  fi
+}
+
+validate_compose_no_public_https
+
 echo "==> Sincronizar .env Docker a partir do Laravel (se necessário)"
 ensure_docker_env_from_laravel "$ENV_FILE" "$LARAVEL_ENV"
+ensure_mysql_host_port "$ENV_FILE"
+ensure_nginx_ports "$ENV_FILE"
 
 echo "==> Validar .env raiz (Docker)"
 for key in MYSQL_ROOT_PASSWORD MYSQL_PASSWORD MYSQL_USER MYSQL_DATABASE CENTRAL_DOMAIN; do
@@ -222,7 +284,7 @@ echo "==> Nginx (validar config)"
 "${DC[@]}" exec -T nginx nginx -t
 
 NGINX_TEST_BIND="${NGINX_HTTP_BIND:-127.0.0.1}"
-NGINX_TEST_PORT="${NGINX_HTTP_PORT:-80}"
+NGINX_TEST_PORT="${NGINX_HTTP_PORT:-18080}"
 echo "==> Smoke test nginx (http://${NGINX_TEST_BIND}:${NGINX_TEST_PORT})"
 if ! "${DC[@]}" exec -T nginx test -f /var/www/spa/index.html; then
   echo "ERRO: /var/www/spa/index.html não existe no container nginx." >&2

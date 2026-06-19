@@ -32,6 +32,7 @@ services:
       - "host.docker.internal:host-gateway"
 
   # ── Nginx ─────────────────────────────────────────────────────
+  # Caddy no host (80/443) → reverse_proxy 127.0.0.1:18080 (ibigan) / :28080 (nagibi)
   nginx:
     image: nginx:1.27-alpine
     container_name: ${STACK_NAME:-ibigan}_nginx
@@ -39,8 +40,7 @@ services:
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     ports:
-      - "${NGINX_HTTP_BIND:-0.0.0.0}:${NGINX_HTTP_PORT:-80}:80"
-      - "${NGINX_HTTPS_BIND:-0.0.0.0}:${NGINX_HTTPS_PORT:-443}:443"
+      - "${NGINX_HTTP_BIND:-127.0.0.1}:${NGINX_HTTP_PORT:-18080}:80"
     volumes:
       - ./projects/ibigan-api:/var/www
       - ./projects/ibigan-web/dist:/var/www/spa
@@ -59,7 +59,7 @@ services:
     container_name: ${STACK_NAME:-ibigan}_mysql
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"
     environment:
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
