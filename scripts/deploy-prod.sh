@@ -57,7 +57,77 @@ set_env_var() {
     mv "${file}.tmp" "$file"
   fi
 
-  printf '%s=%s\n' "$key" "$value" >> "$file"
+  if [[ "$value" =~ [[:space:]] ]]; then
+    printf '%s="%s"\n' "$key" "$value" >> "$file"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$file"
+  fi
+}
+
+# Valores com espaço precisam de aspas — ex.: APP_NAME="Ibigan APP"
+fix_unquoted_dotenv_spaces() {
+  local file="$1"
+  local tmp="${file}.dotenv-fix.tmp"
+  local changed=false
+  local line key value
+
+  : > "$tmp"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%$'\r'}"
+    if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+      printf '%s\n' "$line" >> "$tmp"
+      continue
+    fi
+
+    if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      key="${BASH_REMATCH[1]}"
+      value="${BASH_REMATCH[2]}"
+      if [[ "$value" =~ [[:space:]] && ! "$value" =~ ^\".*\"$ && ! "$value" =~ ^\'.*\'$ ]]; then
+        echo "==> Corrigindo ${key} em ${file} — valor com espaço precisa de aspas"
+        printf '%s="%s"\n' "$key" "$value" >> "$tmp"
+        changed=true
+        continue
+      fi
+    fi
+
+    printf '%s\n' "$line" >> "$tmp"
+  done < "$file"
+
+  if [[ "$changed" == "true" ]]; then
+    mv "$tmp" "$file"
+  else
+    rm -f "$tmp"
+  fi
+}
+
+validate_dotenv_syntax() {
+  local file="$1"
+  local line key value
+  local -a bad_lines=()
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%$'\r'}"
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
+
+    key="${BASH_REMATCH[1]}"
+    value="${BASH_REMATCH[2]}"
+    [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]] && continue
+    [[ "$value" =~ \$\{ ]] && continue
+
+    if [[ "$value" =~ [[:space:]] ]]; then
+      bad_lines+=("${key}=${value}")
+    fi
+  done < "$file"
+
+  if [[ ${#bad_lines[@]} -gt 0 ]]; then
+    echo "ERRO: ${file} contém valores com espaço sem aspas (Laravel dotenv rejeita):" >&2
+    for line in "${bad_lines[@]}"; do
+      echo "  ${line}" >&2
+    done
+    echo '      Use aspas: APP_NAME="Ibigan APP"' >&2
+    exit 1
+  fi
 }
 
 ensure_docker_env_from_laravel() {
@@ -188,6 +258,8 @@ for key in MYSQL_ROOT_PASSWORD MYSQL_PASSWORD MYSQL_USER MYSQL_DATABASE CENTRAL_
 done
 
 echo "==> Validar .env Laravel"
+fix_unquoted_dotenv_spaces "$LARAVEL_ENV"
+validate_dotenv_syntax "$LARAVEL_ENV"
 for key in APP_KEY DB_PASSWORD DB_USERNAME DB_DATABASE; do
   require_env "$LARAVEL_ENV" "$key"
 done
