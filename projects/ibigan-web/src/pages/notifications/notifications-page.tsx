@@ -205,6 +205,7 @@ export function NotificationsPage() {
       const updated = response.data.result;
       upsertNotificationInCache(queryClient, updated);
       syncViewingNotification(updated);
+      showSuccess(t('notifications.marked_read'));
     },
     onError: (error) => showError('Erro ao marcar notificação como lida.', error),
   });
@@ -215,6 +216,7 @@ export function NotificationsPage() {
       const updated = response.data.result;
       upsertNotificationInCache(queryClient, updated);
       syncViewingNotification(updated);
+      showSuccess(t('notifications.marked_unread'));
     },
     onError: (error) => showError('Erro ao marcar notificação como não lida.', error),
   });
@@ -422,7 +424,7 @@ export function NotificationsPage() {
 
           return (
             <div
-              className="flex justify-center"
+              className="flex justify-start"
               onClick={(event) => event.stopPropagation()}
             >
               <Switch

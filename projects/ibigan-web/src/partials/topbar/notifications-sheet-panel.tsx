@@ -10,6 +10,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   invalidateNotifications,
@@ -48,12 +49,14 @@ export function NotificationsSheetPanel({
   const isCentralOnly = useCentralOnlySession();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  const { t } = useTranslation();
   const { data, isLoading } = useNotificationsList(open);
 
   const markAsReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markAsRead(id),
     onSuccess: (response) => {
       upsertNotificationInCache(queryClient, response.data.result);
+      toast.success(t('notifications.marked_read'));
     },
   });
 
@@ -61,6 +64,7 @@ export function NotificationsSheetPanel({
     mutationFn: (id: string) => notificationsService.markAsUnread(id),
     onSuccess: (response) => {
       upsertNotificationInCache(queryClient, response.data.result);
+      toast.success(t('notifications.marked_unread'));
     },
   });
 
